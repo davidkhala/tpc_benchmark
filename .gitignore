@@ -127,3 +127,8 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# data, tpc binaries, shell scripts and output folders
+download/
+ds/
+h/
