@@ -84,9 +84,10 @@ TPC-H is a Decision Support Benchmark
 
 The TPC Benchmark H (TPC-H) is a decision support benchmark. It consists of a suite of business oriented ad-hoc queries and concurrent data modifications. The queries and the data populating the database have been chosen to have broad industry-wide relevance. This benchmark illustrates decision support systems that examine large volumes of data, execute queries with a high degree of complexity, and give answers to critical business questions. 
 
-The performance metric reported by TPC-H is called the TPC-H Composite Query-per-Hour Performance Metric (QphH@Size), and reflects multiple aspects of the capability of the system to process queries. These aspects include the selected database size against which the queries are executed, the query processing power when queries are submitted by a single stream, and the query throughput when queries are submitted by multiple concurrent users. The TPC-H Price/Performance metric is expressed as $/QphH@Size.
+The performance metric reported by TPC-H is called the TPC-H Composite Query-per-Hour Performance Metric (QphH@Size), and reflects multiple aspects of the capability of the system to process queries. These aspects include the selected database size against which the queries are executed, the query processing power when queries are submitted by a single stream, and the query throughput when queries are submitted by multiple concurrent users. The TPC-H Price/Performance metric is expressed as dollars per QphH@Size
 
 #### Specification.pdf  
+
 pg 9: 
 The purpose of TPC benchmarks is to provide relevant, objective performance data to industry users. To achieve that purpose, TPC benchmark specifications require that benchmark tests be implemented with systems, products, technologies and pricing that:
 • Are generally available to users;
@@ -104,12 +105,11 @@ After which, emails are sent with download links.  Note these links are not for 
 Both source programs were downloaded locally 2020-02-24.  
 
 TPC-H_Tools_v2.18.0.zip  
-from 
-http://www.tpc.org/tpc_documents_current_versions/download_programs/tools-download5.asp?bm_type=TPC-H&download_key=80ACE813%2D3CFD%2D4EA2%2D9988%2D0D2910D5E72D
+from  
+```http://www.tpc.org/tpc_documents_current_versions/download_programs/tools-download5.asp?bm_type=TPC-H&download_key=80ACE813%2D3CFD%2D4EA2%2D9988%2D0D2910D5E72D```
 
 TPC-DS_Tools_v2.11.0.zip  
-from 
-http://www.tpc.org/tpc_documents_current_versions/download_programs/tools-download5.asp?bm_type=TPC-DS&download_key=62E009C9%2D6434%2D4285%2DA04A%2D9C0817377874
+from ```http://www.tpc.org/tpc_documents_current_versions/download_programs/tools-download5.asp?bm_type=TPC-DS&download_key=62E009C9%2D6434%2D4285%2DA04A%2D9C0817377874```
 
 ### Building TPC-H and TPC-DS  
 In both sets of directions below, `tpc_root` is the base directory of the uncompressed .zip files downloaded in the previous step.  
@@ -123,13 +123,14 @@ https://www.haidongji.com/2011/03/30/data-generation-with-tpc-hs-dbgen-for-load-
 
 
 
-### Building TPC-DS  
+### Building TPC-DS V1  
+
 1. Change directory to the tools folder in tpc_root
-`$ cd tpc_root/tools`
+`> cd tpc_root/tools`
 2. Compile dsdgen and dsqgen using make.  Note that the default target environment is linux so nothing needs to be changed in the makefile or Makefile.suite
-`$ make`  
+`> make`  
 3. Generate the default data (1 GB) using:  
-`$ dsdgen`  
+`> dsdgen`  
 Which will save pipe delimited data with extension .data into the tpc_root/tools directory.
 4. Edit `tpc_root/query_templates/sql_server.tpl` by adding the following line:  
 `define _END = "";`  
@@ -146,6 +147,16 @@ This will generate one output file in the OUTPUT_DIR named `query_0.sql`
 Query generation edit to include `_END == ""`  
 https://dba.stackexchange.com/questions/36938/how-to-generate-tpc-ds-query-for-sql-server-from-templates/40436
 https://dba.stackexchange.com/questions/36938/how-to-generate-tpc-ds-query-for-sql-server-from-templates
+
+### Building TPC-DS V2  
+
+1. Download and install conda 3.7 for 64bit 
+2. Download source python to server
+3. sudo apt-get install make gcc git curl
+4. $python ds_pipeline_1.py
+5. Copy tpc-ds zip to /downloads folder
+6. $ python ds_pipeline_2.py
+7. bash dsdgen_cpu_1_scale_1GB.sh
 
 
 #### Generating TPC Data  

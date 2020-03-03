@@ -114,11 +114,17 @@ def dsdgen_bash_scripts():
                   config.sep + 
                   "dsdgen")
     
+    # use the data output folder if it exists
+    if os.path.exists(config.fp_ds_output_data):
+        data_out = config.fp_ds_output_data
+    else:
+        data_out = config.fp_ds_output
+    
     for cpu in [1, 8, 16, 32, 64, 96]:
         for scale in [1, 1000, 10000]:
             text = dsdgen_bash_text(cpu=cpu, 
                                     dsdgen_bin=dsdgen_bin, 
-                                    data_out=config.fp_ds_output,
+                                    data_out=data_out,
                                     scale=scale, 
                                     seed=13)
             fp = (config.fp_ds_src + 
