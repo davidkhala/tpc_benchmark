@@ -121,7 +121,7 @@ def dsdgen_bash_scripts():
         data_out = config.fp_ds_output
     
     for cpu in [1, 8, 16, 32, 64, 96]:
-        for scale in [1, 1000, 10000]:
+        for scale in [1, 100, 1000, 10000]:
             text = dsdgen_bash_text(cpu=cpu, 
                                     dsdgen_bin=dsdgen_bin, 
                                     data_out=data_out,
