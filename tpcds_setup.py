@@ -9,8 +9,11 @@ import zipfile
 import time
 import glob
 import shutil
+import requests
 
-import config
+from google.cloud import storage
+
+import config, gcp_storage
 
 
 def make_directories():
@@ -42,7 +45,20 @@ def make_tpcds():
     """
     subprocess.run(["make", "-C", config.fp_ds_src + config.sep + "tools"])
 
+def download_zip():
+    """Download the copy of tpcds source.  See README for versioning."""
 
+    client = storage.Client.from_service_account_json(config.gcp_cred_file)
+    print("Client created using default project: {}".format(client.project))
+    
+    bs = gcp_storage.BlobSync(client=client,
+                  bucket_name=config.gcs_zip_bucket,
+                  blob_name=config.gcs_ds_zip,
+                  local_filepath=config.fp_ds_zip)
+    bs.download()
+    
+    return bs.local_filepath
+    
 def extract_tpcds_zip(zip_filepath, version):
     """Extract downloaded TPC-DS test .zip to a standard location as set 
     in config.py

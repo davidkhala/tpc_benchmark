@@ -121,8 +121,6 @@ There are two parts to building TPC tests.  First, there is creation of the test
 Editing makefile.suite:  
 https://www.haidongji.com/2011/03/30/data-generation-with-tpc-hs-dbgen-for-load-testing/  
 
-
-
 ### Building TPC-DS V1  
 
 1. Change directory to the tools folder in tpc_root

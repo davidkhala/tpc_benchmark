@@ -136,3 +136,12 @@ def create_dataset(verbose=False):
         print("Created dataset {}.{}".format(client.project, dataset.dataset_id))    
     return copy_job
 
+def apply_schema(verbose=False):
+    """Apply the schema .sql file as reformatted from 
+    config.tpcds_schema_ansi_sql_filepath
+    to 
+    config.tpcds_schema_bq_filepath
+    using schema() method in this module.
+    """
+    
+    
