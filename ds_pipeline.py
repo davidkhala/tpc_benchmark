@@ -4,7 +4,7 @@ Downloads, makes and generated bash scripts to generate
 TPC-DS data for benchmarking.
 """
 
-import tpcds_setup
+import config, tpcds_setup, tpcds_bq 
 
 # create project folders
 tpcds_setup.make_directories()
