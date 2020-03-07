@@ -46,6 +46,7 @@ fp_ds                  = cwd   + sep + "ds"
 #fp_ds_src              = fp_ds + sep + "src"
 fp_ds_output           = fp_ds + sep + "output"  # folder local to the user
 fp_ds_output_mnt       = "/mnt/disks/20tb"       # mounted persistent disk or gcs in the VM
+fp_ds_output_gcs       = "/mnt/disks/" + gcs_1gb
 fp_ds_output_snowflake = fp_ds + sep + "output_snowflake"
 
 fp_h                   = cwd   + sep + "h"

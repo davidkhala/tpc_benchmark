@@ -115,7 +115,7 @@ seq 1 {cpu} \\
     -CHILD __  \\"""              
     return s
 
-def dsdgen_bash_scripts():
+def dsdgen_bash_scripts(verbose=False):
     """Generate Bash scripts for various configurations
     
     Range of configuration values:
@@ -133,11 +133,19 @@ def dsdgen_bash_scripts():
                   config.sep + 
                   "dsdgen")
     
-    # use the data output folder if it exists
-    if os.path.exists(config.fp_ds_output_mnt):
+    # use the data output folder on GCS if it exists
+    if os.path.exists(config.fp_ds_output_gcs):
+        data_out = config.fp_ds_output_gcs
+    # fall back to persistent disk if it exists
+    elif os.path.exists(config.fp_ds_output_mnt):
         data_out = config.fp_ds_output_mnt
+    # save locally
     else:
         data_out = config.fp_ds_output
+    
+    if verbose:
+        print("Bash scripts will write data to:")
+        print(">>", data_out)
     
     for cpu in config.tpc_cpus:
         for scale in config.tpc_scale:
