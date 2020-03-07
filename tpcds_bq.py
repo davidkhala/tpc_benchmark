@@ -31,7 +31,7 @@ Based on the above definitions, the following datatype definitions mapping was u
 | --------------- | ------------ |
 | decimal         | FLOAT64      |  
 | integer         | INT64        |  
-| varchar(N)      | STRING       |  
+| char(N)         | STRING       |  
 | varchar(N)      | STRING       |
 | time            | TIME         |  
 | date            | DATE         |  
@@ -136,12 +136,46 @@ def create_dataset(verbose=False):
         print("Created dataset {}.{}".format(client.project, dataset.dataset_id))    
     return copy_job
 
-def apply_schema(verbose=False):
+def create_schema(verbose=False):
     """Apply the schema .sql file as reformatted from 
     config.tpcds_schema_ansi_sql_filepath
     to 
     config.tpcds_schema_bq_filepath
     using schema() method in this module.
     """
+    client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
+    with open(config.tpcds_schema_bq_filepath, 'r') as f:
+        query_txt = f.read()
+        
+    query_job = client.query(query_txt)  # API request
+    rows = query_job.result()  # Waits for query to finish
     
+    if verbose:
+        for r in rows:
+            print(r.name)
+
+    
+
+def extract_table_name(f_name):
+    """Extract the table name target for a TPC-DS data file
+    
+    Parameters
+    ----------
+    fname : str, name of file as generated with dsdgen
+    
+    Returns
+    -------
+    table_name : str, name of table the file's data should be
+        loaded in
+    """
+    f_name = f_name.split(config.sep)[-1]
+    f_name = f_name.split(".")[0]
+    f_list = f_name.split("_")
+    f_list_new = []
+    for x in f_list:
+        try:
+            int(x)
+        except:
+            f_list_new.append(x)
+    return "_".join(f_list_new)
     

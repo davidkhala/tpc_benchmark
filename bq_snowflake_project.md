@@ -168,6 +168,27 @@ https://github.com/fivetran/benchmark/blob/master/2-GenerateData.sh
 
 ### Ops Tasks - Operations Tasks  
 
+Loading into BQ from other sources  
+https://cloud.google.com/compute/docs/disks/  
+https://cloud.google.com/compute/docs/disks/gcs-buckets  
+https://cloud.google.com/storage/docs/gcs-fuse  
+https://cloud.google.com/storage/docs/gcs-fuse#using  
+https://cloud.google.com/bigquery/docs/loading-data-local
+https://cloud.google.com/bigquery/docs/loading-data-cloud-storage-csv#limitations  
+https://cloud.google.com/bigquery-transfer/docs/cloud-storage-transfer  
+https://github.com/GoogleCloudPlatform/gcsfuse/blob/a8d9f02/docs/mounting.md#unmounting
+
+#### gcsfuse
+1. Follow directions here to add apt source and install gcsfuse:  
+https://github.com/GoogleCloudPlatform/gcsfuse/blob/master/docs/installing.md  
+2. Ensure the Compute Engine Instance was created with ALL API access credentials
+3. Choose what storege bucket to use, here we'll use 'test_bucket' for the example
+4. //$ sudo mkdir /mnt/disks/test_bucket
+5. //$ sudo chmod 777 /mnt/disks/test_bucket
+	>> TODO: less permissive permission?
+6. //$ gcsfuse test_bucket /mnt/disks/test_bucket
+
+
 ## TCO - Total Cost of Ownership?  
 
 ## Output Graphics  

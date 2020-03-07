@@ -35,13 +35,17 @@ gcs_100gb      = "tpc-ds-100gb-58732"
 gcs_1tb        = "tpc-ds-1tb-"
 gcs_100tb      = "tpc-ds-100tb-"
 
+# 1.4 CPU options for TPC data generation, scale factor
+tpc_cpus = [1, 8, 16, 32, 64, 96]
+tpc_scale = [1, 100, 1000, 10000]  # GB
+
 # 2.0 File Locations
 # >> Do NOT edit this section
 
 fp_ds                  = cwd   + sep + "ds"
 #fp_ds_src              = fp_ds + sep + "src"
 fp_ds_output           = fp_ds + sep + "output"  # folder local to the user
-fp_ds_output_data      = "/mnt/disks/20tb"       # mounted persistent disk in the VM
+fp_ds_output_mnt       = "/mnt/disks/20tb"       # mounted persistent disk or gcs in the VM
 fp_ds_output_snowflake = fp_ds + sep + "output_snowflake"
 
 fp_h                   = cwd   + sep + "h"
@@ -71,12 +75,15 @@ tpcds_schema_bq_filepath       = fp_ds_output + sep + "tpcds_schema_bq.sql"
 tpcds_table_names = ""
 
 # 3.0 TPC Datagen output file inventory
-fp_ds_1GB_inventory   = fp_ds_output + sep + "1GB_inventory.csv"
-fp_ds_100GB_inventory = fp_ds_output + sep + "100GB_inventory.csv"
-fp_ds_1TB_inventory   = fp_ds_output + sep + "1TB_inventory.csv"
-fp_ds_100TB_inventory = fp_ds_output + sep + "100TB_inventory.csv"
+"""
+    fp_ds_1GB_inventory   = fp_ds_output + sep + "1GB_inventory.csv"
+    fp_ds_100GB_inventory = fp_ds_output + sep + "100GB_inventory.csv"
+    fp_ds_1TB_inventory   = fp_ds_output + sep + "1TB_inventory.csv"
+    fp_ds_100TB_inventory = fp_ds_output + sep + "100TB_inventory.csv"
 
-fp_h_1GB_inventory    = fp_h_output + sep + "1GB_inventory.csv"
-fp_h_100GB_inventory  = fp_h_output + sep + "100GB_inventory.csv"
-fp_h_1TB_inventory    = fp_h_output + sep + "1TB_inventory.csv"
-fp_h_100TB_inventory  = fp_h_output + sep + "100TB_inventory.csv"
+    fp_h_1GB_inventory    = fp_h_output + sep + "1GB_inventory.csv"
+    fp_h_100GB_inventory  = fp_h_output + sep + "100GB_inventory.csv"
+    fp_h_1TB_inventory    = fp_h_output + sep + "1TB_inventory.csv"
+    fp_h_100TB_inventory  = fp_h_output + sep + "100TB_inventory.csv"
+"""
+
