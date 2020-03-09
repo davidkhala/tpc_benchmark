@@ -139,16 +139,17 @@ def dsdgen_bash_scripts(data_out=None, verbose=False):
                   "tools" + 
                   config.sep + 
                   "dsdgen")
-    
-    # use the data output folder on GCS if it exists
-    if os.path.exists(config.fp_ds_output_gcs):
-        data_out = config.fp_ds_output_gcs
-    # fall back to persistent disk if it exists
-    elif os.path.exists(config.fp_ds_output_mnt):
-        data_out = config.fp_ds_output_mnt
-    # save locally
-    else:
-        data_out = config.fp_ds_output
+    if data_out is None:
+
+        # use the data output folder on GCS if it exists
+        if os.path.exists(config.fp_ds_output_gcs):
+            data_out = config.fp_ds_output_gcs
+        # fall back to persistent disk if it exists
+        elif os.path.exists(config.fp_ds_output_mnt):
+            data_out = config.fp_ds_output_mnt
+        # save locally
+        else:
+            data_out = config.fp_ds_output
     
     if verbose:
         print("Bash scripts will write data to:")
