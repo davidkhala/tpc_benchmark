@@ -115,7 +115,7 @@ seq 1 {cpu} \\
     -CHILD __  \\"""              
     return s
 
-def dsdgen_bash_scripts(verbose=False):
+def dsdgen_bash_scripts(data_out=None, verbose=False):
     """Generate Bash scripts for various configurations
     
     Range of configuration values:
@@ -125,6 +125,13 @@ def dsdgen_bash_scripts(verbose=False):
     Therefore, for each combination, a bash script for that cpu use and scale:
     i.e. `dsdgen_cpu_8_scale_3000.sh`
     would be use 8 cpus to generate the 3TB dataset
+    
+    data_out : str, target override for data output location.
+        If not set, will attempt to find in the following order:
+            1. GCS storge set in config.py as fp_ds_output_gcs
+            2. Persistent disk location in config.py as fp_output_mnt
+            3. Locally set in configy.py fp_ds_output
+        If set, str must be a valid path to a directory.
     """
     
     dsdgen_bin = (config.fp_ds_src + 

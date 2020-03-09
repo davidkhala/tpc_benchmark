@@ -25,7 +25,8 @@ tpcds_bq.schema(filepath_in=config.tpcds_schema_ansi_sql_filepath,
                 dataset_name=config.gcp_bq_table)
 
 # generate install specific tpc-ds dsdgen bash scripts
-tpcds_setup.dsdgen_bash_scripts(verbose=True)
+tpcds_setup.dsdgen_bash_scripts(data_out=config.fp_ds_output_mnt,
+                                verbose=True)
 
 # move tpc-ds dsdgen bash scripts and related files to output folder
 tpcds_setup.dsdgen_move_bash_scripts()
