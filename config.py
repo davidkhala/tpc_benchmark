@@ -26,34 +26,30 @@ gcp_bq_table = "placeholder"
 
 # 1.3 GCP Storage Buckets
 # >> Edit to correct Link URL of TPC-DS & TPC-H zip files downloaded from TPC
-gcs_zip_bucket = "bq-vs-snowflake-48933"
+gcs_zip_bucket = "tpc-benchmark-9432"
 gcs_ds_zip     = "tpc-ds_v2.11.0rc2.zip"
 gcs_h_zip      = ""
 
-gcs_1gb        = "tpc-ds-1gb-9875"
-gcs_100gb      = "tpc-ds-100gb-58732"
-gcs_1tb        = "tpc-ds-1tb-"
-gcs_100tb      = "tpc-ds-100tb-"
+# 1.4 Compute Engine Mounted Persistent Disk
+fp_output_mnt    = "/mnt/disks/20tb"
+fp_ds_output_mnt = fp_output_mnt + sep + "ds"
+fp_h_output_mnt  = fp_output_mnt + sep + "h"
+
+gcs_ds_bucket  = "tpc-ds-9432"
+gcs_h_bucket   = "tpc-h-9432"
 
 # 1.4 CPU options for TPC data generation, scale factor
-tpc_cpus = [1, 8, 16, 32, 64, 96]
+tpc_cpus = [1, 8, 32, 96]
 tpc_scale = [1, 100, 1000, 10000]  # GB
 
 # 2.0 File Locations
 # >> Do NOT edit this section
 
 fp_ds                  = cwd   + sep + "ds"
-#fp_ds_src              = fp_ds + sep + "src"
 fp_ds_output           = fp_ds + sep + "output"  # folder local to the user
-fp_ds_output_mnt       = "/mnt/disks/20tb"       # mounted persistent disk or gcs in the VM
-fp_ds_output_gcs       = "/mnt/disks/" + gcs_1gb
-fp_ds_output_snowflake = fp_ds + sep + "output_snowflake"
 
 fp_h                   = cwd   + sep + "h"
-#fp_h_src               = fp_h  + sep + "src"
-fp_h_output            = fp_ds + sep + "output"
-fp_h_output_data       = None
-fp_h_output_snowflake  = fp_ds + sep + "output_snowflake"
+fp_h_output            = fp_h  + sep + "output"
 
 fp_download = cwd + sep + "download"
 
@@ -74,17 +70,3 @@ tpcds_schema_bq_filepath       = fp_ds_output + sep + "tpcds_schema_bq.sql"
 
 # 2.3 SQL schema table names (for upload method)
 tpcds_table_names = ""
-
-# 3.0 TPC Datagen output file inventory
-"""
-    fp_ds_1GB_inventory   = fp_ds_output + sep + "1GB_inventory.csv"
-    fp_ds_100GB_inventory = fp_ds_output + sep + "100GB_inventory.csv"
-    fp_ds_1TB_inventory   = fp_ds_output + sep + "1TB_inventory.csv"
-    fp_ds_100TB_inventory = fp_ds_output + sep + "100TB_inventory.csv"
-
-    fp_h_1GB_inventory    = fp_h_output + sep + "1GB_inventory.csv"
-    fp_h_100GB_inventory  = fp_h_output + sep + "100GB_inventory.csv"
-    fp_h_1TB_inventory    = fp_h_output + sep + "1TB_inventory.csv"
-    fp_h_100TB_inventory  = fp_h_output + sep + "100TB_inventory.csv"
-"""
-

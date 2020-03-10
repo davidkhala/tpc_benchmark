@@ -45,7 +45,7 @@ The Scope of Work states this project will take 100 hrs total to complete using 
 | Benchmark | URL to public-readable benchmark document |  
 
 
-## Timeline  
+## PreSales Timeline Description    
 Miles and the Scope of Work estimated this work will take 3-4 weeks.  
 
 | Milestone | Timeline |  
@@ -55,6 +55,47 @@ Miles and the Scope of Work estimated this work will take 3-4 weeks.
 | benchmark draft | +3 weeks |  
 | benchmark | +3-4 weeks |  
 
+
+## Development Timeline  
+1. Scope TPC benchmark methods - DONE
+2. Localize TPC tests - DONE
+3. TPC-DS Data Generation
+	a. Generate 1GB data locally - DONE
+	b. Generate 1GB data on vm - DONE in ~20 min @ 96 cores
+	c. Generate 100GB data on vm - DONE in ~1 hr @ 96 cores
+	d. Generate 1000GB, 10TB data on vm
+	e. Transfer all data to GCS
+4. TPC-DS Schema & Query Generation  
+	a. Modify ANSI SQL schema to BQ formatting - DONE
+	b. Modify Query SQL to BQ SQL - DONE
+5. Naive Loading of BQ
+	a. Load 1GB data into BQ
+		i. FUSE
+		ii. BQ API
+	b. Load 100GB data into BQ
+	c. Load 1TB, 10TB data into BQ
+6. Opitmized Loading of BQ
+	a. Load 100GB data into BQ
+	b. Load 1TB, 10TB data into BQ
+
+7. Naive Loading of Snowflake
+	a. Load 100GB data into Snowflake
+	b. Load 1TB data into Snowflake
+
+8. 1st round comparisions
+	a. BQ naive vs optimized
+	b. BQ v SF
+		i. 100GB
+		ii. 1TB
+	c. SF loaded v SF builtin TPC-DS
+
+9. 2nd round comparisons
+	a. query categories
+	b. query orders
+	c. cold start vs warm start / precached
+
+10-19 Repeat 1-9 for TPC-H
+- TPC-DS code is was written to handle both
 
 ## TPC  
 This work uses two TPC tests to create a reproducible load on a data storage system.  TPC the organization started as benchmarking tools for debit card transactions in the early 1980s.  
