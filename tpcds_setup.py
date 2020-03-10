@@ -24,8 +24,8 @@ def make_directories():
         config.fp_h, config.fp_h_output,
         #config.fp_h_output_bq, config.fp_h_output_snowflake,
         config.fp_download,
-        config.fp_output_ds_mnt,
-        config.fp_output_h_mnt
+        config.fp_ds_output_mnt,
+        config.fp_h_output_mnt
     ]
 
     for fp in filepath_list:
