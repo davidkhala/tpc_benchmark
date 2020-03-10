@@ -20,17 +20,13 @@ gcp_project  = "sada-colin-dietrich"
 gcp_dataset  = "gcprabbit"
 gcp_location = "US"
 
-# 1.2 GCP BigQuery Table Name
-# >> Edit this if you need another table created TODO: remove?
-gcp_bq_table = "placeholder"
-
-# 1.3 GCP Storage Buckets
+# 1.2 GCP Storage Buckets
 # >> Edit to correct Link URL of TPC-DS & TPC-H zip files downloaded from TPC
 gcs_zip_bucket = "tpc-benchmark-9432"
 gcs_ds_zip     = "tpc-ds_v2.11.0rc2.zip"
 gcs_h_zip      = ""
 
-# 1.4 Compute Engine Mounted Persistent Disk
+# 1.3 Compute Engine Mounted Persistent Disk
 fp_output_mnt    = "/mnt/disks/20tb"
 fp_ds_output_mnt = fp_output_mnt + sep + "ds"
 fp_h_output_mnt  = fp_output_mnt + sep + "h"
@@ -59,7 +55,6 @@ fp_ds_zip              = fp_download + sep + "tpc-ds_v2.11.0rc2.zip"
 fp_ds_src_version      = "v2.11.0rc2"  # folder name in the .zip
 fp_ds_src              = fp_ds + sep + fp_ds_src_version
 
-# >> Edit this 
 fp_h_zip               = fp_download + sep + ""
 fp_h_src_version       = "2.18.0_rc2"  # folder name in the .zip
 fp_h_src               = fp_h  + sep + fp_h_src_version

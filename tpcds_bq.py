@@ -59,7 +59,7 @@ dtype_mapper = {r'  decimal\(\d+,\d+\)  ': r'  FLOAT64  ',
 
 
 
-def schema(filepath_in, filepath_out, dataset_name):
+def rewrite_schema(filepath_in, filepath_out, dataset_name):
     """Convert the sample implementation of the logical schema as described in TPC-DS Specification V1.0.0L , specifications.pdf, pg 99, Appendix A and contained in  tpc_rool/tools/tpcds.sql.
     
     Parameters
@@ -153,8 +153,6 @@ def create_schema(verbose=False):
     if verbose:
         for r in rows:
             print(r.name)
-
-    
 
 def extract_table_name(f_name):
     """Extract the table name target for a TPC-DS data file

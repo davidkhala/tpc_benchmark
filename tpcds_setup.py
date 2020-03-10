@@ -18,19 +18,22 @@ import config, gcp_storage
 
 def make_directories():
     """Make local directories for TPC tests"""
-    filepath_list = [
+    filepath_list_1 = [
         config.fp_ds, config.fp_ds_output, 
-        #config.fp_ds_output_bq, config.fp_ds_output_snowflake,
         config.fp_h, config.fp_h_output,
-        #config.fp_h_output_bq, config.fp_h_output_snowflake,
-        config.fp_download,
-        config.fp_ds_output_mnt,
-        config.fp_h_output_mnt
+        config.fp_download
     ]
 
-    for fp in filepath_list:
+    for fp in filepath_list_1:
         if not os.path.exists(fp):
             os.mkdir(fp)
+            
+    if os.path.exists(config.fp_output_mnt):
+        filepath_list_2 = [config.fp_ds_output_mnt,
+                           config.fp_h_output_mnt]
+        for fp in filepath_list_2:
+            if not os.path.exists(fp):
+                os.mkdir(fp)
             
     with open(config.fp_download + config.sep +
               "place_tpc_zip_here.txt", "w") as f:
@@ -144,10 +147,12 @@ def dsdgen_bash_scripts(data_out=None, verbose=False):
     if data_out is None:
 
         # use the data output folder on GCS if it exists
-        if os.path.exists(config.fp_ds_output_gcs):
-            data_out = config.fp_ds_output_gcs
+        # this used FUSE and didn't seem to work - possible latency issue?
+        #if os.path.exists(config.fp_ds_output_gcs):
+        #    data_out = config.fp_ds_output_gcs
+        
         # fall back to persistent disk if it exists
-        elif os.path.exists(config.fp_ds_output_mnt):
+        if os.path.exists(config.fp_ds_output_mnt):
             data_out = config.fp_ds_output_mnt
         # save locally
         else:

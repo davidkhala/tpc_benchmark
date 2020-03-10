@@ -4,6 +4,29 @@
 import os
 import glob
 
+def extract_table_name(f_name):
+    """Extract the table name target for a TPC-DS data file
+    
+    Parameters
+    ----------
+    fname : str, name of file as generated with dsdgen
+    
+    Returns
+    -------
+    table_name : str, name of table the file's data should be
+        loaded in
+    """
+    #f_name = f_name.split(config.sep)[-1]
+    f_name = f_name.split(".")[0]
+    f_list = f_name.split("_")
+    f_list_new = []
+    for x in f_list:
+        try:
+            int(x)
+        except:
+            f_list_new.append(x)
+    return "_".join(f_list_new)
+
 def pathlist(directory_path, extension="*"):
     """Get all files in a directory, non-recursively"""
     from pathlib import Path
@@ -21,7 +44,8 @@ def file_inventory(directory):
     for f in files:
         f_size = os.path.getsize(f) / 1000000
         f_basename = os.path.basename(f)
-        inv.append([f_basename, f_size])
+        f_table_name = extract_table_name(f_basename)
+        inv.append([f_basename, f_size, f, f_table_name])
     return inv
 
 def print_inventory(directory):
@@ -35,7 +59,6 @@ def print_inventory(directory):
         l_max = max(l_max, len(i[0]))
     
     for i in inv:
-        #l_max = max(l_max, len(i[0]))
         size_count += i[1]
         f_basename = i[0]
         f_size = i[1]
