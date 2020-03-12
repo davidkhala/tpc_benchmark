@@ -3,7 +3,7 @@
 import config, tools, os
 
 print("TPC-DS Inventory")
-print("================")
+print("++++++++++++++++")
 print()
 
 _base_local = config.fp_ds_output + config.sep
@@ -19,7 +19,7 @@ for fp in filepath_list:
         tools.print_inventory(fp)
     
 print("TPC-H Inventory")
-print("===============")
+print("+++++++++++++++")
 print()
 
 _base_local = config.fp_h_output + config.sep
@@ -33,3 +33,4 @@ for base in [_base_local, _base_mnt]:
 for fp in filepath_list:
     if os.path.exists(fp):
         tools.print_inventory(fp)
+    

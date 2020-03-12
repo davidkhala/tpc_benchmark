@@ -45,7 +45,7 @@ for BigQuery datatype specifications in standard SQL
 import re
 from google.cloud import bigquery
 
-import config
+import config, tools
 
 
 dtype_mapper = {r'  decimal\(\d+,\d+\)  ': r'  FLOAT64  ',
@@ -154,6 +154,35 @@ def create_schema(verbose=False):
         for r in rows:
             print(r.name)
 
+def table_size(client, project, dataset, table, verbose=False):
+    """Apply the schema .sql file as reformatted from 
+    config.tpcds_schema_ansi_sql_filepath
+    to 
+    config.tpcds_schema_bq_filepath
+    using schema() method in this module.
+    
+    Returns
+    -------
+    size of table in bytes
+    """
+    
+    client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
+    
+    query_txt = """
+    select 
+      sum(size_bytes) as size
+    from
+      {}.{}.__TABLES__
+    where 
+      table_id = '{}'
+        """.format(project, dataset, table)
+        
+    query_job = client.query(query_txt)  # API request
+    rows = query_job.result()  # Waits for query to finish
+    _df = rows.to_dataframe()
+    size = _df.loc[0, "size"]
+    return size
+            
 def extract_table_name(f_name):
     """Extract the table name target for a TPC-DS data file
     
@@ -177,3 +206,168 @@ def extract_table_name(f_name):
             f_list_new.append(x)
     return "_".join(f_list_new)
     
+def validate(directory, dataset, byte_multiplier=1):
+    dir_files = tools.file_inventory(directory)
+    table_names = set([f[2] for f in dir_files])
+    table_sizes = {f[2]:f[1] for f in dir_files}
+    
+    client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
+    
+    
+    b = BQUpload(client=client,
+                 project=config.gcp_project,
+                 dataset=config.gcp_dataset)
+    table_attrs = b.get_all_table_attributes()
+    
+    data = []
+    for t in table_names:
+        # count rows across all files for this table
+        local_rows = 0
+        for f in dir_files:
+            if f[2] == t:
+                local_rows += int(f[3])
+        local_size = table_sizes[t]
+        bq_size, bq_rows = table_attrs[t]
+        bq_size = bq_size / 10**6
+        data.append([t, local_size, local_rows, bq_size, bq_rows]) 
+    return data
+
+class BQUpload:
+    """Upload CSV data from a file location"""
+    def __init__(self, client, project, dataset):
+        """
+        Parameters
+        ----------
+        client : GCP storage client instance
+        project : str, GCP project name
+        dataset : str, BigQuery dataset name
+        """
+        self.client = client
+        self.project = project
+        self.dataset = dataset
+        
+        self.job_config = None
+        
+        self.tables = None
+        
+        # apply CSV specific setup
+        # values can be altered as parameters of self.job_config
+        self.setup()
+        
+    def setup(self):
+        """General setup for CSV upload"""
+        
+        # https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.job.LoadJob.html#google.cloud.bigquery.job.LoadJob
+        self.job_config = bigquery.LoadJobConfig()
+
+        # https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.job.WriteDisposition.html#google.cloud.bigquery.job.WriteDisposition
+        self.job_config.write_disposition = bigquery.WriteDisposition.WRITE_APPEND
+
+        # Number of rows to skip when reading data (CSV only)
+        self.job_config.skip_leading_rows = 0
+
+        # The separator for fields in a CSV file
+        self.job_config.field_delimiter = "|"
+
+        # The character encoding of the data
+        # default is utf-8 so this does not need to be set
+        # the other option is ISO-8859-1
+        #job_config.encoding = "UTF-8"
+        
+        # The source format defaults to CSV, so the line below is optional.
+        self.job_config.source_format = bigquery.SourceFormat.CSV
+
+        self.get_all_table_ids()
+        
+    def get_all_table_ids(self):
+        _itter = self.client.list_tables(dataset=self.dataset)
+        self.tables = [_t.table_id for _t in _itter]
+        
+    def get_table(self, table_id):
+        full_table_id = (self.project + "." +
+                         self.dataset + "." +
+                         table_id)
+        return self.client.get_table(full_table_id)
+        
+    def get_all_table_attributes(self):
+        """Get the size of all tables in the project dataset
+        Returns
+        -------
+        dict : key = str, table name
+               value = int, size in bytes of table
+        """
+        self.get_all_table_ids()
+        
+        _sizes = {}
+        for t in self.tables:
+            _s = table_size(client=self.client, 
+                            project=config.gcp_project, 
+                            dataset=config.gcp_dataset,
+                            table=t)
+            _t = self.get_table(table_id=t)
+            _r = _t.num_rows
+            _sizes[t] = (_s, _r)
+        return _sizes
+        
+    def upload_local_csv(self, table, filepath, delimiter="|", verbose=False):
+        """Upload a CSV file to BigQuery
+
+        https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.client.Client.html#google.cloud.bigquery.client.Client.load_table_from_file
+
+        Parameters
+        ----------
+        table : str, table name to upload data to
+        filepath : str, path to file to upload
+        delimiter : str, delimiting character of CSV file
+            default = "|"
+            
+        Returns
+        -------
+        google.cloud.bigquery.job.LoadJob
+        """
+
+        destination = ".".join([config.gcp_project, config.gcp_dataset, table])
+
+        with open(filepath, "rb") as f_open:
+            load_job = self.client.load_table_from_file(file_obj=f_open,
+                                                        destination=destination,
+                                                        job_config=self.job_config
+                                                        )
+            if verbose:
+                print("Starting job {}".format(load_job.job_id))
+                load_job.result()  # Waits for table load to complete.
+                print("Job finished.")
+                
+        return load_job
+
+    def upload_uri_csv(self, table, gs_path, delimiter="|", verbose=False):
+        """Upload a CSV file to BigQuery
+
+        https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.client.Client.html#google.cloud.bigquery.client.Client.load_table_from_uri
+
+        Parameters
+        ----------
+        table : str, table name to upload data to
+        filepath : str or sequence of str, single path to a GCS file 
+            to upload, or a sequence of strings of the same
+        delimiter : str, delimiting character of CSV file
+            default = "|"
+            
+        Returns
+        -------
+        google.cloud.bigquery.job.LoadJob
+        """
+        
+        destination = ".".join([config.gcp_project, config.gcp_dataset, table])
+        
+        with open(filepath, "rb") as f_open:
+            load_job = client.load_table_from_uri(uri=gs_path,
+                                                  destination=destination,
+                                                  job_config=self.job_config
+                                                  )
+            if verbose:
+                print("Starting job {}".format(load_job.job_id))
+                load_job.result()  # Waits for table load to complete.
+                print("Job finished.")
+                
+        return load_job

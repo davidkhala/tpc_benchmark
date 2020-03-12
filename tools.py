@@ -1,4 +1,8 @@
-"""Specific tools for EDA or debugging"""
+"""Specific tools for EDA or debugging
+
+TODO: rename this module to tpcds_tools
+> the methods in here are too specific, but not strictly setup
+"""
 
 
 import os
@@ -38,17 +42,60 @@ def pathlist_recursive(directory_path, extension="*"):
     files = glob.glob(directory_path + '/**/*.' + extension, recursive=True)
     return files
 
+def line_counter(filepath, verbose=False):
+    """Count the number of lines in a TPC-DS dsdgen created data file, 
+    as well as the number reported in the file
+    
+    Parameters
+    ----------
+    filepath : str, filepath to dsdgen file
+    verbose : bool, print debug statements
+    
+    Returns
+    -------
+    count : int, lines actually counted in file
+    count_read : int, line indexes read from the first
+        and last line of the file as:
+        line_n - line_0 + 1
+    """
+    with open(filepath, "br") as f:
+        try:
+            x0 = f.readline().decode("utf-8").split("|")[0]
+        except:
+            print()
+        count = 1
+        for line in f:
+            count += 1
+        xn = line.split(b"|")[0]
+    
+    count_read = int(xn) - int(x0) + 1
+    
+    if verbose:    
+        print("File: {}".format(filepath))
+        print("Seen Count: {}".format(count))
+        print("Read Count: {}".format(count_read))
+    
+    return count, count_read
+
 def file_inventory(directory):
     files = pathlist_recursive(directory)
     inv = []
     for f in files:
-        f_size = os.path.getsize(f) / 1000000
+        if "dbgen_version" in f:
+            continue
         f_basename = os.path.basename(f)
+        f_size = os.path.getsize(f) / 1000000        
         f_table_name = extract_table_name(f_basename)
-        inv.append([f_basename, f_size, f, f_table_name])
+        f_count, f_count_read = line_counter(f)
+        inv.append([f_basename, f_size, f_table_name, f_count, f_count_read, f])
     return inv
 
 def print_inventory(directory):
+    """Print the results of a directory inventory
+    Note: only uses the 0 and 1 indexes of the output from
+    file_inventory()
+    
+    """
     inv = file_inventory(directory)
     l_max = 0
     size_count = 0
@@ -62,14 +109,23 @@ def print_inventory(directory):
         size_count += i[1]
         f_basename = i[0]
         f_size = i[1]
+        f_count = str(i[3])
+        f_count_read = str(i[4])
         f_size = "{:.3f}".format(f_size)
-        line = "{} {} MB".format(f_basename.ljust(l_max+1), f_size.rjust(12))
+        line = "{} {} MB {}".format(f_basename.ljust(l_max+1), 
+                                       f_size.rjust(12),
+                                       f_count.rjust(14))
         width_max = max(width_max, len(line))
         rows.append(line)
     
-    print("-"*len(directory))
+    print("="*width_max)
     print(directory)
-    print("-"*len(directory))
+    print("="*width_max)
+
+    print("{} {}    {}".format("File".ljust(l_max+1),
+                                  "Size".rjust(12),
+                                  "Line Count".rjust(14)))
+    print("="*width_max)
 
     for r in rows:
         print(r)

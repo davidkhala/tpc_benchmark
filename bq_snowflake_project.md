@@ -274,6 +274,14 @@ https://blog.panoply.io/a-full-comparison-of-redshift-and-bigquery
 #### Xplenty  
 https://www.xplenty.com/blog/snowflake-vs-bigquery/  
 
+#### General TPC Data Generation  
+https://github.com/cloudera/impala-tpcds-kit/tree/master/tpcds-gen
+https://stackoverflow.com/questions/56631851/how-to-generate-tables-in-parallel-with-tpc-ds-benchmark  
+https://github.com/maropu/spark-tpcds-datagen  
+https://github.com/dhiraa/spark-tpcds  
+http://www.greenplumguru.com/?p=1045  
+https://github.com/pivotalguru/TPC-DS  
+
 
 ### Snowflake  
 
@@ -305,6 +313,11 @@ https://cloud.google.com/bigquery/docs/visualize-jupyter
 
 3. Snowflake Jupyter Notebook  
 https://www.snowflake.com/blog/quickstart-guide-for-sagemaker-snowflake-part-one/  
+
+### SQL Snippets  
+1. Size of table in BQ  
+	https://stackoverflow.com/questions/31266740/how-to-get-bigquery-storage-size-for-a-single-table
+2. 
 
 
 ### TPC-DS Specification Notes  

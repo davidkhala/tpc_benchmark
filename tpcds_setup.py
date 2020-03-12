@@ -241,3 +241,4 @@ def upload_tpc_data(folder, bucket_name, limit=2000, verbose=False):
         elif verbose:
             print("Skipping {} @ {} MB".format(file_name, fp_size))
     return inventory
+
