@@ -206,6 +206,24 @@ def extract_table_name(f_name):
             f_list_new.append(x)
     return "_".join(f_list_new)
     
+def upload_all_local(directory, dataset, validate=True, verbose=False):
+    
+    files = tools.file_inventory(directory)
+    
+    client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
+    
+    b = BQUpload(client=client,
+                 project=config.gcp_project,
+                 dataset=dataset)
+    
+    for f in files:
+        table = f[2]
+        filepath = f[5]
+        load_job = b.upload_local_csv(table=table, filepath=filepath, verbose=verbose)
+        
+    df = validate(directory=folder, dataset=dataset)
+    return df
+    
 def validate(directory, dataset, byte_multiplier=1):
     dir_files = tools.file_inventory(directory)
     table_names = set([f[2] for f in dir_files])
@@ -229,8 +247,13 @@ def validate(directory, dataset, byte_multiplier=1):
         local_size = table_sizes[t]
         bq_size, bq_rows = table_attrs[t]
         bq_size = bq_size / 10**6
-        data.append([t, local_size, local_rows, bq_size, bq_rows]) 
-    return data
+        data.append([t, local_size, local_rows, bq_size, bq_rows])
+        
+    df = pd.DataFrame(date, columns=["table", 
+                                     "local_size", "local_rows",
+                                     "bq_size", "bq_rows"])
+    df["bq_percent"] = (df.bq_rows / df.local_rows) * 100
+    return df
 
 class BQUpload:
     """Upload CSV data from a file location"""
@@ -329,14 +352,19 @@ class BQUpload:
         destination = ".".join([config.gcp_project, config.gcp_dataset, table])
 
         with open(filepath, "rb") as f_open:
+            if verbose:
+                print("Starting Upload...")
+                print("From:", filepath)
+                print("To:", destination)
             load_job = self.client.load_table_from_file(file_obj=f_open,
                                                         destination=destination,
                                                         job_config=self.job_config
                                                         )
             if verbose:
-                print("Starting job {}".format(load_job.job_id))
-                load_job.result()  # Waits for table load to complete.
-                print("Job finished.")
+                print("Job Started: {}".format(load_job.job_id))
+            load_job.result()  # Waits for table load to complete.
+            if verbose:
+                print("Job finished: {}".format(load_job.done()))
                 
         return load_job
 
