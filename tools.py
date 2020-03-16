@@ -8,6 +8,8 @@ TODO: rename this module to tpcds_tools
 import os
 import glob
 
+import config
+
 def extract_table_name(f_name):
     """Extract the table name target for a TPC-DS data file
     
