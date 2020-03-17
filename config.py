@@ -38,6 +38,9 @@ gcs_h_bucket   = "tpc-h-9432"
 cpu_count = os.cpu_count()
 tpc_scale = [1, 100, 1000, 10000]  # GB
 
+# 1.5 Random Seed
+random_seed = 13
+
 # 2.0 File Locations
 # >> Do NOT edit this section
 

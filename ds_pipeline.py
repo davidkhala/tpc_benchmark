@@ -27,8 +27,7 @@ tpcds_bq.rewrite_schema(filepath_in=config.tpcds_schema_ansi_sql_filepath,
 scale = 1
 
 # run dsdgen with the max number of cpus on this machine
-ds_setup.run_dsdgen(cpu=config.cpu_count,
-                    scale=scale)
+ds_setup.run_dsdgen(scale=scale, seed=config.random_seed)
 
 # generate install specific tpc-ds dsdgen bash scripts
 # tpcds_setup.dsdgen_bash_scripts(data_out=config.fp_ds_output_mnt, verbose=True)
