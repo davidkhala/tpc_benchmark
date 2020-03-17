@@ -230,7 +230,9 @@ def run_qgen(n, scale=1, seed=None, verbose=False):
     return std_out, err_out
     
 def move_data(scale, verbose=False):
-    """Move TPC-H dbgen files to output folder
+    """TODO: remove, not needed when using env_vars["DSS_PATH"]
+    
+    Move TPC-H dbgen files to output folder
     
     Parameters
     ----------
@@ -248,9 +250,6 @@ def move_data(scale, verbose=False):
             print("To:     ", d)
             print("--------")
         shutil.move(s, d)
-
-        
-        
 
 def rewrite_schema(filepath_in, filepath_out, dataset_name):
     """Convert the sample implementation of the logical schema as described in TPC-DS Specification V1.0.0L , specifications.pdf, pg 99, Appendix A and contained in  tpc_rool/tools/tpcds.sql.
