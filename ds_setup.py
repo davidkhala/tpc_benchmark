@@ -218,16 +218,18 @@ def run_dsdgen(scale=1, seed=None):
         cmd = cmd + ["-RNGSEED", str(seed)]
 
     total_cpu = config.cpu_count
+    binary_folder = config.fp_ds_src + config.sep + "tools"
     
     pipe_outputs = []
-    for n in range(1, cpu+1):
+    for n in range(1, total_cpu+1):
         child_cpu = str(n)
         n_cmd = cmd + ["-PARALLEL", total_cpu,
                        "-CHILD", child_cpu]
     
         pipe = subprocess.run(n_cmd, 
-                              stdout=PIPE, stderr=PIPE, 
-                              cwd=dsdgen_folder)
+                              stdout=subprocess.PIPE, 
+                              stderr=subprocess.PIPE, 
+                              cwd=binary_folder)
         pipe_outputs.append(pipe)
 
     for pipe in pipe_outputs:

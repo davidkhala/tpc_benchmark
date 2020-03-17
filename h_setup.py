@@ -89,7 +89,6 @@ def create_makefile(verbose=False):
                    "MACHINE ="  : "MACHINE  = {}".format(config.machine),
                    "WORKLOAD =" : "WORKLOAD = {}".format(config.workload)}
 
-    verbose = True
     fp = config.fp_h_src + config.sep + "dbgen" + config.sep
     new_lines = []
     
@@ -131,7 +130,42 @@ def make_tpch():
     if len(pipe.stdout) > 0:
         print(pipe.stdout.decode("utf-8"))
     
+def run_dbgen(scale=1):
+    """Run TPC-DS dsdgen with a subprocess for each cpu core 
+    on the host machine
+    
+    Parameters
+    ----------
+    scale : int, scale factor in GB, acceptable values:
+        1, 100, 1000, 10000
+    seed : int, random seed value
+    """
+    if scale not in config.tpc_scale:
+        raise ValueError("Scale must be one of:", config.tpc_scale)
+    
+    cmd = ["./dbgen", "-vf", "-s", str(scale)]
 
+    total_cpu = config.cpu_count
+    binary_folder = config.fp_h_src + config.sep + "dbgen"
+    
+    pipe_outputs = []
+    for n in range(1, total_cpu+1):
+        child_cpu = str(n)
+        total_cpu = str(total_cpu)
+        n_cmd = cmd + ["-C", total_cpu,
+                       "-S", child_cpu]
+    
+        pipe = subprocess.run(n_cmd, 
+                              stdout=subprocess.PIPE, 
+                              stderr=subprocess.PIPE, 
+                              cwd=binary_folder)
+        pipe_outputs.append(pipe)
+
+    for pipe in pipe_outputs:
+        if len(pipe.stderr) > 0:
+            print(pipe.stderr.decode("utf-8"))
+        if len(pipe.stdout) > 0:
+            print(pipe.stdout.decode("utf-8"))
     
 def move_data(scale, verbose=False):
     """Move TPC-H dbgen files to output folder
