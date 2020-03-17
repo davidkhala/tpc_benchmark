@@ -1,0 +1,80 @@
+dsdgen Population Generator (Version 2.11.0)
+Copyright Transaction Processing Performance Council (TPC) 2001 - 2019
+
+
+USAGE: dsdgen [options]
+
+Note: When defined in a parameter file (using -p), parmeters should
+use the form below. Each option can also be set from the command
+line, using a form of '-param [optional argument]'
+Unique anchored substrings of options are also recognized, and 
+case is ignored, so '-sc' is equivalent to '-SCALE'
+
+General Options
+===============
+ABREVIATION =  <s>       -- build table with abreviation <s>
+DIR =  <s>               -- generate tables in directory <s>
+HELP =  <n>              -- display this message
+PARAMS =  <s>            -- read parameters from file <s>
+QUIET =  [Y|N]           -- disable all output to stdout/stderr
+SCALE =  <n>             -- volume of data to generate in GB
+TABLE =  <s>             -- build only table <s>
+UPDATE =  <n>            -- generate update data set <n>
+VERBOSE =  [Y|N]         -- enable verbose output
+PARALLEL =  <n>          -- build data in <n> separate chunks
+CHILD =  <n>             -- generate <n>th chunk of the parallelized data
+RELEASE =  [Y|N]         -- display the release information
+_FILTER =  [Y|N]         -- output data to stdout
+VALIDATE =  [Y|N]        -- produce rows for data validation
+
+Advanced Options
+===============
+DELIMITER =  <s>         -- use <s> as output field separator
+DISTRIBUTIONS =  <s>     -- read distributions from file <s>
+FORCE =  [Y|N]           -- over-write data files without prompting
+SUFFIX =  <s>            -- use <s> as output file suffix
+TERMINATE =  [Y|N]       -- end each record with a field delimiter
+VCOUNT =  <n>            -- set number of validation rows to be produced
+VSUFFIX =  <s>           -- set file suffix for data validation
+RNGSEED =  <n>           -- set RNG seed
+
+TPC-H Population Generator (Version 2.18.0 build 0)
+Copyright Transaction Processing Performance Council 1994 - 2010
+USAGE:
+dbgen [-{vf}][-T {pcsoPSOL}]
+	[-s <scale>][-C <procs>][-S <step>]
+dbgen [-v] [-O m] [-s <scale>] [-U <updates>]
+
+Basic Options
+===========================
+-C <n> -- separate data set into <n> chunks (requires -S, default: 1)
+-f     -- force. Overwrite existing files
+-h     -- display this message
+-q     -- enable QUIET mode
+-s <n> -- set Scale Factor (SF) to  <n> (default: 1) 
+-S <n> -- build the <n>th step of the data/update set (used with -C or -U)
+-U <n> -- generate <n> update sets
+-v     -- enable VERBOSE mode
+
+Advanced Options
+===========================
+-b <s> -- load distributions for <s> (default: dists.dss)
+-d <n> -- split deletes between <n> files (requires -U)
+-i <n> -- split inserts between <n> files (requires -U)
+-T c   -- generate cutomers ONLY
+-T l   -- generate nation/region ONLY
+-T L   -- generate lineitem ONLY
+-T n   -- generate nation ONLY
+-T o   -- generate orders/lineitem ONLY
+-T O   -- generate orders ONLY
+-T p   -- generate parts/partsupp ONLY
+-T P   -- generate parts ONLY
+-T r   -- generate region ONLY
+-T s   -- generate suppliers ONLY
+-T S   -- generate partsupp ONLY
+
+To generate the SF=1 (1GB), validation database population, use:
+	dbgen -vf -s 1
+
+To generate updates for a SF=1 (1GB), use:
+	dbgen -v -U 1 -s 1
