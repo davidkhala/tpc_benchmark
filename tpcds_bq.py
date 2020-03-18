@@ -47,7 +47,7 @@ from google.cloud import bigquery
 
 import config, tools
 
-
+"""
 dtype_mapper = {r'  decimal\(\d+,\d+\)  ': r'  FLOAT64  ',
                 r'  varchar\(\d+\)  ':     r'  STRING  ',
                 r'  char\(\d+\)  ':        r'  STRING  ',
@@ -56,11 +56,11 @@ dtype_mapper = {r'  decimal\(\d+,\d+\)  ': r'  FLOAT64  ',
                 r'  time  ':               r'  TIME  ',
                 r'  date  ':               r'  DATE  '
                }
-
+"""
 
 
 def rewrite_schema(filepath_in, filepath_out, dataset_name):
-    """Convert the sample implementation of the logical schema as described in TPC-DS Specification V1.0.0L , specifications.pdf, pg 99, Appendix A and contained in  tpc_rool/tools/tpcds.sql.
+    """Convert the sample implementation of the logical schema as described in TPC-DS Specification V1.0.0L , specifications.pdf, pg 99, Appendix A and contained in  tpc_root/tools/tpcds.sql.
     
     Parameters
     ----------
@@ -108,7 +108,7 @@ def rewrite_schema(filepath_in, filepath_out, dataset_name):
     
     open(filepath_out, "w").write(text)
     
-def create_dataset(verbose=False):
+def create_dataset_old(verbose=False):
     """Create a dataset on the project
     
     See:
@@ -135,6 +135,9 @@ def create_dataset(verbose=False):
     if verbose:
         print("Created dataset {}.{}".format(client.project, dataset.dataset_id))    
     return copy_job
+
+def create_dataset(verbose=False):
+    return bq.create_dataset(verbose=verbose)
 
 def create_schema(verbose=False):
     """Apply the schema .sql file as reformatted from 

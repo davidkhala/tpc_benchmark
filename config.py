@@ -86,5 +86,8 @@ workload   = "TPCH"
 tpcds_schema_ansi_sql_filepath = fp_ds_src + sep + "tools" + sep + "tpcds.sql"
 tpcds_schema_bq_filepath       = fp_ds_output + sep + "tpcds_schema_bq.sql"
 
+h_schema_ddl_filepath = fp_h_src + sep + "dbgen" + sep + "dss.ddl"
+h_schema_bq_filepath = fp_h_output + sep + "tpc_h_schema_bq.ddl"
+
 # 2.4 SQL schema table names (for upload method)
 tpcds_table_names = ""
