@@ -16,29 +16,47 @@ gcp_cred_file = user_dir + sep + "code" + sep + "sada-colin-dietrich-bd003814fcb
 
 # 1.1 GCP Project and BigQuery Dataset
 # >> Edit this to what you want created
-gcp_project  = "sada-colin-dietrich"
-gcp_dataset  = "gcprabbit"
-gcp_location = "US"
+gcp_project      = "sada-colin-dietrich"
+gcp_location     = "US"
 
-# 1.2 GCP Storage Buckets
+# 1.2 BigQuery Datasets
+gcp_dataset      = "gcprabbit"
+# dataset_h_1GB
+# dataset_h_100GB
+# dataset_h_1TB
+# dataset_h_10TB
+
+# dataset_ds_1GB
+# dataset_ds_100GB
+# dataset_ds_1TB
+# dataset_ds_10TB
+
+# 1.3 Cloud Storage Buckets
 # >> Edit to correct Link URL of TPC-DS & TPC-H zip files downloaded from TPC
-gcs_zip_bucket = "tpc-benchmark-9432"
-gcs_ds_zip     = "tpc-ds_v2.11.0rc2.zip"
-gcs_h_zip      = "tpc-h_2.18.0_rc2.zip"
+gcs_zip_bucket   = "tpc-benchmark-zips-9432"
+gcs_data_bucket  = "tpc-benchmark-9432"
 
-# 1.3 Compute Engine Mounted Persistent Disk
+# bucket_zip
+# bucket_data
+
+# 1.3 TPC installer zip file names
+gcs_ds_zip       = "tpc-ds_v2.11.0rc2.zip"
+gcs_h_zip        = "tpc-h_2.18.0_rc2.zip"
+
+# 1.4 Compute Engine Mounted Persistent Disk
 fp_output_mnt    = "/mnt/disks/20tb"
 fp_ds_output_mnt = fp_output_mnt + sep + "ds"
 fp_h_output_mnt  = fp_output_mnt + sep + "h"
 
-gcs_ds_bucket  = "tpc-ds-9432"
-gcs_h_bucket   = "tpc-h-9432"
+# mnt_output
+# mnt_output_ds
+# mnt_output_h
 
-# 1.4 CPU options for TPC data generation, scale factor
+# 1.5 CPU options for TPC data generation, scale factor
 cpu_count = os.cpu_count()
 tpc_scale = [1, 100, 1000, 10000]  # GB
 
-# 1.5 Random Seed
+# 1.6 Random Seed
 random_seed = 13
 
 # 2.0 File Locations

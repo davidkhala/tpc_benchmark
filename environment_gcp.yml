@@ -48,4 +48,5 @@ dependencies:
     - google-cloud-iot
     - google-cloud-speech
     - ftransc
+    - google-resumable-media
 
