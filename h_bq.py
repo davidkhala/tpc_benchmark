@@ -24,16 +24,16 @@ for BigQuery datatype specifications in standard SQL
 import re
 from google.cloud import bigquery
 
-import config, tools
+import config
 
 
-def rewrite_schema(filepath_in, filepath_out, dataset_name):
+def rewrite_schema_DUP(filepath_in, filepath_out, dataset_name):
     """Convert the sample implementation of the logical schema as described in TPC-DS Specification V1.0.0L , specifications.pdf, pg 14, and contained in  tpc_root/dbgen/dss.ddl.
     
     Parameters
     ----------
-    file_path_in : str, path to dss.ddl file
-    file_path_out : str, path to write BigQuery formatted table schema, named 'tpch_bq.ddl'
+    filepath_in : str, path to dss.ddl file
+    filepath_out : str, path to write BigQuery formatted table schema, named 'tpch_bq.ddl'
     dataset_name : str, name of BigQuery Dataset to append to existing table names
     
     Returns
@@ -49,7 +49,7 @@ def rewrite_schema(filepath_in, filepath_out, dataset_name):
                     # the following are just to have consistent UPPERCASE formatting
                     r' time':               r' TIME',
                     r' date':               r' DATE'
-                   }
+                    }
     
     text = open(filepath_in).read()
     
@@ -82,7 +82,7 @@ def rewrite_schema(filepath_in, filepath_out, dataset_name):
 
     return text
 
-def create_dataset(verbose=False):
+def create_dataset_DUP(verbose=False):
     """Create a dataset on the project
     
     See:
@@ -110,7 +110,7 @@ def create_dataset(verbose=False):
         print("Created dataset {}.{}".format(client.project, dataset.dataset_id))    
     return copy_job
 
-def create_schema(verbose=False):
+def create_schema_DUP(verbose=False):
     """Apply the schema .sql file as reformatted from 
     config.tpcds_schema_ansi_sql_filepath
     to 
