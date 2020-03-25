@@ -9,23 +9,32 @@ From TPC-DS Specifications, V1.0.0L, specifications.pdf, pg 21:
 
 a) Identifier means that the column shall be able to hold any key value generated for that column.
 
-b) Integer means that the column shall be able to exactly represent integer values (i.e., values in increments of 1) in the range of at least ( − 2 n − 1 ) to (2 n − 1 − 1), where n is 64.
+b) Integer means that the column shall be able to exactly represent integer values (i.e., values in increments of 1) in
+the range of at least ( − 2 n − 1 ) to (2 n − 1 − 1), where n is 64.
 
-c) Decimal(d, f) means that the column shall be able to represent decimal values up to and including d digits, of which f shall occur to the right of the decimal place; the values can be either represented exactly or interpreted to be in this range.
+c) Decimal(d, f) means that the column shall be able to represent decimal values up to and including d digits, of which
+f shall occur to the right of the decimal place; the values can be either represented exactly or interpreted to be in
+this range.
 
 d) Char(N) means that the column shall be able to hold any string of characters of a fixed length of N.
 
-Comment: If the string that a column of datatype char(N) holds is shorter than N characters, then trailing spaces shall be stored in the database or the database shall automatically pad with spaces upon retrieval such that a CHAR_LENGTH() function will return N.
+Comment: If the string that a column of datatype char(N) holds is shorter than N characters, then trailing spaces shall
+be stored in the database or the database shall automatically pad with spaces upon retrieval such that a CHAR_LENGTH()
+function will return N.
 
-e) Varchar(N) means that the column shall be able to hold any string of characters of a variable length with a maximum length of N. Columns defined as "varchar(N)" may optionally be implemented as "char(N)".
+e) Varchar(N) means that the column shall be able to hold any string of characters of a variable length with a maximum
+length of N. Columns defined as "varchar(N)" may optionally be implemented as "char(N)".
 
 f) Date means that the column shall be able to express any calendar day between January 1, 1900 and December 31, 2199.
 
 2.2.2.2
-The datatypes do not correspond to any specific SQL-standard datatype. The definitions are provided to highlight the properties that are required for a particular column. The benchmark implementer may employ any internal representation or SQL datatype that meets those requirements.
+The datatypes do not correspond to any specific SQL-standard datatype. The definitions are provided to highlight the
+properties that are required for a particular column. The benchmark implementer may employ any internal representation
+or SQL datatype that meets those requirements.
 
 ## Implementation  
-Based on the above definitions, the following datatype definitions mapping was used.  Note `time` and `date` are converted to UPPER for code formatting consistency, no performance difference is intended.  
+Based on the above definitions, the following datatype definitions mapping was used.  Note `time` and `date` are
+converted to UPPER for code formatting consistency, no performance difference is intended.
 
 | TPC-DS ANSI SQL | BigQuery SQL |
 | --------------- | ------------ |
@@ -47,25 +56,15 @@ from google.cloud import bigquery
 
 import config, tools
 
-"""
-dtype_mapper = {r'  decimal\(\d+,\d+\)  ': r'  FLOAT64  ',
-                r'  varchar\(\d+\)  ':     r'  STRING  ',
-                r'  char\(\d+\)  ':        r'  STRING  ',
-                r'  integer  ':            r'  INT64  ',
-                # the following are just to have consistent UPPERCASE formatting
-                r'  time  ':               r'  TIME  ',
-                r'  date  ':               r'  DATE  '
-               }
-"""
-
 
 def rewrite_schema(filepath_in, filepath_out, dataset_name):
-    """Convert the sample implementation of the logical schema as described in TPC-DS Specification V1.0.0L , specifications.pdf, pg 99, Appendix A and contained in  tpc_root/tools/tpcds.sql.
+    """Convert the sample implementation of the logical schema as described in TPC-DS Specification V1.0.0L ,
+    specifications.pdf, pg 99, Appendix A and contained in  tpc_root/tools/tpcds.sql.
     
     Parameters
     ----------
-    file_path_in : str, path to tpcds.sql file
-    file_path_out : str, path to write BigQuery formatted table schema, named 'tpcds_bq.sql'
+    filepath_in : str, path to tpcds.sql file
+    filepath_out : str, path to write BigQuery formatted table schema, named 'tpcds_bq.sql'
     dataset_name : str, name of BigQuery Dataset to append to existing table names
     
     Returns
@@ -107,7 +106,8 @@ def rewrite_schema(filepath_in, filepath_out, dataset_name):
     text = "\n".join(text_list_out)
     
     open(filepath_out, "w").write(text)
-    
+
+
 def create_dataset_old(verbose=False):
     """Create a dataset on the project
     
@@ -136,8 +136,10 @@ def create_dataset_old(verbose=False):
         print("Created dataset {}.{}".format(client.project, dataset.dataset_id))    
     return copy_job
 
+
 def create_dataset(verbose=False):
     return bq.create_dataset(verbose=verbose)
+
 
 def create_schema(verbose=False):
     """Apply the schema .sql file as reformatted from 
@@ -156,6 +158,7 @@ def create_schema(verbose=False):
     if verbose:
         for r in rows:
             print(r.name)
+
 
 def table_size(client, project, dataset, table, verbose=False):
     """Apply the schema .sql file as reformatted from 
@@ -185,13 +188,14 @@ def table_size(client, project, dataset, table, verbose=False):
     _df = rows.to_dataframe()
     size = _df.loc[0, "size"]
     return size
-            
+
+
 def extract_table_name(f_name):
     """Extract the table name target for a TPC-DS data file
     
     Parameters
     ----------
-    fname : str, name of file as generated with dsdgen
+    f_name : str, name of file as generated with dsdgen
     
     Returns
     -------
@@ -205,11 +209,12 @@ def extract_table_name(f_name):
     for x in f_list:
         try:
             int(x)
-        except:
+        except ValueError:
             f_list_new.append(x)
     return "_".join(f_list_new)
-    
-def upload_all_local(directory, dataset, validate=True, verbose=False):
+
+
+def upload_all_local(directory, dataset, verbose=False):
     
     files = tools.file_inventory(directory)
     
@@ -223,18 +228,15 @@ def upload_all_local(directory, dataset, validate=True, verbose=False):
         table = f[2]
         filepath = f[5]
         load_job = b.upload_local_csv(table=table, filepath=filepath, verbose=verbose)
-        
-    df = validate(directory=folder, dataset=dataset)
-    return df
-    
+
+
 def validate(directory, dataset, byte_multiplier=1):
     dir_files = tools.file_inventory(directory)
     table_names = set([f[2] for f in dir_files])
     table_sizes = {f[2]:f[1] for f in dir_files}
     
     client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
-    
-    
+
     b = BQUpload(client=client,
                  project=config.gcp_project,
                  dataset=config.gcp_dataset)
@@ -252,11 +254,12 @@ def validate(directory, dataset, byte_multiplier=1):
         bq_size = bq_size / 10**6
         data.append([t, local_size, local_rows, bq_size, bq_rows])
         
-    df = pd.DataFrame(date, columns=["table", 
+    df = pd.DataFrame(data, columns=["table",
                                      "local_size", "local_rows",
                                      "bq_size", "bq_rows"])
     df["bq_percent"] = (df.bq_rows / df.local_rows) * 100
     return df
+
 
 class BQUpload:
     """Upload CSV data from a file location"""
@@ -306,8 +309,8 @@ class BQUpload:
         self.get_all_table_ids()
         
     def get_all_table_ids(self):
-        _itter = self.client.list_tables(dataset=self.dataset)
-        self.tables = [_t.table_id for _t in _itter]
+        _tables = self.client.list_tables(dataset=self.dataset)
+        self.tables = [_t.table_id for _t in _tables]
         
     def get_table(self, table_id):
         full_table_id = (self.project + "." +
@@ -346,7 +349,8 @@ class BQUpload:
         filepath : str, path to file to upload
         delimiter : str, delimiting character of CSV file
             default = "|"
-            
+        verbose : bool, print debug statements
+
         Returns
         -------
         google.cloud.bigquery.job.LoadJob
@@ -383,6 +387,7 @@ class BQUpload:
             to upload, or a sequence of strings of the same
         delimiter : str, delimiting character of CSV file
             default = "|"
+        verbose : bool, print debug statements
             
         Returns
         -------
@@ -391,14 +396,15 @@ class BQUpload:
         
         destination = ".".join([config.gcp_project, config.gcp_dataset, table])
         
-        with open(filepath, "rb") as f_open:
-            load_job = client.load_table_from_uri(uri=gs_path,
-                                                  destination=destination,
-                                                  job_config=self.job_config
-                                                  )
-            if verbose:
-                print("Starting job {}".format(load_job.job_id))
-                load_job.result()  # Waits for table load to complete.
-                print("Job finished.")
+        #with open(gs_path, "rb") as gs_open:
+
+        load_job = self.client.load_table_from_uri(uri=gs_path,
+                                                   destination=destination,
+                                                   job_config=self.job_config
+                                                   )
+        if verbose:
+            print("Starting job {}".format(load_job.job_id))
+            load_job.result()  # Waits for table load to complete.
+            print("Job finished.")
                 
         return load_job
