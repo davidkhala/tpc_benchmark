@@ -6,12 +6,32 @@ import io
 import os
 import time
 import datetime
+import threading
+import concurrent.futures
+import numpy as np
 
 from google.auth.transport.requests import AuthorizedSession
 #from google.resumable_media.requests import ResumableUpload
 from google.resumable_media import requests, common
 
 import config, tools
+
+
+"""log formats:
+upload start: dt, 'start', file_name,           ,          ,               ,            , f_size,           , bucket_name
+upload chunk: dt, 'chunk', file_name, chunk_size, http_code,               ,            ,       ,           ,
+upload done:  dt, 'done',  file_name,           ,          , bytes_uploaded, total_bytes,       ,           ,
+upload error: dt, 'error', file_name,           ,          ,               ,            ,       , error_name,
+"""
+
+log_format = ["dt", "action", "file", "chunk_size", 
+              "http_code", "bytes_uploaded", "total_bytes", 
+              "f_size", "exception", "bucket"]
+
+def parser(data_list):
+    import pandas as pd
+    _df = pd.DataFrame(data_list, columns=log_format)
+    return _df
 
 
 class BlobSync:
@@ -40,10 +60,6 @@ class BlobSync:
         self.content_type = "text/csv"  # override this for other files
         self.chunk_size = 256*1024  # min allowed chunk size (TODO: add reference)
         
-        """log formats:
-        upload chunk: iso_time, upload_chunk, file_name, chunk_size, response.status_code
-        upload done:  iso_time, 'upload_done', file_name, upload.bytes_uploaded, upload.total_bytes
-        """
         self.log = []
         
     def filename_extract(self, filepath):
@@ -87,24 +103,27 @@ class BlobSync:
                f'{self.bucket_name}/o?uploadType=resumable'
                )
 
+        if verbose:
+            print("BlobSync.upload_resumable to: {}".format(url))
+            
         upload = requests.ResumableUpload(upload_url=url, chunk_size=self.chunk_size)
         
         stream = io.FileIO(self.local_filepath, mode='r')
         
         transport = AuthorizedSession(credentials=self.client._credentials)
-
+        
         upload.initiate(transport=transport,
                         content_type='application/octet-stream',
                         stream=stream,
                         metadata={'name': self.blob_name}
                         )
-        
         file_name = os.path.basename(self.local_filepath)
         
         # start upload
         dt = datetime.datetime.now().isoformat()
-        f_size = os.path.getsize(self.local_filepath) / 1000000
-        log_line = [dt, "upload_start", file_name, f_size, self.bucket_name]
+        f_size = os.path.getsize(self.local_filepath)
+        log_line = [dt, "start", file_name, "", 
+                    "", "", "", f_size, "" , self.bucket_name]
         self.log.append(log_line)
         if verbose:
             print(" ".join([str(s) for s in log_line]))
@@ -114,7 +133,8 @@ class BlobSync:
             try:
                 response = upload.transmit_next_chunk(transport)
                 dt = datetime.datetime.now().isoformat()
-                log_line = [dt, "upload_chunk", file_name, self.chunk_size, response.status_code]
+                log_line = [dt, "chunk", file_name, self.chunk_size, 
+                            response.status_code, "", "", "", "", ""]
                 self.log.append(log_line)
                 if verbose:
                     print(" ".join([str(s) for s in log_line]))
@@ -123,7 +143,8 @@ class BlobSync:
         
         # return upload object and end time
         dt = datetime.datetime.now().isoformat()
-        log_line = [dt, "upload_done", file_name, upload.bytes_uploaded, upload.total_bytes]
+        log_line = [dt, "done", file_name, "",
+                    "", upload.bytes_uploaded, upload.total_bytes, "", "", ""]
         self.log.append(log_line)
         if verbose:
             print(" ".join([str(s) for s in log_line]))
@@ -153,16 +174,19 @@ class FolderSync:
         blob_name : str, name of blob to create
         """
 
-        self.local_directory = local_directory
-        self.local_files = None
-        self.local_blobs = None
-        self.pattern = pattern
-        
+
         self.client = client
         self.bucket_name = bucket_name
         self.bucket = self.client.get_bucket(self.bucket_name)
+        self.local_directory = local_directory
+        if self.local_directory[-1] == config.sep:
+            self.local_directory = self.local_directory[:-1]
+        self.pattern = pattern
+
         self.bucket_files = None
-        
+        self.local_files = None
+        self.local_blobs = None
+                
         self.log = []
 
     def blob_from_path(self, filepath, root_directory):
@@ -171,49 +195,60 @@ class FolderSync:
         fp = fp.replace(config.sep, "_")
         return fp
         
-    def inventory(self):
+    def inventory_local(self):
         self.local_files = tools.pathlist(self.local_directory, pattern=self.pattern)
+    
+    def inventory_bucket(self):
+        self.bucket_files = [x.name for x in list(self.bucket.list_blobs())]
+            
+    def blobify(self):
         self.local_blobs = {}
         for f in self.local_files:
-            self.local_blobs[f] = self.blob_from_path(f, self.local_directory)
-        self.bucket_files = [x.name for x in list(self.bucket.list_blobs())]
+            self.local_blobs[f] = self.blob_from_path(f, self.local_directory)    
+
+    @property
+    def df_bucket_blobs(self):
+        import pandas as pd
+        _df = pd.DataFrame([(b.name, b.size) for b in self.bucket.list_blobs()],
+                           columns=["file_name", "size_bytes"])
+        return _df
     
     def sync_upload(self, verbose=False):
-        self.inventory()
+        if self.local_files is None:
+            self.inventory_local()
+        if self.bucket_files is None:
+            self.inventory_bucket()
         for f in self.local_files:
-            t = datetime.datetime.now().isoformat()
-            t0 = time.time()
-            f_basename = os.path.basename(f)
-            f_size = os.path.getsize(f) / 1000000
             if verbose:
-                print(t, " - UPLOAD")
-                print(f)
-                print("to:")
-                print(self.local_blobs[f])
-                print("Size: {} MB".format(f_size))
-                
-            self.log.append([t, "up", f_basename, f_size, 0, "started"])
+                print("Uploading: {}".format(f))
+            if os.path.isdir(f):
+                if verbose:
+                    print("Skipping directory: {}".format(f))
+                continue
             if f not in self.bucket_files:
+                file_name = os.path.basename(f)
+                blob_name = self.blob_from_path(f, self.local_directory)
                 try:
                     bs = BlobSync(client=self.client, 
-                                  bucket_name=self.bucket,
+                                  bucket_name=self.bucket_name,
                                   local_filepath=f,
-                                  blob_name=self.local_blobs[f])
-                    bs.upload()
-                    tn = time.time() - t0
-                    self.log.append([t, "up", f_basename, f_size, tn, "done"])
+                                  blob_name=blob_name)
+                    bs.upload_resumable(verbose=verbose)
+                    for log_line in bs.log:
+                        self.log.append(log_line)
                 except Exception as e:
-                    print("While uploading", f)
-                    print("-- size:", f_size)
-                    print(e.__doc__)
-                    #print(e.message)
-                    tn = time.time() - t0
-                    self.log.append([t, "ERROR", f_basename, f_size, tn]) #, e.message])
+                    dt = datetime.datetime.now().isoformat()
+                    if verbose:
+                        print("While uploading", f)
+                        response = e.response
+                        print(response)
+                    self.log.append([dt, "error", f, "", 
+                                     response, "", "", "", e.__class__.__name__, ""])
             if verbose:
                 print("-"*30)
-                    
+                
     def sync_download(self):
-        self.inventory()
+        self.inventory_local()
         for f in self.bucket_files:
             if f not in self.local_files:
                 bs = BlobSync(client=self.client, 
@@ -221,3 +256,62 @@ class FolderSync:
                               local_filepath=self.local_directory + config.sep + f)
                 bs.download()
     
+
+class PooledSync():
+    def __init__(self,  client, bucket_name, local_directory, pattern="*", n=None):
+        
+        self.client = client
+        self.bucket_name = bucket_name
+        self.bucket = self.client.get_bucket(self.bucket_name)
+        self.local_directory = local_directory
+        self.pattern = pattern
+        self.n = n
+        
+        self.bucket_files = None
+        self.local_files = None
+        self.local_blobs = None
+        
+        if self.n is None:
+            self.n = config.cpu_count
+        
+        self.log = []
+            
+        self.control_sync = FolderSync(client=self.client,
+                                       bucket_name=self.bucket_name, 
+                                       local_directory=self.local_directory, 
+                                       pattern="*"
+                                       )
+        self.control_sync.inventory_local()
+        self.control_sync.inventory_bucket()
+        
+        self.local_files = np.array(self.control_sync.local_files)
+        self.local_files_chunks = np.array_split(self.local_files, self.n)
+        self.n_indexes = np.arange(len(self.local_files))
+        self.n_chunks = np.array_split(self.n_indexes, self.n)
+        
+        self.producer_lock = threading.Lock()
+        
+    def sync_upload_chunk(self, local_files, n, verbose=False):
+        
+        fs = FolderSync(client=self.client,
+                        bucket_name=self.bucket_name,
+                        local_directory=self.local_directory)
+        fs.local_files = list(local_files)
+        fs.blobify()
+        #print("A >>", fs.local_directory)
+        #print("B >>", fs.blob_from_path(fs.local_files[0], fs.local_directory))
+        #print("1 >> ", fs.local_files)
+        #print("2 >>", fs.local_blobs)
+        if verbose:
+            print("Start thread {}".format(n))
+        fs.sync_upload(verbose=False)
+        
+        with self.producer_lock:
+            for log_line in fs.log:
+                self.log.append(log_line)
+        
+    def pipeline(self):
+        
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.n) as executor:
+            executor.map(self.sync_upload_chunk, 
+                         self.local_files_chunks, self.n_chunks)

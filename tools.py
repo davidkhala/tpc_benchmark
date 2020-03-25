@@ -6,7 +6,6 @@ TODO: rename this module to tpcds_tools
 
 
 import os
-import glob
 
 import config
 
@@ -33,10 +32,10 @@ def extract_table_name(f_name):
             f_list_new.append(x)
     return "_".join(f_list_new)
 
-def pathlist(directory_path, extension="*"):
+def pathlist(directory_path, pattern="*"):
     """Get all files in a directory, non-recursively"""
     from pathlib import Path
-    return [str(fp) for fp in Path(directory_path).rglob(extension)]
+    return [str(fp) for fp in Path(directory_path).rglob(pattern)]
 
 def pathlist_recursive(directory_path, extension="*"):
     """Get all files in a directory, recursively"""
