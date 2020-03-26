@@ -4,50 +4,14 @@ Colin Dietrich, SADA, 2020
 """
 
 import os
-#import shutil
 import subprocess
 import zipfile
-#import time
 import glob
-import shutil
-#import requests
 
 from google.cloud import storage
 
 import config, gcp_storage
 
-
-def make_directories_DUP():
-    """Make local directories for TPC DS & H tests"""
-    filepath_list_1 = [
-        #config.fp_ds, config.fp_ds_output, 
-        config.fp_h, config.fp_h_output,
-        config.fp_download
-    ]
-
-    filepath_list_1 += [config.fp_h_output + 
-                        config.sep + str(i) + "GB" for i in config.tpc_scale]
-    
-    for fp in filepath_list_1:
-        if not os.path.exists(fp):
-            os.mkdir(fp)
-            
-    if os.path.exists(config.fp_output_mnt):
-        filepath_list_2 = [#config.fp_ds_output_mnt,
-                           config.fp_h_output_mnt]
-        filepath_list_1 += [config.fp_h_output_mnt + 
-                            config.sep + str(i) + "GB" for i in config.tpc_scale]
-    
-        
-        for fp in filepath_list_2:
-            if not os.path.exists(fp):
-                os.mkdir(fp)
-            
-    #with open(config.fp_download + config.sep +
-    #          "place_tpc_zip_here.txt", "w") as f:
-    #    f.write("# Place TCP-DS and TPC-H zip files in this directory\n")
-    #    f.write("# Then run setup_tpcds.py or setup_tpch.py\n")
-        
 
 def download_zip():
     """Download the copy of tpcds source.  See README for versioning."""
@@ -64,14 +28,13 @@ def download_zip():
     return bs.local_filepath
 
 
-
-
 def extract_zip():
     """Extract downloaded TPC-H .zip to the location set in config.fp_h
     """
     with zipfile.ZipFile(config.fp_h_zip) as z:
         z.extractall(config.fp_h)
-        
+
+
 def create_makefile(verbose=False):
     """Edit dbgen/makefile.suite and save to makefile
     setting the c compiler, database, machine and workload
@@ -104,26 +67,38 @@ def create_makefile(verbose=False):
             f.write(line + "\n")
 
 
-def make_tpch():
+def make_tpch(verbose=False):
     """Using the installed C compiler, build TPC-DS.  This assumes an
     installed C compiler is available on the host OS.
     
     Security note: This is also directly running the command line where ever
     config.fp_ds_src is set so be careful.
+
+    Parameters
+    ----------
+    verbose : bool, print stdout and stderr output
     """
     cmd = ["make"]
     pipe = subprocess.run(cmd, 
                           stdout=subprocess.PIPE, 
                           stderr=subprocess.PIPE,
                           cwd=config.fp_h_src + config.sep + "dbgen")
-    
-    if len(pipe.stderr) > 0:
-        print(pipe.stderr.decode("utf-8"))
-    if len(pipe.stdout) > 0:
-        print(pipe.stdout.decode("utf-8"))
+
+    stdout = pipe.stdout.decode("utf-8")
+    stderr = pipe.stderr.decode("utf-8")
+
+    if verbose:
+        if len(stdout) > 0:
+            print(stdout)
+        if len(stderr) > 0:
+            print(stderr)
+
+    return stdout, stderr
+
+# alignment filler
 
 
-def run_dbgen(scale=1):
+def run_dbgen(scale=1, verbose=False):
     """Create data for TPC-H using the binary dbgen with
     a subprocess for each cpu core on the host machine
     
@@ -131,7 +106,7 @@ def run_dbgen(scale=1):
     ----------
     scale : int, scale factor in GB, acceptable values:
         1, 100, 1000, 10000
-    #seed : int, random seed value
+    verbose : bool, print stdout and stderr output
     """
     if scale not in config.tpc_scale:
         raise ValueError("Scale must be one of:", config.tpc_scale)
@@ -145,6 +120,8 @@ def run_dbgen(scale=1):
     binary_folder = config.fp_h_src + config.sep + "dbgen"
     
     pipe_outputs = []
+    stdout = ""
+    stderr = ""
     for n in range(1, total_cpu+1):
         child_cpu = str(n)
         total_cpu = str(total_cpu)
@@ -159,10 +136,16 @@ def run_dbgen(scale=1):
         pipe_outputs.append(pipe)
 
     for pipe in pipe_outputs:
-        if len(pipe.stderr) > 0:
-            print(pipe.stderr.decode("utf-8"))
-        if len(pipe.stdout) > 0:
-            print(pipe.stdout.decode("utf-8"))
+        stdout += pipe.stdout.decode("utf-8")
+        stderr += pipe.stderr.decode("utf-8")
+
+    if verbose:
+        if len(stdout) > 0:
+            print(stdout)
+        if len(stderr) > 0:
+            print(stderr)
+
+    return stdout, stderr
 
 
 def run_qgen(n, scale=1, seed=None, verbose=False):
@@ -223,29 +206,6 @@ def run_qgen(n, scale=1, seed=None, verbose=False):
     std_out = std_out_new
     std_out = "\n".join(std_out)
     return std_out, err_out
-
-
-def move_data_DUP(scale, verbose=False):
-    """TODO: remove, not needed when using env_vars["DSS_PATH"]
-    
-    Move TPC-H dbgen files to output folder
-    
-    Parameters
-    ----------
-    scale : int, scale factor of generated data in GB
-    verbose : bool, print debug statements
-    """
-    source_files = glob.glob(config.fp_h_src + config.sep + 
-                      "dbgen" + config.sep + "*.tbl*")
-    dest = config.fp_h_data_out + config.sep + str(scale) + "GB"
-    destination_files = [(dest + config.sep + 
-                          f.split(config.sep)[-1]) for f in source_files]
-    for s, d in zip(source_files, destination_files):
-        if verbose:
-            print("Moving: ", s)
-            print("To:     ", d)
-            print("--------")
-        shutil.move(s, d)
 
 
 def rewrite_schema(filepath_in, filepath_out, dataset_name):
