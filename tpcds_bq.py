@@ -57,7 +57,7 @@ from google.cloud import bigquery
 import config, tools
 
 
-def rewrite_schema(filepath_in, filepath_out, dataset_name):
+def rewrite_schema_old(filepath_in, filepath_out, dataset_name):
     """Convert the sample implementation of the logical schema as described in TPC-DS Specification V1.0.0L ,
     specifications.pdf, pg 99, Appendix A and contained in  tpc_root/tools/tpcds.sql.
     
@@ -108,7 +108,7 @@ def rewrite_schema(filepath_in, filepath_out, dataset_name):
     open(filepath_out, "w").write(text)
 
 
-def create_dataset_old(verbose=False):
+def create_dataset(dataset_name, verbose=False):
     """Create a dataset on the project
     
     See:
@@ -119,6 +119,7 @@ def create_dataset_old(verbose=False):
     
     Parameters
     ----------
+    dataset_name : str, name of dataset to create
     verbose : bool, print debug statements
     
     Returns
@@ -126,8 +127,8 @@ def create_dataset_old(verbose=False):
     A new copy job instance
     """
     
-    dataset_name = config.gcp_project + "." + config.gcp_dataset
-    dataset = bigquery.Dataset(dataset_name)
+    dataset_name_full = config.gcp_project + "." + dataset_name
+    dataset = bigquery.Dataset(dataset_name_full)
     dataset.location = config.gcp_location
     
     client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
@@ -137,19 +138,20 @@ def create_dataset_old(verbose=False):
     return copy_job
 
 
-def create_dataset(verbose=False):
-    return bq.create_dataset(verbose=verbose)
-
-
-def create_schema(verbose=False):
+def create_schema(schema_file, verbose=False):
     """Apply the schema .sql file as reformatted from 
     config.tpcds_schema_ansi_sql_filepath
     to 
     config.tpcds_schema_bq_filepath
     using schema() method in this module.
+
+    Parameters
+    ----------
+    schema_file : str, path to file containing DDL or sql schema query definitions
+    verbose : bool, print debug statements
     """
     client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
-    with open(config.tpcds_schema_bq_filepath, 'r') as f:
+    with open(schema_file, 'r') as f:
         query_txt = f.read()
         
     query_job = client.query(query_txt)  # API request
@@ -231,9 +233,25 @@ def upload_all_local(directory, dataset, verbose=False):
 
 
 def validate(directory, dataset, byte_multiplier=1):
+    """Validate data integrity between .csv data and data in BigQuery
+
+    Parameters
+    ----------
+    directory : str, path to directory with .csv data files
+    dataset : str, dataset to compare
+    byte_multiplier : int, multiplier for size, default is 1, equal to bytes output
+
+    Returns
+    -------
+    Pandas DataFrame with:
+        columns=["table", "local_size", "local_rows", "bq_size", "bq_rows"]
+    """
+
+    import pandas as pd
+
     dir_files = tools.file_inventory(directory)
     table_names = set([f[2] for f in dir_files])
-    table_sizes = {f[2]:f[1] for f in dir_files}
+    table_sizes = {f[2]: f[1] for f in dir_files}
     
     client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
 

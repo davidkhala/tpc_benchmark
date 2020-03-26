@@ -15,48 +15,44 @@ user_dir = os.path.expanduser('~')
 gcp_cred_file = user_dir + sep + "code" + sep + "sada-colin-dietrich-bd003814fcb1.json"
 
 # 1.1 GCP Project and BigQuery Dataset
-# >> Edit this to what you want created
+# >> Edit this to what project is hosting this work on GCP
+# note: this will have to match your credential file
 gcp_project      = "sada-colin-dietrich"
 gcp_location     = "US"
 
-# 1.2 BigQuery Datasets
-gcp_dataset      = "gcprabbit"
-# dataset_h_1GB
-# dataset_h_100GB
-# dataset_h_1TB
-# dataset_h_10TB
-
-# dataset_ds_1GB
-# dataset_ds_100GB
-# dataset_ds_1TB
-# dataset_ds_10TB
-
-# 1.3 Cloud Storage Buckets
+# 1.2 Cloud Storage Buckets
 # >> Edit to correct Link URL of TPC-DS & TPC-H zip files downloaded from TPC
 gcs_zip_bucket   = "tpc-benchmark-zips-9432"
 gcs_data_bucket  = "tpc-benchmark-9432"
 
-# bucket_zip
-# bucket_data
+# 1.3 BigQuery Datasets
+# >> Do NOT edit this section after dev work
+gcp_dataset      = "gcprabbit"
 
-# 1.3 TPC installer zip file names
+dataset_h_1GB_basic    = "h_1GB_basic"
+dataset_h_100GB_basic  = "h_100GB_basic"
+dataset_h_1TB_basic    = "h_1TB_basic"
+dataset_h_10TB_basic   = "h_10TB_basic"
+
+dataset_ds_1GB_basic   = "ds_1GB_basic"
+dataset_ds_100GB_basic = "ds_100GB_basic"
+dataset_ds_1TB_basic   = "ds_1TB_basic"
+dataset_ds_10TB_basic  = "ds_10TB_basic"
+
+# 1.4 TPC installer zip file names
 gcs_ds_zip       = "tpc-ds_v2.11.0rc2.zip"
 gcs_h_zip        = "tpc-h_2.18.0_rc2.zip"
 
-# 1.4 Compute Engine Mounted Persistent Disk
+# 1.5 Compute Engine Mounted Persistent Disk
 fp_output_mnt    = "/mnt/disks/20tb"
 fp_ds_output_mnt = fp_output_mnt + sep + "ds"
 fp_h_output_mnt  = fp_output_mnt + sep + "h"
 
-# mnt_output
-# mnt_output_ds
-# mnt_output_h
-
-# 1.5 CPU options for TPC data generation, scale factor
+# 1.6 CPU options for TPC data generation, scale factor
 cpu_count = os.cpu_count()
 tpc_scale = [1, 100, 1000, 10000]  # GB
 
-# 1.6 Random Seed
+# 1.7 Random Seed
 random_seed = 13
 
 # 2.0 File Locations
@@ -82,7 +78,7 @@ else:
     
 fp_download = cwd + sep + "download"
 
-# 2.1 Extracted TPC Binaries
+# 2.2 Extracted TPC Binaries
 # >> Edit this 
 fp_ds_zip              = fp_download + sep + "tpc-ds_v2.11.0rc2.zip"
 fp_ds_src_version      = "v2.11.0rc2"  # folder name in the .zip
@@ -92,7 +88,7 @@ fp_h_zip               = fp_download + sep + "tpc-h_2.18.0_rc2.zip"
 fp_h_src_version       = "2.18.0_rc2"  # folder name in the .zip
 fp_h_src               = fp_h  + sep + fp_h_src_version
 
-# 2.2 TPC-H makefile parameters
+# 2.3 TPC-H makefile parameters
 # >> Edit this if not using Linux and targeting SQL
 # see lines 104-108 in makefile.suite
 c_compiler = "gcc"
@@ -100,12 +96,12 @@ database   = "SQLSERVER"
 machine    = "LINUX"
 workload   = "TPCH"
 
-# 2.3 SQL schema files
+# 2.4 SQL schema files
 tpcds_schema_ansi_sql_filepath = fp_ds_src + sep + "tools" + sep + "tpcds.sql"
-tpcds_schema_bq_filepath       = fp_ds_output + sep + "tpcds_schema_bq.sql"
+tpcds_schema_bq_basic_filepath       = fp_ds_output + sep + "tpcds_schema_bq_basic.sql"
 
 h_schema_ddl_filepath = fp_h_src + sep + "dbgen" + sep + "dss.ddl"
-h_schema_bq_filepath = fp_h_output + sep + "tpc_h_schema_bq.ddl"
+h_schema_bq_basic_filepath = fp_h_output + sep + "tpc_h_schema_bq_basic.ddl"
 
-# 2.4 SQL schema table names (for upload method)
+# 2.5 SQL schema table names (for upload method)
 tpcds_table_names = ""

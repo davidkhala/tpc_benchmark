@@ -1,47 +1,102 @@
-"""Specific tools for EDA or debugging
+"""Generic tools for setup, EDA and debugging
 
-TODO: rename this module to tpcds_tools
-> the methods in here are too specific, but not strictly setup
+Colin Dietrich, SADA 2020
 """
 
-
 import os
+import zipfile
 
 import config
+
+
+def make_directories():
+    """Make local directories for TPC DS & H tests"""
+    filepath_list_1 = [
+        config.fp_ds, config.fp_ds_output,
+        config.fp_h, config.fp_h_output,
+        config.fp_download
+    ]
+
+    filepath_list_1 += [config.fp_h_output +
+                        config.sep + str(i) + "GB" for i in config.tpc_scale]
+
+    filepath_list_1 += [config.fp_ds_output +
+                        config.sep + str(i) + "GB" for i in config.tpc_scale]
+
+    for fp in filepath_list_1:
+        if not os.path.exists(fp):
+            os.mkdir(fp)
+
+    if os.path.exists(config.fp_output_mnt):
+        filepath_list_2 = [config.fp_ds_output_mnt,
+                           config.fp_h_output_mnt]
+
+        filepath_list_2 += [config.fp_h_output_mnt +
+                            config.sep + str(i) + "GB" for i in config.tpc_scale]
+
+        filepath_list_2 += [config.fp_ds_output_mnt +
+                            config.sep + str(i) + "GB" for i in config.tpc_scale]
+
+        for fp in filepath_list_2:
+            if not os.path.exists(fp):
+                os.mkdir(fp)
+
+    with open(config.fp_download + config.sep +
+              "place_tpc_zip_here.txt", "w") as f:
+        f.write("# Place TCP-DS and TPC-H zip files in this directory\n")
+        f.write("# Then run ds_setup.py or h_setup.py\n")
+
+
+def extract_zip(zip_filepath, target):
+    """Extract downloaded TPC-DS test .zip to a standard location as set
+    in config.py
+
+    Note: it may be better for repeatability to do this step manually
+
+    Parameters
+    ----------
+    zip_filepath : str, file location of .zip file
+    target : str, directory to expand files to
+    """
+    with zipfile.ZipFile(zip_filepath) as z:
+        z.extractall(target)
+
 
 def extract_table_name(f_name):
     """Extract the table name target for a TPC-DS data file
     
     Parameters
     ----------
-    fname : str, name of file as generated with dsdgen
+    f_name : str, name of file as generated with dsdgen
     
     Returns
     -------
     table_name : str, name of table the file's data should be
         loaded in
     """
-    #f_name = f_name.split(config.sep)[-1]
     f_name = f_name.split(".")[0]
     f_list = f_name.split("_")
     f_list_new = []
     for x in f_list:
         try:
             int(x)
-        except:
+        except ValueError:
             f_list_new.append(x)
     return "_".join(f_list_new)
+
 
 def pathlist(directory_path, pattern="*"):
     """Get all files in a directory, non-recursively"""
     from pathlib import Path
     return [str(fp) for fp in Path(directory_path).rglob(pattern)]
 
+
 def pathlist_recursive(directory_path, extension="*"):
     """Get all files in a directory, recursively"""
     import glob
     files = glob.glob(directory_path + '/**/*.' + extension, recursive=True)
     return files
+
 
 def line_counter(filepath, verbose=False):
     """Count the number of lines in a TPC-DS dsdgen created data file, 
@@ -78,6 +133,7 @@ def line_counter(filepath, verbose=False):
     
     return count, count_read
 
+
 def file_inventory(directory):
     files = pathlist_recursive(directory)
     inv = []
@@ -90,6 +146,7 @@ def file_inventory(directory):
         f_count, f_count_read = line_counter(f)
         inv.append([f_basename, f_size, f_table_name, f_count, f_count_read, f])
     return inv
+
 
 def print_inventory(directory):
     """Print the results of a directory inventory
@@ -114,8 +171,8 @@ def print_inventory(directory):
         f_count_read = str(i[4])
         f_size = "{:.3f}".format(f_size)
         line = "{} {} MB {}".format(f_basename.ljust(l_max+1), 
-                                       f_size.rjust(12),
-                                       f_count.rjust(14))
+                                    f_size.rjust(12),
+                                    f_count.rjust(14))
         width_max = max(width_max, len(line))
         rows.append(line)
     
@@ -124,8 +181,8 @@ def print_inventory(directory):
     print("="*width_max)
 
     print("{} {}    {}".format("File".ljust(l_max+1),
-                                  "Size".rjust(12),
-                                  "Line Count".rjust(14)))
+                                "Size".rjust(12),
+                                "Line Count".rjust(14)))
     print("="*width_max)
 
     for r in rows:
