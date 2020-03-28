@@ -1,4 +1,4 @@
-name: gcp
+name: tpc
 
 channels:
   - defaults
@@ -6,35 +6,16 @@ channels:
   - plotly
 
 dependencies:
-  - python=3.6
+  - python
   - numpy
   - scipy
-  - lxml
   - pandas
-  - statsmodels
-  - xlrd
   - scikit-learn
-  - xarray
-  - netcdf4
-  - geojson
   - matplotlib
   - seaborn
   - plotly
   - cufflinks-py
   - bokeh
-  - jupyter
-  - jupyterlab
-  - beautifulsoup4
-  - tqdm
-  - theano
-  - tensorflow
-  - tensorflow-hub
-  - keras
-  - requests
-  - sqlite
-  - selenium
-  - geckodriver
-  - h5py
   - google-cloud-bigquery
   - google-cloud-bigtable
   - google-cloud-datastore
@@ -42,11 +23,6 @@ dependencies:
   - google-cloud-pubsub
   - google-cloud-storage
   - pip
-
+  
   - pip:
-    - google-cloud-automl
-    - google-cloud-iot
-    - google-cloud-speech
-    - ftransc
     - google-resumable-media
-

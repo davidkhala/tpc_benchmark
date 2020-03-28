@@ -56,46 +56,82 @@ Miles and the Scope of Work estimated this work will take 3-4 weeks.
 | benchmark | +3-4 weeks |  
 
 
-## Development Timeline  
+## Development Tasks  
+### Part I. Data Engineering  
 1. Scope TPC benchmark methods - DONE
-2. Localize TPC tests - DONE
-3. TPC-DS Data Generation
-	a. Generate 1GB data locally - DONE
-	b. Generate 1GB data on vm - DONE in ~20 min @ 96 cores
-	c. Generate 100GB data on vm - DONE in ~1 hr @ 96 cores
-	d. Generate 1000GB, 10TB data on vm
-	e. Transfer all data to GCS
-4. TPC-DS Schema & Query Generation  
+2. Localize TPC tests
+	a. Reproducible extraction & make - DONE
+	a. Bash script parallelized - DONE
+	b. subprocess parallelized - DONE
+	c. dsdgen & dbgen thread & child split output files - DONE
+3. Data Generation Outputs
+	a. TPC-DS
+		1. Generate 1GB data locally - DONE
+		2. Generate 1GB data on vm - DONE in ~ 20 min @ 96 cores  
+		3. Generate 100GB data on vm - DONE in ~ 1 hr @ 96 cores  
+		4. Generate 1000GB, 10TB data on vm - TODO after 1GB, 100GB pipeline validated
+	b. TPC-H
+		1. Generate 1GB data locally - DONE
+		2. Generate 1GB data on vm - DONE  
+		3. Generate 100GB data on vm - TODO  
+		4. Generate 1000GB, 10TB data on vm - TODO
+4. Naive Loading of BQ from /mnt/disk
+	a. Load data into BQ
+		i. FUSE - DONE, but transfer fails, switch to GCS intermediate
+		ii. BQ API - DONE, direct python driver uploads properly
+5. Data Upload to Cloud Storage
+	a. Write methods using python driver - DONE, fails on large files though
+	b. Write methods using resumable media - DONE, all files upload ok
+	c. Write nested flat file schema for tests - DONE
+6. TPC-DS Schema & Query Generation  
 	a. Modify ANSI SQL schema to BQ formatting - DONE
 	b. Modify Query SQL to BQ SQL - DONE
-5. Naive Loading of BQ
-	a. Load 1GB data into BQ
-		i. FUSE
-		ii. BQ API
-	b. Load 100GB data into BQ
+7. Naive Loading of BigQuery (GCS uri to BQ upload)
+	a. 1GB test - TODO again
+	b. Load 100GB data into BQ - redo
 	c. Load 1TB, 10TB data into BQ
-6. Opitmized Loading of BQ
-	a. Load 100GB data into BQ
-	b. Load 1TB, 10TB data into BQ
+8. Naive Loading of Snowflake
+	a. Snowflake account setup - user account done, organization pending
+	b. Snowflake billing setup - CC ok, organization still pending
+	c. Load 1GB data from GSC into Snowflake
+	d. Load 100GB data from GSC into Snowflake
+	e. Load 1TB data from GSC into Snowflake
+	f. Load 10TB data from GSC into Snowflake
+9. Refactor packages
+	a. Combine DS & H shared methods
+	b. Rationalize names & methods
+	c. Coordinate local, GCS, table names
 
-7. Naive Loading of Snowflake
-	a. Load 100GB data into Snowflake
-	b. Load 1TB data into Snowflake
-
-8. 1st round comparisions
+## Part II. Query Evaluation  
+10. Initial query EDA
+	a. DS suite time
+	b. H suite time
+	c. DS per query time
+	d. H per query time
+	e. Evaluate differences
+	f. Identify additional units of measure
+11. BigQuery Best Practices
+	a. literature review
+	b. implement alternative query suites
+		1. breakdown per query times
+12. 1st round comparisions
 	a. BQ naive vs optimized
 	b. BQ v SF
 		i. 100GB
 		ii. 1TB
 	c. SF loaded v SF builtin TPC-DS
-
-9. 2nd round comparisons
+13. 2nd round comparisons
 	a. query categories
 	b. query orders
 	c. cold start vs warm start / precached
-
-10-19 Repeat 1-9 for TPC-H
-- TPC-DS code is was written to handle both
+	d. replacement queries
+14. Notebook refactor from EDA
+	a. install pipeline
+	b. data generation
+	c. query suite tests and compilation
+15. Rewrite Notebook Results
+	a. technical summary
+	b. blog format
 
 ## Data Structure  
 
@@ -281,13 +317,12 @@ https://github.com/GoogleCloudPlatform/gcsfuse/blob/a8d9f02/docs/mounting.md#unm
 
 #### gcsfuse
 1. Follow directions here to add apt source and install gcsfuse:  
-https://github.com/GoogleCloudPlatform/gcsfuse/blob/master/docs/installing.md  
+`https://github.com/GoogleCloudPlatform/gcsfuse/blob/master/docs/installing.md`  
 2. Ensure the Compute Engine Instance was created with ALL API access credentials
 3. Choose what storege bucket to use, here we'll use 'test_bucket' for the example
-4. //$ sudo mkdir /mnt/disks/test_bucket
-5. //$ sudo chmod 777 /mnt/disks/test_bucket
-	>> TODO: less permissive permission?
-6. //$ gcsfuse test_bucket /mnt/disks/test_bucket
+4. ``` sudo mkdir /mnt/disks/test_bucket```
+5. ``` sudo chmod 777 /mnt/disks/test_bucket```
+6. ``` gcsfuse test_bucket /mnt/disks/test_bucket```
 
 
 ## TCO - Total Cost of Ownership?  
@@ -424,3 +459,39 @@ The benchmark abstracts the diversity of operations found in an information anal
 Although the emphasis is on information analysis, the benchmark recognizes the need to periodically refresh its data. The data represents a reasonable image of a business operation as they progress over time. 
 
 Some TPC benchmarks model the operational aspect of the business environment where transactions are executed on a real time basis. Other benchmarks address the simpler, more static model of decision support. The TPC-DS benchmark, models the challenges of business intelligence systems where operational data is used both to support the making of sound business decisions in near real time and to direct long-range planning and exploration.
+
+## VM Setup  
+An AI Notebook can be used to run all code in this project.  Two instances are suggested to reduce costs:
+1. High CPU Count to create data
+	a. 96 cores, 86.4 GB Ram
+	b. boot disk of 40TB persistent disk
+2. Modest specs to run queries and modify SQL Queries
+
+
+## Conda Environment Setup  
+There are two Conda environment files,  
+`environment_gcp.yml` - overkill, almost all possible DS and GCP tools  
+`environment_tpc.yml` - used to update the base conda environment run on GCP AI Notebooks  
+See step 7. in Setup for command line argument to update base conda environment.
+
+
+### Setup Steps  
+
+1. Create an new AI Notebook on GCP
+2. Start instance and open Jupyter Lab
+3. Open new terminal from the plus menu (+)
+4. Add ssh key to github repo if required
+    see: https://help.github.com/en/github/authenticating-to-github/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent  
+5. Once the ssh key is generated, you can view the hash in a Notebook with:
+    ```
+    with open("/home/jupyter/.ssh/id_rsa.pub", "r") as f:
+        for line in f:
+            print(line)
+    ``` 
+    and paste into github.com credential page
+6. git clone the repo
+7. cd to the repo and update the base conda environment with
+    ```
+    conda env update --file environment_tpc.yml --name base
+    ```
+8. 
