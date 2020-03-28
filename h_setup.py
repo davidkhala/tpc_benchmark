@@ -108,8 +108,8 @@ def run_dbgen(scale=1, verbose=False):
         1, 100, 1000, 10000
     verbose : bool, print stdout and stderr output
     """
-    if scale not in config.tpc_scale:
-        raise ValueError("Scale must be one of:", config.tpc_scale)
+    if scale not in config.scale_factors:
+        raise ValueError("Scale must be one of:", config.scale_factors)
     
     env_vars = dict(os.environ)
     env_vars["DSS_PATH"] = config.fp_h_data_out + config.sep + str(scale) + "GB"

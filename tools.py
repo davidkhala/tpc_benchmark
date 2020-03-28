@@ -18,10 +18,10 @@ def make_directories():
     ]
 
     filepath_list_1 += [config.fp_h_output +
-                        config.sep + str(i) + "GB" for i in config.tpc_scale]
+                        config.sep + str(i) + "GB" for i in config.scale_factors]
 
     filepath_list_1 += [config.fp_ds_output +
-                        config.sep + str(i) + "GB" for i in config.tpc_scale]
+                        config.sep + str(i) + "GB" for i in config.scale_factors]
 
     for fp in filepath_list_1:
         if not os.path.exists(fp):
@@ -32,10 +32,10 @@ def make_directories():
                            config.fp_h_output_mnt]
 
         filepath_list_2 += [config.fp_h_output_mnt +
-                            config.sep + str(i) + "GB" for i in config.tpc_scale]
+                            config.sep + str(i) + "GB" for i in config.scale_factors]
 
         filepath_list_2 += [config.fp_ds_output_mnt +
-                            config.sep + str(i) + "GB" for i in config.tpc_scale]
+                            config.sep + str(i) + "GB" for i in config.scale_factors]
 
         for fp in filepath_list_2:
             if not os.path.exists(fp):

@@ -4,7 +4,7 @@ Downloads, makes and generated bash scripts to generate
 TPC-DS data for benchmarking.
 """
 
-import config, ds_setup, tpcds_bq
+import config, ds_setup, bq
 
 # create project folders
 ds_setup.make_directories()
@@ -20,9 +20,9 @@ ds_setup.extract_tpcds_zip(zip_filepath=config.fp_ds_zip,
 ds_setup.make_tpcds()
 
 # edit the tpc-ds schema file
-tpcds_bq.rewrite_schema(filepath_in=config.tpcds_schema_ansi_sql_filepath, 
-                        filepath_out=config.tpcds_schema_bq_filepath, 
-                        dataset_name=config.gcp_dataset)
+bq.rewrite_schema(filepath_in=config.tpcds_schema_ansi_sql_filepath,
+                  filepath_out=config.tpcds_schema_bq_filepath,
+                  dataset_name=config.gcp_dataset)
 
 scale = 1
 
@@ -36,16 +36,16 @@ ds_setup.run_dsdgen(scale=scale, seed=config.random_seed)
 # tpcds_setup.dsdgen_move_bash_scripts()
 
 # create BQ Dataset
-tpcds_bq.create_dataset()
+bq.create_dataset()
 
 # create naive schema
-tpcds_bq.create_schema()
+bq.create_schema()
 
 folder = config.fp_ds_data_out + config.sep + str(scale) + "GB"
 
 # upload the 1 GB data
-df = tpcds_bq.upload_all_local(directory=folder,
-                               dataset=config.gcp_dataset, verbose=True)
+df = bq.upload_all_local(directory=folder,
+                         dataset=config.gcp_dataset, verbose=True)
 
 # print the validation data
 print(df)
