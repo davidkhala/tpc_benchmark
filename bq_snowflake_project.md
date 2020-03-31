@@ -460,6 +460,11 @@ Although the emphasis is on information analysis, the benchmark recognizes the n
 
 Some TPC benchmarks model the operational aspect of the business environment where transactions are executed on a real time basis. Other benchmarks address the simpler, more static model of decision support. The TPC-DS benchmark, models the challenges of business intelligence systems where operational data is used both to support the making of sound business decisions in near real time and to direct long-range planning and exploration.
 
+## GCP Setup  
+1. Create service account key for local development:  
+    https://cloud.google.com/iam/docs/creating-managing-service-account-keys#iam-service-account-keys-create-python
+2. 
+
 ## VM Setup  
 An AI Notebook can be used to run all code in this project.  Two instances are suggested to reduce costs:
 1. High CPU Count to create data

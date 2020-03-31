@@ -164,13 +164,18 @@ class BlobSync:
             
 class FolderSync:
     
-    def __init__(self, client, bucket_name, local_directory, pattern="*"):
-        """
+    def __init__(self, client, bucket_name, 
+                 local_directory, local_base_directory=None, 
+                 pattern="*"):
+        """Syncronize a folder on the local machine with Google Cloud Storage
+        
         Parameters
         ----------
         client : GCP storage client instance
         bucket_name : str, bucket name to access
-        local_filepath : str, path of local file to upload
+        local_directory : str, path of local directory to upload
+        local_base_directory : str, path of local directory that contains local_directory,
+            to use as base directory for blob naming
         blob_name : str, name of blob to create
         """
 
@@ -181,6 +186,11 @@ class FolderSync:
         self.local_directory = local_directory
         if self.local_directory[-1] == config.sep:
             self.local_directory = self.local_directory[:-1]
+        self.local_base_directory = local_base_directory
+        if self.local_base_directory is None:
+            self.local_base_directory = self.local_directory
+        if self.local_base_directory[-1] == config.sep:
+            self.local_base_directory = self.local_base_directory[:-1]
         self.pattern = pattern
 
         self.bucket_files = None
@@ -204,7 +214,7 @@ class FolderSync:
     def blobify(self):
         self.local_blobs = {}
         for f in self.local_files:
-            self.local_blobs[f] = self.blob_from_path(f, self.local_directory)    
+            self.local_blobs[f] = self.blob_from_path(f, self.local_base_directory)    
 
     @property
     def df_bucket_blobs(self):
@@ -227,7 +237,7 @@ class FolderSync:
                 continue
             if f not in self.bucket_files:
                 file_name = os.path.basename(f)
-                blob_name = self.blob_from_path(f, self.local_directory)
+                blob_name = self.blob_from_path(f, self.local_base_directory)
                 try:
                     bs = BlobSync(client=self.client, 
                                   bucket_name=self.bucket_name,
@@ -258,12 +268,27 @@ class FolderSync:
     
 
 class PooledSync():
-    def __init__(self,  client, bucket_name, local_directory, pattern="*", n=None):
+    def __init__(self,  client, bucket_name, 
+                 local_directory, 
+                 local_base_directory=None,
+                 pattern="*", n=None):
+        """Syncronize a folder on the local machine with Google Cloud Storage using
+        a pool of threads.
         
+        Parameters
+        ----------
+        client : GCP storage client instance
+        bucket_name : str, bucket name to access
+        local_directory : str, path of local directory to upload
+        local_base_directory : str, path of local directory that contains local_directory,
+            to use as base directory for blob naming
+        blob_name : str, name of blob to create
+        """
         self.client = client
         self.bucket_name = bucket_name
         self.bucket = self.client.get_bucket(self.bucket_name)
         self.local_directory = local_directory
+        self.local_base_directory = local_base_directory
         self.pattern = pattern
         self.n = n
         
@@ -278,7 +303,8 @@ class PooledSync():
             
         self.control_sync = FolderSync(client=self.client,
                                        bucket_name=self.bucket_name, 
-                                       local_directory=self.local_directory, 
+                                       local_directory=self.local_directory,
+                                       local_base_directory=self.local_base_directory,
                                        pattern="*"
                                        )
         self.control_sync.inventory_local()
@@ -295,7 +321,9 @@ class PooledSync():
         
         fs = FolderSync(client=self.client,
                         bucket_name=self.bucket_name,
-                        local_directory=self.local_directory)
+                        local_directory=self.local_directory,
+                        local_base_directory=self.local_base_directory
+                        )
         fs.local_files = list(local_files)
         fs.blobify()
         #print("A >>", fs.local_directory)
