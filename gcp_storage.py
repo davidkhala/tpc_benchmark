@@ -8,6 +8,7 @@ import time
 import datetime
 import threading
 import concurrent.futures
+import pandas as pd
 import numpy as np
 
 from google.auth.transport.requests import AuthorizedSession
@@ -29,11 +30,47 @@ log_format = ["dt", "action", "file", "chunk_size",
               "f_size", "exception", "bucket"]
 
 def parser(data_list):
-    import pandas as pd
     _df = pd.DataFrame(data_list, columns=log_format)
     return _df
 
-
+def inventory_bucket(gcs_client, bucket_name):
+    """Inventory a GCS bucket and return all blob information as 
+    they relate to TPC benchmarks.
+    
+    Parameters
+    ----------
+    gcs_client : authenticated Google Cloud Storage client instance
+    bucket_name : str, name of bucket within the client service domain
+    
+    Returns
+    -------
+    Pandas DataFrame
+    """
+    
+    b = FolderSync(client=gcs_client,
+                   bucket_name=bucket_name,
+                   local_directory=config.fp_h_output, # just placeholder
+                   local_base_directory=None)
+    
+    b.inventory_bucket()
+    
+    data = [(_b.name, _b.public_url, _b.size) for _b in b.bucket_blobs]
+    
+    df = pd.DataFrame(data, columns=["chunk_name", "url", "size"])
+    df["uri"] = df.url.apply(lambda x: x.replace("https://storage.googleapis.com/", "gs://"))
+    df["name"] = df.chunk_name.str.split(".").apply(lambda x: x[0])
+    
+    df_name = df["name"].str.split("_", 3, expand=True)
+    df_name.columns = ["test", "scale", "table"]
+    
+    df = pd.concat([df, df_name], axis=1, sort=False)
+    
+    df["t0"] = ""
+    df["t1"] = ""
+    df["status"] = ""
+    
+    return df
+    
 class BlobSync:
     """Sync GCP Storage Blob with local file location"""
     def __init__(self, client, bucket_name, local_filepath, blob_name=None):
@@ -193,10 +230,12 @@ class FolderSync:
             self.local_base_directory = self.local_base_directory[:-1]
         self.pattern = pattern
 
-        self.bucket_files = None
         self.local_files = None
         self.local_blobs = None
-                
+        
+        self.bucket_files = None
+        self.bucket_blobs = None
+            
         self.log = []
 
     def blob_from_path(self, filepath, root_directory):
@@ -210,7 +249,8 @@ class FolderSync:
     
     def inventory_bucket(self):
         self.bucket_files = [x.name for x in list(self.bucket.list_blobs())]
-            
+        self.bucket_blobs = [x for x in list(self.bucket.list_blobs())]
+        
     def blobify(self):
         self.local_blobs = {}
         for f in self.local_files:
@@ -218,7 +258,6 @@ class FolderSync:
 
     @property
     def df_bucket_blobs(self):
-        import pandas as pd
         _df = pd.DataFrame([(b.name, b.size) for b in self.bucket.list_blobs()],
                            columns=["file_name", "size_bytes"])
         return _df

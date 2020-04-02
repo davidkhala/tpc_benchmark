@@ -127,7 +127,7 @@ def create_dataset(dataset_name, verbose=False):
     A new copy job instance
     """
     
-    dataset_name_full = config.gcp_project + "." + dataset_name
+    dataset_name_full = config.gcp_project.lower() + "." + dataset_name
     dataset = bigquery.Dataset(dataset_name_full)
     dataset.location = config.gcp_location
     
@@ -374,7 +374,7 @@ class BQUpload:
         google.cloud.bigquery.job.LoadJob
         """
 
-        destination = ".".join([config.gcp_project, config.gcp_dataset, table])
+        destination = ".".join([self.project, self.dataset, table])
 
         with open(filepath, "rb") as f_open:
             if verbose:
@@ -412,17 +412,17 @@ class BQUpload:
         google.cloud.bigquery.job.LoadJob
         """
         
-        destination = ".".join([config.gcp_project, config.gcp_dataset, table])
+        destination = ".".join([self.project, self.dataset, table])
         
         #with open(gs_path, "rb") as gs_open:
 
-        load_job = self.client.load_table_from_uri(uri=gs_path,
+        load_job = self.client.load_table_from_uri(source_uris=gs_path,
                                                    destination=destination,
                                                    job_config=self.job_config
                                                    )
         if verbose:
             print("Starting job {}".format(load_job.job_id))
             load_job.result()  # Waits for table load to complete.
-            print("Job finished.")
+            print("Job finished.".format(load_job.done()))
                 
         return load_job

@@ -24,6 +24,8 @@ gcp_cred_file = user_dir + sep + "code" + sep + cred_file_name
 # 2.1 GCP Project and BigQuery Dataset
 # >> Edit this to what project is hosting this work on GCP
 # note: this will have to match your credential file
+# note: if the project name has uppercase, 
+#       the BQ dataset will need to be converted to all lower 
 #gcp_project      = "sada-colin-dietrich"
 gcp_project      = "TPC-Benchmarking-9432"
 gcp_location     = "US"
@@ -125,14 +127,15 @@ scale_factors = [1, 2, 100, 1000, 10000]  # GB
 scale_factor_mapper = {"1GB": 1, "2GB": 2, "100GB": 100, "1TB": 1000, "10TB": 10000}
 
 # 5.1 Schema Variations
-bq_schema = ["basic"]
-sf_schema = ["basic"]
+bq_schema = ["1_basic"]
+sf_schema = ["1_basic"]
 
 # 5.2 Test Schema Combinations
 test_schema_bq = []
 for test in tests:
-    for schema in bq_schema:
-        test_schema_bq.append(test + "_" + schema)
+    for scale in scale_factors:
+        for schema in bq_schema:
+            test_schema_bq.append(test + "_" + str(scale) + "GB_" + schema)
 
 test_schema_sf = []
 for test in tests:

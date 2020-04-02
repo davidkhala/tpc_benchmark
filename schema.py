@@ -110,5 +110,3 @@ def rewrite_h_basic(filepath_out, dataset_name):
     text = "\n".join(text_list_out)
 
     open(filepath_out, "w").write(text)
-
-    return text
