@@ -4,6 +4,7 @@ Colin Dietrich, SADA, 2020
 """
 
 import os
+import shutil
 import subprocess
 import zipfile
 import glob
@@ -35,6 +36,40 @@ def extract_zip():
         z.extractall(config.fp_h)
 
 
+def modify_dbgen_source(verbose=False):
+    """Modify the source file dss.h to prevent the generation of 
+    trailing delimiters in the output data.  BigQuery does not support trailing
+    delimiters and other methods would be more complex.  
+    
+    The file is located at: (TPC-H source dir)/dbgen/dss.h
+    
+    The alteration is done at line 482. Specifically:
+    481 #define  PR_STRT(fp)   /* any line prep for a record goes here */
+    482 #define  PR_END(fp)    fprintf(fp, "\n")   /* finish the record here */
+    
+    After alteration, line 482 is:
+    482 #define  PR_END(fp) {fseek(fp, -1, SEEK_CUR);fprintf(fp, "\n");}   /* finish the record here */
+
+    Alteration method derived from:
+    https://github.com/gregrahn/tpch-kit/commit/abfbdd352fecabc69baea2244cf43ba184b261d3
+    
+    Parameters
+    ----------
+    verbose : bool, print debug statements
+    """
+    
+    fp = config.fp_h_src + config.sep + "dbgen" + config.sep + "dss.h"
+    
+    # make a backup of the original
+    f_out = shutil.copyfile(fp, fp[:-2]+".h_backup")
+    
+    # alter line 482 based on the function signature
+    text = open(fp).read()
+    old_define = '#define  PR_END(fp)    fprintf(fp, "\\n")'
+    new_define = '#define  PR_END(fp) {fseek(fp, -1, SEEK_CUR);fprintf(fp, "\\n");}'
+    new_text = text.replace(old_define, new_define)
+    open(fp, 'w').write(new_text)
+        
 def create_makefile(verbose=False):
     """Edit dbgen/makefile.suite and save to makefile
     setting the c compiler, database, machine and workload
