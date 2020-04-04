@@ -365,10 +365,7 @@ class PooledSync():
                         )
         fs.local_files = list(local_files)
         fs.blobify()
-        #print("A >>", fs.local_directory)
-        #print("B >>", fs.blob_from_path(fs.local_files[0], fs.local_directory))
-        #print("1 >> ", fs.local_files)
-        #print("2 >>", fs.local_blobs)
+        
         if verbose:
             print("Start thread {}".format(n))
         fs.sync_upload(verbose=False)
