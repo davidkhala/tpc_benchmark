@@ -8,38 +8,10 @@ import concurrent.futures
 import numpy as np
 import pandas as pd
 
-from google.cloud import bigquery, storage
+from google.cloud import bigquery
 
-import config, bq, gcp_storage
-
-
-def bucket_blobs(bucket_name):
-    """Inventory a GCS bucket and return all blob information as 
-    they relate to TPC benchmarks.
-
-    Parameters
-    ----------
-    #gcs_client : authenticated Google Cloud Storage client instance
-    bucket_name : str, name of bucket within the client service domain
-
-    Returns
-    -------
-    Pandas DataFrame
-    """
-    
-    gcs_client = storage.Client.from_service_account_json(config.gcp_cred_file)
-    
-    b = gcp_storage.FolderSync(client=gcs_client,
-                               bucket_name=bucket_name,
-                               local_directory=config.fp_h_output, # just placeholder
-                               local_base_directory=None)
-
-    b.inventory_bucket()
-    return b.bucket_blobs
-
-
-def format_blob_inventory(blobs):
-    return [(_b.name, _b.public_url, _b.size) for _b in blobs]
+import config, bq
+from gcp_storage import inventory_bucket_df
 
 
 def calc_stats(df):
@@ -88,29 +60,10 @@ class BQUpload:
         self.df = None
         
     def inventory_bucket(self):
-        self.bucket_blobs = bucket_blobs(self.bucket_name)
-        self.inventory_data = format_blob_inventory(self.bucket_blobs)
-        
-    #def compile_df(self, data=None):
-    def compile_df(self):
-        
-        #if data is None:
-        #     data = self.inventory_data
-        
-        df = pd.DataFrame(self.inventory_data, columns=["chunk_name", "url", "size_bytes"])
-        df["uri"] = df.url.apply(lambda x: x.replace("https://storage.googleapis.com/", "gs://"))
-        df["name"] = df.chunk_name.str.split(".").apply(lambda x: x[0])
-
-        df_name = df["name"].str.split("_", 3, expand=True)
-        df_name.columns = ["test", "scale", "table"]
-
-        df = pd.concat([df, df_name], axis=1, sort=False)
-
-        df["t0"] = ""
-        df["t1"] = ""
-        df["done"] = ""
-
-        self.df = df
+        self.df = inventory_bucket_df(self.bucket_name)
+        self.df["t0"] = ""
+        self.df["t1"] = ""
+        self.df["done"] = ""
     
     def subset_df(self):
         self.df = self.df.loc[(self.df.test == self.test) & 
@@ -129,7 +82,7 @@ class BQUpload:
                                      verbose=self.verbose)
         
         while not load_job.done():
-            print("HEREEEEE")
+            print("Still loading...")
             
         return load_job
         
@@ -179,6 +132,7 @@ class BQPooledUpload:
         
         # inventory, compile and subset the blob list to this test and scale
         self.base_up.inventory_bucket()
+        
         self.base_up.compile_df()
         self.base_up.subset_df()
         

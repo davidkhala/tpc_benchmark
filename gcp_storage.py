@@ -12,7 +12,7 @@ import pandas as pd
 import numpy as np
 
 from google.auth.transport.requests import AuthorizedSession
-#from google.resumable_media.requests import ResumableUpload
+from google.cloud import storage
 from google.resumable_media import requests, common
 
 import config, tools
@@ -29,9 +29,11 @@ log_format = ["dt", "action", "file", "chunk_size",
               "http_code", "bytes_uploaded", "total_bytes", 
               "f_size", "exception", "bucket"]
 
+
 def parser(data_list):
     _df = pd.DataFrame(data_list, columns=log_format)
     return _df
+
 
 def inventory_bucket(gcs_client, bucket_name):
     """Inventory a GCS bucket and return all blob information as 
@@ -70,7 +72,8 @@ def inventory_bucket(gcs_client, bucket_name):
     df["status"] = ""
     
     return df
-    
+
+
 class BlobSync:
     """Sync GCP Storage Blob with local file location"""
     def __init__(self, client, bucket_name, local_filepath, blob_name=None):
@@ -198,7 +201,8 @@ class BlobSync:
         self.blob.download_to_filename(self.local_filepath)
         if verbose:
             print("Downloaded blob {} to {}.".format(self.blob.name, self.local_filepath))
-            
+
+
 class FolderSync:
     
     def __init__(self, client, bucket_name, 
@@ -275,7 +279,7 @@ class FolderSync:
                     print("Skipping directory: {}".format(f))
                 continue
             if f not in self.bucket_files:
-                file_name = os.path.basename(f)
+                file_name = os.path.basename(f)  # TODO: remove?
                 blob_name = self.blob_from_path(f, self.local_base_directory)
                 try:
                     bs = BlobSync(client=self.client, 
@@ -306,12 +310,12 @@ class FolderSync:
                 bs.download()
     
 
-class PooledSync():
+class PooledSync:
     def __init__(self,  client, bucket_name, 
                  local_directory, 
                  local_base_directory=None,
                  pattern="*", n=None):
-        """Syncronize a folder on the local machine with Google Cloud Storage using
+        """Synchronize a folder on the local machine with Google Cloud Storage using
         a pool of threads.
         
         Parameters
@@ -321,7 +325,6 @@ class PooledSync():
         local_directory : str, path of local directory to upload
         local_base_directory : str, path of local directory that contains local_directory,
             to use as base directory for blob naming
-        blob_name : str, name of blob to create
         """
         self.client = client
         self.bucket_name = bucket_name
@@ -379,3 +382,105 @@ class PooledSync():
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.n) as executor:
             executor.map(self.sync_upload_chunk, 
                          self.local_files_chunks, self.n_chunks)
+
+
+def bucket_blobs(bucket_name):
+    """Inventory a GCS bucket and return all blob information as
+    they relate to TPC benchmarks.
+
+    Parameters
+    ----------
+    #gcs_client : authenticated Google Cloud Storage client instance
+    bucket_name : str, name of bucket within the client service domain
+
+    Returns
+    -------
+    Pandas DataFrame
+    """
+
+    gcs_client = storage.Client.from_service_account_json(config.gcp_cred_file)
+
+    b = FolderSync(client=gcs_client,
+                   bucket_name=bucket_name,
+                   local_directory=config.fp_h_output,  # just placeholder
+                   local_base_directory=None)
+
+    b.inventory_bucket()
+    return b.bucket_blobs
+
+
+def format_blob_inventory(blobs):
+    """Get basic blob info: name, url, size in bytes"""
+    return [(_b.name, _b.public_url, _b.size) for _b in blobs]
+
+
+def base_split(s):
+    """Base split of TPC-DS and TPC-H generaged
+    data files"""
+    x = s.split("_")
+    test = x[0]
+    scale = x[1]
+    more = x[2:]
+    return test, scale, more
+
+
+def extract_test(s):
+    """Extract the test name, either 'ds' or 'h'"""
+    test, _scale, _more = base_split(s)
+    return test
+
+
+def extract_scale(s):
+    """Extract the TPC scale factor the data file
+    was generated under"""
+    _test, scale, _more = base_split(s)
+    return scale
+
+
+def extract_table(s):
+    """Extract table name from TPC-DS and TPC-H file names"""
+    test, scale, more = base_split(s)
+    if test == "ds":
+        if len(more) == 3:
+            return more[0]
+        elif len(more) == 4:
+            return more[0] + "_" + more[1]
+        else: return "ds-non-table"
+    elif test == "h":
+        return more[0].split(".")[0]
+    else:
+        return "non-table"
+
+
+def extract_chunk_number(s):
+    """Extract chunk number, i.e. thread number when generated"""
+    test, scale, more = base_split(s)
+    if test == "ds":
+        return more[-2]
+    elif test == "h":
+        ext = more[-1].split(".")
+        n = ext[-1]
+        try:
+            int(n)
+            return n
+        except ValueError:
+            return "1"
+    else:
+        return "non-table"
+
+
+def inventory_blobs_df(blobs):
+    data = format_blob_inventory(blobs)
+    df = pd.DataFrame(data, columns=["chunk_name", "url", "size_bytes"])
+    df["uri"] = df.url.apply(lambda x: x.replace("https://storage.googleapis.com/", "gs://"))
+    df["test"] = df.chunk_name.apply(extract_test)
+    df["scale"] = df.chunk_name.apply(extract_scale)
+    df["table"] = df.chunk_name.apply(extract_table)
+    df["n"] = df.chunk_name.apply(extract_chunk_number)
+    return df
+
+
+def inventory_bucket_df(bucket_name):
+    blobs = bucket_blobs(bucket_name)
+    df = inventory_blobs_df(blobs)
+    return df
