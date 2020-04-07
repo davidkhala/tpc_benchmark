@@ -109,8 +109,8 @@ def run_dsdgen(scale=1, seed=None, verbose=False):
     seed : int, random seed value
     verbose : bool, print stdout and stderr output
     """
-    if scale not in config.tpc_scale:
-        raise ValueError("Scale must be one of:", config.tpc_scale)
+    if scale not in config.scale_factors:
+        raise ValueError("Scale must be one of:", config.scale_factors)
 
     _data_out = config.fp_ds_data_out + config.sep + str(scale) + "GB"
 

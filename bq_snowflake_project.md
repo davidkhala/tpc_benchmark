@@ -380,6 +380,28 @@ https://github.com/pivotalguru/TPC-DS
 
 ### Snowflake  
 
+Snowflake comes in multiple instance types, they are:
+
+#### Snowflake Standard:
+Robust SQL functionality. Data is always encrypted when it is sent over the public Internet or when it is stored on disk.
+
+#### Snowflake Premier:
+Standard plus support for SLAs, and 24 x 365 service/support.
+
+#### Snowflake Enterprise:
+Premier plus 90-day time travel, multi-cluster warehouse, and materialized views.
+
+#### Snowflake Business Critical:
+Data is encrypted when it is transmitted over the network within the Snowflake VPC. Additionally, the metadata for all customer queries including the SQL text is fully encrypted at the application level before it is persisted to the metadata store.
+
+Business Critical is Snowflake’s solution for customers with specific compliance requirements. It includes HIPAA support, is PCI compliant and features an enhanced security policy. Customers must enter into a Business Associate Agreement (“BAA”) with Snowflake before uploading any HIPAA data to the service. To obtain a Business Associate Agreement (“BAA”) please reach out to sales.
+
+#### Snowflake Configuration Used  
+Edition: Standard
+Provider: Amazon Web Services
+Region: US West (Oregon)
+
+
 A good diagram of Snowflake architecture layers and caching
 https://www.analytics.today/blog/caching-in-snowflake-data-warehouse  
 
