@@ -64,17 +64,17 @@ Miles and the Scope of Work estimated this work will take 3-4 weeks.
 	a. Bash script parallelized - DONE
 	b. subprocess parallelized - DONE
 	c. dsdgen & dbgen thread & child split output files - DONE
-3. Data Generation Outputs
+3. Data Generation - Pipeline Development
 	a. TPC-DS
 		1. Generate 1GB data locally - DONE
-		2. Generate 1GB data on vm - DONE in ~ 20 min @ 96 cores  
-		3. Generate 100GB data on vm - DONE in ~ 1 hr @ 96 cores  
-		4. Generate 1000GB, 10TB data on vm - TODO after 1GB, 100GB pipeline validated
+		2. Generate 2GB data locally - DONE
+		3. Generate 1GB data on vm - DONE in ~ 20 min @ 96 cores
+		4. Generate 1GB data on vm - DONE in ~ 20 min @ 96 cores
 	b. TPC-H
 		1. Generate 1GB data locally - DONE
-		2. Generate 1GB data on vm - DONE  
-		3. Generate 100GB data on vm - TODO  
-		4. Generate 1000GB, 10TB data on vm - TODO
+		2. Generate 2GB data locally - DONE
+		3. Generate 1GB data on vm - DONE  
+		4. Generate 2GB data on vm - TODO		
 4. Naive Loading of BQ from /mnt/disk
 	a. Load data into BQ
 		i. FUSE - DONE, but transfer fails, switch to GCS intermediate
@@ -86,28 +86,86 @@ Miles and the Scope of Work estimated this work will take 3-4 weeks.
 6. TPC-DS Schema & Query Generation  
 	a. Modify ANSI SQL schema to BQ formatting - DONE
 	b. Modify Query SQL to BQ SQL - DONE
-7. Naive Loading of BigQuery (GCS uri to BQ upload)
-	a. 1GB test - TODO again
-	b. Load 100GB data into BQ - redo
-	c. Load 1TB, 10TB data into BQ
-8. Naive Loading of Snowflake
+
+7. Refactor packages
+	a. Combine DS & H shared methods - DONE
+	b. Rationalize names & methods - DONE
+	c. Coordinate local, GCS, table names - DONE
+
+
+8. Naive Loading of BigQuery (GCS uri to BQ upload)
+	a. 1GB - TODO again
+	b. 2GB 
+	
+9. Naive Loading of Snowflake
 	a. Snowflake account setup - user account done, organization pending
 	b. Snowflake billing setup - CC ok, organization still pending
 	c. Load 1GB data from GSC into Snowflake
-	d. Load 100GB data from GSC into Snowflake
-	e. Load 1TB data from GSC into Snowflake
-	f. Load 10TB data from GSC into Snowflake
-9. Refactor packages
-	a. Combine DS & H shared methods
-	b. Rationalize names & methods
-	c. Coordinate local, GCS, table names
+	d. Load 2GB data
+
+10. Naive Query Evaluation
+	a. TPC-DS suite
+		1. BQ
+		2. SF
+	b. TPC-H suite
+		1. BQ
+		2. SF
+	
+11. Generate Larger Datasets on VM
+	a. 100GB - REDO (~ 1 hr @ 96 cores)  
+	b. 1TB
+	c. 10TB
+		
+12. Naive Load 100GB
+	a. BQ
+	b. SF
+
+10. Naive Query Evaluation
+	a. TPC-DS suite
+		1. BQ
+		2. SF
+	b. TPC-H suite
+		1. BQ
+		2. SF
+
+11. Cluster and Partition
+	a. BQ
+		1. 100GB
+		2. 1TB
+
+	b. SF
+		1. 100GB
+		2. 1TB
+
+12. Further Optimizations?
+	a. BQ
+		1. 100GB
+		2. 1TB
+
+	b. SF
+		1. 100GB
+		2. 1TB
+
+13. Query Category Breakdown
+	a. 100GB
+		1. BQ
+		2. SF
+
+13. Final load of 10TB
+	a. 
 
 ## Part II. Query Evaluation  
 10. Initial query EDA
-	a. DS suite time
-	b. H suite time
-	c. DS per query time
-	d. H per query time
+	a. 1GB Scale Factor
+		1. DS suite time
+		2. H suite time
+		3. DS per query time
+		4. H per query time
+	b. 2GB Scale Factor
+		1. DS suite time
+		2. H suite time
+		3. DS per query time
+		4. H per query time
 	e. Evaluate differences
 	f. Identify additional units of measure
 11. BigQuery Best Practices

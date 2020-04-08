@@ -8,6 +8,8 @@ import time
 import datetime
 import threading
 import concurrent.futures
+
+import gcsfs
 import pandas as pd
 import numpy as np
 
@@ -483,4 +485,40 @@ def inventory_blobs_df(blobs):
 def inventory_bucket_df(bucket_name):
     blobs = bucket_blobs(bucket_name)
     df = inventory_blobs_df(blobs)
+    return df
+
+
+def get_last_row(uri):
+    fs = gcsfs.GCSFileSystem(project=config.gcp_project,
+                         token=config.gcp_cred_file)
+    with fs.open(uri) as f:
+        df = pd.read_csv(f, sep="|", header=None, encoding="ISO-8859-1")
+    return df.iloc[-1,0]
+
+
+def get_dataset_rows():
+    df = inventory_bucket_df(bucket_name=config.gcs_data_bucket)
+    df["str_valid"] = df.test + "_" + df.scale + "_" + df.table
+    df["valid"] = df.apply(lambda x: x.str_valid in x.chunk_name, axis=1)
+    assert(len(df[df.valid == False]) == 0)
+    df.n = df.n.astype(int)
+    df["max_n"] = 0
+    
+    # terrible combination finding solution
+    for test in df.test.unique():
+        _df1 = df[df.test == test]
+        for s in _df1.scale.unique():
+            _df2 = _df1[_df1.scale == s]
+            for table in _df2.table.unique():
+                if "version" not in table:
+                    mask = ((df.test == test) & 
+                            (df.scale == s) & 
+                            (df.table == table))
+                    _df3 = df[mask]
+                    df.loc[mask, "max_n"] = _df3.n.max()
+                    
+    x = df.loc[df.max_n == df.n].copy()  # copy is probably unneeded
+    rows = x.uri.apply(get_last_row)
+    df["row_count"] = ""
+    df.loc[df.max_n == df.n, "row_count"] = rows
     return df
