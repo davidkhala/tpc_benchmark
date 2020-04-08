@@ -2,6 +2,7 @@
 
 Colin Dietrich, SADA 2020
 """
+import sys
 import threading
 import concurrent.futures
 
@@ -77,10 +78,17 @@ class BQUpload:
                          project=config.gcp_project.lower(),
                          dataset=self.dataset_name)
         
-        load_job = up.upload_uri_csv(table=table_name,
-                                     gs_path=uri,
-                                     verbose=self.verbose)
-        
+        try:
+            load_job = up.upload_uri_csv(table=table_name,
+                                         gs_path=uri,
+                                         verbose=self.verbose)
+        except:
+            e = sys.exc_info()[0]
+            print("Exception processing:")
+            print(table_name, uri)
+            print("-"*20)
+            print(e)
+            
         while not load_job.done():
             print("Still loading...")
             
@@ -90,8 +98,14 @@ class BQUpload:
         
         uri = row.uri
         table_name = row.table
-        table_name = table_name.upper()
-        
+        if self.test == "h":
+            table_name = table_name.upper()
+            
+        for ig in config.ignore_files:
+            if ig in row.chunk_name:
+                row.job_id = "skipped"
+                return row
+            
         t0 = str(pd.Timestamp.now())
         load_job = self.upload_item(table_name=table_name, uri=uri)
         t1 = str(pd.Timestamp.now())
@@ -133,7 +147,7 @@ class BQPooledUpload:
         # inventory, compile and subset the blob list to this test and scale
         self.base_up.inventory_bucket()
         
-        self.base_up.compile_df()
+        #self.base_up.compile_df()
         self.base_up.subset_df()
         
         self.df = self.base_up.df

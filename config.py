@@ -118,8 +118,9 @@ h_schema_ddl_filepath = fp_h_src + sep + "dbgen" + sep + "dss.ddl"
 ds_schema_bq_basic_filepath       = fp_ds_output + sep + "tpcds_schema_bq_basic.sql"
 h_schema_bq_basic_filepath = fp_h_output + sep + "tpc_h_schema_bq_basic.ddl"
 
-# 2.5 SQL schema table names (for upload method)
-#tpcds_table_names = ""
+# 4.3 Files output by data generators from either test
+# to ignore
+ignore_files = ["version"]
 
 # 5.0 Experimental Setup
 tests = ["ds", "h"]
