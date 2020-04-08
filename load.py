@@ -103,7 +103,7 @@ class BQUpload:
             
         for ig in config.ignore_files:
             if ig in row.chunk_name:
-                row.job_id = "skipped"
+                row.table = "NA - skipped"
                 return row
             
         t0 = str(pd.Timestamp.now())
