@@ -1,9 +1,11 @@
-# Benchmark Comparison of BigQuery and Snowflake  
+# TPC Benchmark Comparison of BigQuery and Snowflake  
 
 ## Project Description  
-Perform an analysis of the strengths and weakness of BigQuery when using TPC-DS and TPC-H standards, when compared to SnowFlake.
+
+SOW: Perform an analysis of the strengths and weakness of BigQuery when using TPC-DS and TPC-H standards, when compared to SnowFlake.
 
 ## Terminology  
+
 TPC uses specific terminology for the work, for a complete list see 
 x.xx in TCP-DS specifications.pdf  
 y.yy in TPC-H specification.pdf  
@@ -13,7 +15,7 @@ SUT : System Under Test - i.e. the database system being tested
 
 ## Scope of Work  
 
-The following topics will be observed and included in the final report:  
+The following items were specified in the SOW:  
 * The setup experience  
 * Ops Tasks
     * TODO: more clarity on what this means
@@ -26,37 +28,23 @@ The following topics will be observed and included in the final report:
     * TODO: What is the reference blog for this style?
 * Graphic representations of relative measures  
 
-## Time and Allocation  
-The Scope of Work states this project will take 100 hrs total to complete using the following capacities:  
-
-| Role | Allocation | Equvalent Hours |  
-| ---- | ---------- | --------------- |   
-| Project Owner | 25% | 14 |  
-| Subject Area Expert | 25% | 14 |  
-| Project Manager | 25% | 14 |  
-| Technical Lead | 100% | 57 |  
-
-## Deliverable  
-
-| Deliverable | Description |  
-| ----------- | ----------- | 
-| Benchmark Outline | Full outline of the benchmark document to be published |  
-| Benchmark Draft | A complete first draft for joint review, feedback and ratification for publication |  
-| Benchmark | URL to public-readable benchmark document |  
-
-
-## PreSales Timeline Description    
-Miles and the Scope of Work estimated this work will take 3-4 weeks.  
-
-| Milestone | Timeline |  
-| --------- | -------- |  
-| kickoff | 0 |
-| benchmark outline | + 1 week |  
-| benchmark draft | +3 weeks |  
-| benchmark | +3-4 weeks |  
-
-
 ## Development Tasks  
+
+### Overview  
+
+1. Source TPC binaries
+2. Pipeline TPC binaries
+3. Generate data on VM boot disk
+4. Load VM data into GCS Bucket
+5. Generate BQ datasets and schema
+6. Load data from GCS to BQ
+7. Load data from GCS to SF
+8. Query BQ
+9. Query SF
+10. Iterate 5-9 on scale 1, 100, 1000, 10000
+11. Compile results
+
+
 ### Part I. Data Engineering  
 1. Scope TPC benchmark methods - DONE
 2. Localize TPC tests
@@ -91,7 +79,6 @@ Miles and the Scope of Work estimated this work will take 3-4 weeks.
 	a. Combine DS & H shared methods - DONE
 	b. Rationalize names & methods - DONE
 	c. Coordinate local, GCS, table names - DONE
-
 
 8. Naive Loading of BigQuery (GCS uri to BQ upload)
 	a. 1GB - TODO again
@@ -190,6 +177,37 @@ Miles and the Scope of Work estimated this work will take 3-4 weeks.
 15. Rewrite Notebook Results
 	a. technical summary
 	b. blog format
+
+
+
+## Time and Allocation  
+The Scope of Work states this project will take 100 hrs total to complete using the following capacities:  
+
+| Role | Allocation | Equvalent Hours |  
+| ---- | ---------- | --------------- |   
+| Project Owner | 25% | 14 |  
+| Subject Area Expert | 25% | 14 |  
+| Project Manager | 25% | 14 |  
+| Technical Lead | 100% | 57 |  
+
+## Deliverable  
+
+| Deliverable | Description |  
+| ----------- | ----------- | 
+| Benchmark Outline | Full outline of the benchmark document to be published |  
+| Benchmark Draft | A complete first draft for joint review, feedback and ratification for publication |  
+| Benchmark | URL to public-readable benchmark document |  
+
+
+## PreSales Timeline Description    
+Miles and the Scope of Work estimated this work will take 3-4 weeks.  
+
+| Milestone | Timeline |  
+| --------- | -------- |  
+| kickoff | 0 |
+| benchmark outline | + 1 week |  
+| benchmark draft | +3 weeks |  
+| benchmark | +3-4 weeks |  
 
 ## Data Structure  
 
@@ -477,6 +495,10 @@ https://panoply.io/data-warehouse-guide/bigquery-architecture/
 
 Whitepaper on BQ internals  
 https://cloud.google.com/files/BigQueryTechnicalWP.pdf
+
+https://cloud.google.com/bigquery/docs/best-practices-costs
+https://cloud.google.com/bigquery/docs/best-practices-storage
+
 
 
 ### Google Cloud Storage  
