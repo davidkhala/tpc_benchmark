@@ -7,23 +7,15 @@ channels:
 
 dependencies:
   - python
-  - numpy
-  - scipy
+  - jupyterlab
+  - snowflake-connector-python
   - pandas
-  - scikit-learn
   - matplotlib
   - seaborn
-  - plotly
-  - cufflinks-py
-  - bokeh
   - google-cloud-bigquery
-  - google-cloud-bigtable
-  - google-cloud-datastore
-  - google-cloud-language
-  - google-cloud-pubsub
   - google-cloud-storage
   - gcsfs
   - pip
-  
+
   - pip:
     - google-resumable-media
