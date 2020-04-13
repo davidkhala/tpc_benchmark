@@ -1,0 +1,42 @@
+    [
+      {
+        "mode": "REQUIRED", 
+        "name": "C_CUSTKEY", 
+        "type": "INTEGER"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "C_NAME", 
+        "type": "STRING"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "C_ADDRESS", 
+        "type": "STRING"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "C_NATIONKEY", 
+        "type": "INTEGER"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "C_PHONE", 
+        "type": "STRING"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "C_ACCTBAL", 
+        "type": "FLOAT"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "C_MKTSEGMENT", 
+        "type": "STRING"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "C_COMMENT", 
+        "type": "STRING"
+      }
+    ]

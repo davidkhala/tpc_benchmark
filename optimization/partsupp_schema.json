@@ -1,0 +1,27 @@
+   [
+      {
+        "mode": "REQUIRED", 
+        "name": "PS_PARTKEY", 
+        "type": "INTEGER"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "PS_SUPPKEY", 
+        "type": "INTEGER"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "PS_AVAILQTY", 
+        "type": "INTEGER"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "PS_SUPPLYCOST", 
+        "type": "FLOAT"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "PS_COMMENT", 
+        "type": "STRING"
+      }
+   ]

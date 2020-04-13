@@ -1,0 +1,57 @@
+{
+  "creationTime": "1586384591960", 
+  "etag": "WBsubND/2TX9SvKboHB3pQ==", 
+  "id": "tpc-benchmarking-9432:h_2GB_1_basic.SUPPLIER", 
+  "kind": "bigquery#table", 
+  "lastModifiedTime": "1586384670369", 
+  "location": "US", 
+  "numBytes": "3048144", 
+  "numLongTermBytes": "0", 
+  "numRows": "20000", 
+  "schema": {
+    "fields": [
+      {
+        "mode": "REQUIRED", 
+        "name": "S_SUPPKEY", 
+        "type": "INTEGER"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "S_NAME", 
+        "type": "STRING"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "S_ADDRESS", 
+        "type": "STRING"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "S_NATIONKEY", 
+        "type": "INTEGER"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "S_PHONE", 
+        "type": "STRING"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "S_ACCTBAL", 
+        "type": "FLOAT"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "S_COMMENT", 
+        "type": "STRING"
+      }
+    ]
+  }, 
+  "selfLink": "https://bigquery.googleapis.com/bigquery/v2/projects/tpc-benchmarking-9432/datasets/h_2GB_1_basic/tables/SUPPLIER", 
+  "tableReference": {
+    "datasetId": "h_2GB_1_basic", 
+    "projectId": "tpc-benchmarking-9432", 
+    "tableId": "SUPPLIER"
+  }, 
+  "type": "TABLE"
+}

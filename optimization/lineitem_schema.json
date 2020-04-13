@@ -1,0 +1,82 @@
+    [
+      {
+        "mode": "REQUIRED", 
+        "name": "L_ORDERKEY", 
+        "type": "INTEGER"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "L_PARTKEY", 
+        "type": "INTEGER"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "L_SUPPKEY", 
+        "type": "INTEGER"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "L_LINENUMBER", 
+        "type": "INTEGER"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "L_QUANTITY", 
+        "type": "FLOAT"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "L_EXTENDEDPRICE", 
+        "type": "FLOAT"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "L_DISCOUNT", 
+        "type": "FLOAT"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "L_TAX", 
+        "type": "FLOAT"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "L_RETURNFLAG", 
+        "type": "STRING"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "L_LINESTATUS", 
+        "type": "STRING"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "L_SHIPDATE", 
+        "type": "DATE"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "L_COMMITDATE", 
+        "type": "DATE"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "L_RECEIPTDATE", 
+        "type": "DATE"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "L_SHIPINSTRUCT", 
+        "type": "STRING"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "L_SHIPMODE", 
+        "type": "STRING"
+      }, 
+      {
+        "mode": "REQUIRED", 
+        "name": "L_COMMENT", 
+        "type": "STRING"
+      }
+    ]
