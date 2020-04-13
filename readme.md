@@ -30,154 +30,216 @@ The following items were specified in the SOW:
 
 ## Development Tasks  
 
-### Overview  
-
-1. Source TPC binaries
-2. Pipeline TPC binaries
-3. Generate data on VM boot disk
-4. Load VM data into GCS Bucket
-5. Generate BQ datasets and schema
-6. Load data from GCS to BQ
-7. Load data from GCS to SF
-8. Query BQ
-9. Query SF
-10. Iterate 5-9 on scale 1, 100, 1000, 10000
-11. Compile results
-
-
-### Part I. Data Engineering  
 1. Scope TPC benchmark methods - DONE
+
 2. Localize TPC tests
-	a. Reproducible extraction & make - DONE
-	a. Bash script parallelized - DONE
-	b. subprocess parallelized - DONE
-	c. dsdgen & dbgen thread & child split output files - DONE
+    1. Reproducible extraction & make - DONE
+    2. Bash script parallelized - DONE
+    3. subprocess parallelized - DONE
+    4. dsdgen & dbgen thread & child split output files - DONE  
+
+
 3. Data Generation - Pipeline Development
-	a. TPC-DS
-		1. Generate 1GB data locally - DONE
-		2. Generate 2GB data locally - DONE
-		3. Generate 1GB data on vm - DONE in ~ 20 min @ 96 cores
-		4. Generate 1GB data on vm - DONE in ~ 20 min @ 96 cores
-	b. TPC-H
-		1. Generate 1GB data locally - DONE
-		2. Generate 2GB data locally - DONE
-		3. Generate 1GB data on vm - DONE  
-		4. Generate 2GB data on vm - TODO		
-4. Naive Loading of BQ from /mnt/disk
-	a. Load data into BQ
-		i. FUSE - DONE, but transfer fails, switch to GCS intermediate
-		ii. BQ API - DONE, direct python driver uploads properly
+    1. TPC-DS
+        1. Generate 1GB data locally - DONE
+        2. Generate 2GB data locally - DONE
+        3. Generate 1GB data on vm - DONE in ~ 20 min @ 96 cores
+        4. Generate 1GB data on vm - DONE in ~ 20 min @ 96 cores
+    2. TPC-H
+        1. Generate 1GB data locally - DONE
+        2. Generate 2GB data locally - DONE
+        3. Generate 1GB data on vm - DONE
+        4. Generate 2GB data on vm - TODO
+
+
+4. Naive BQ Data Loading  
+    1. FUSE - DONE, but transfer fails, switch to GCS intermediate
+    2. BQ API - DONE, direct python driver uploads properly
+
+
 5. Data Upload to Cloud Storage
-	a. Write methods using python driver - DONE, fails on large files though
-	b. Write methods using resumable media - DONE, all files upload ok
-	c. Write nested flat file schema for tests - DONE
+    1. Write methods using python driver - DONE, fails on large files though
+    2. Write methods using resumable media - DONE, all files upload ok
+    3. Write nested flat file schema for tests - DONE  
+
+
 6. TPC-DS Schema & Query Generation  
-	a. Modify ANSI SQL schema to BQ formatting - DONE
-	b. Modify Query SQL to BQ SQL - DONE
+    1. Modify ANSI SQL schema to BQ formatting - DONE  
+    2. Modify Query SQL to BQ SQL - DONE  
+
 
 7. Refactor packages
-	a. Combine DS & H shared methods - DONE
-	b. Rationalize names & methods - DONE
-	c. Coordinate local, GCS, table names - DONE
+    1. Combine DS & H shared methods - DONE
+    2. Rationalize names & methods - DONE
+    3. Coordinate local, GCS, table names - DONE
 
-8. Naive Loading of BigQuery (GCS uri to BQ upload)
-	a. 1GB - TODO again
-	b. 2GB 
-	
-9. Naive Loading of Snowflake
-	a. Snowflake account setup - user account done, organization pending
-	b. Snowflake billing setup - CC ok, organization still pending
-	c. Load 1GB data from GSC into Snowflake
-	d. Load 2GB data
 
-10. Naive Query Evaluation
-	a. TPC-DS suite
-		1. BQ
-		2. SF
-	b. TPC-H suite
-		1. BQ
-		2. SF
-	
-11. Generate Larger Datasets on VM
-	a. 100GB - REDO (~ 1 hr @ 96 cores)  
-	b. 1TB
-	c. 10TB
-		
-12. Naive Load 100GB
-	a. BQ
-	b. SF
+8. Snowflake Account Setup  
+    1. Snowflake account setup - user account done, organization pending
+    2. Snowflake billing setup - CC ok, organization still pending
 
-10. Naive Query Evaluation
-	a. TPC-DS suite
-		1. BQ
-		2. SF
-	b. TPC-H suite
-		1. BQ
-		2. SF
 
-11. Cluster and Partition
-	a. BQ
-		1. 100GB
-		2. 1TB
+9. Validation Scale Loading GCS > BigQuery
+    1. 1GB - TODO again
+    2. 2GB - TODO again
+    
+    
+10. Validation Scale Loading GCS > Snowflake  
+    3. 1GB - TODO
+    4. 2GB - TODO
 
-	b. SF
-		1. 100GB
-		2. 1TB
 
-12. Further Optimizations?
-	a. BQ
-		1. 100GB
-		2. 1TB
+11. Draft Query Experiment Structure
+    1. File structure for query drafts
+    2. Experimental sequence
+    3. Query sequencing
+        1. TPC-H
+        2. TPC-DS
 
-	b. SF
-		1. 100GB
-		2. 1TB
 
-13. Query Category Breakdown
-	a. 100GB
-		1. BQ
-		2. SF
+12. Generate TPC-H ANSI Queries
+    1. Subprocess binary execution
+    2. Modifify source to avoid sqlserver error
+    3. Write query sequencer
 
-13. Final load of 10TB
-	a. 
 
-## Part II. Query Evaluation  
-10. Initial query EDA
-	a. 1GB Scale Factor
-		1. DS suite time
-		2. H suite time
-		3. DS per query time
-		4. H per query time
-	b. 2GB Scale Factor
-		1. DS suite time
-		2. H suite time
-		3. DS per query time
-		4. H per query time
-	e. Evaluate differences
-	f. Identify additional units of measure
-11. BigQuery Best Practices
-	a. literature review
-	b. implement alternative query suites
-		1. breakdown per query times
-12. 1st round comparisions
-	a. BQ naive vs optimized
-	b. BQ v SF
-		i. 100GB
-		ii. 1TB
-	c. SF loaded v SF builtin TPC-DS
-13. 2nd round comparisons
-	a. query categories
-	b. query orders
-	c. cold start vs warm start / precached
-	d. replacement queries
-14. Notebook refactor from EDA
-	a. install pipeline
-	b. data generation
-	c. query suite tests and compilation
-15. Rewrite Notebook Results
-	a. technical summary
-	b. blog format
+13. Generate TPC-D ANSI Queries
+    1. Subprocess binary execution
+    2. Write query sequencer
 
+
+14. Convert TPC-H ANSI Queries to Naive Syntax
+    1. BQ
+    1. SF
+    
+    
+15. Convert TPC-H ANSI Queries to Naive Syntax
+    1. BQ
+    1. SF
+    
+    
+16. Naive Query Execution
+    a. 1GB Scale Factor
+        1. DS suite time
+        2. H suite time
+        3. DS per query time
+        4. H per query time
+    b. 2GB Scale Factor
+        1. DS suite time
+        2. H suite time
+        3. DS per query time
+        4. H per query time
+    e. Evaluate differences
+    f. Identify additional units of measure
+    
+
+17. Generate 100GB Scale Factor Data
+    1. DS
+    2. H
+
+
+18. Convert Naive Syntax DDL & Queries with Clustering
+    1. BQ
+    1. SF
+    
+    
+19. Convert Naive Syntax DDL & Queries with Partitions
+    1. BQ
+    1. SF
+
+
+20. Convert Naive Syntax Queries with Query Order
+    1. BQ
+    1. SF
+
+
+21. Load 100GB Scale Factor
+    1. H
+        1. Naive Queries
+        2. Clustering
+        3. Partitions
+        4. Query Order changes
+    2. DS
+        1. Naive Queries
+        2. Clustering
+        3. Partitions
+        4. Query Order changes
+
+
+22. Evaluate Test Profiles
+    1. 100GB, Naive
+    2. 100GB, Clustered
+    3. 100GB, Partitioned
+    4. 100GB, Clustered & Partitioned
+    5. 100GB, Alternative Clustered & Partitioned
+    6. 100GB, Table Order, Clustered & Partitioned
+    7. 100GB, Table Order, Alternative Clustered & Partitioned
+
+
+22. Evaluate Results
+    1. Summarize Performance
+    2. Identify need for further Test Profiles
+    3. Identify most performant Test Profile in 100GB
+
+
+23. Generate Datasets on VM
+    1. 1TB
+    2. 10TB
+
+
+24. Load 1TB Data
+    1. BQ
+        1. Naive
+        2. Most performant Test Profile
+    2. SF
+        1. Naive
+        2. Most performant Test Profile
+
+
+25. Evaluate 1TB Queries
+    1. Summarize Performance
+    2. Identify areas of improvement
+    
+    
+26. Load 10TB Data
+    1. BQ
+        1. Naive
+        2. Most performant Test Profile from 1TB
+    2. SF
+        1. Naive
+        2. Most performant Test Profile from 1TB
+
+
+27. Best Practices Review
+    1. BQ
+    2. SF
+    
+
+28. 2nd round comparisons
+    a. query categories
+    b. query orders
+    c. cold start vs warm start / precached
+    d. replacement queries
+    
+    
+29. Draft Results
+    1. Comparison Categories
+    2. Caching
+    3. Plots
+    4. Notebook format & Markdown
+
+
+30. Client Feedback  
+
+
+31. Rewrite Draft Results
+    a. Report Draft
+    b. blog format
+    
+32. Apply License and Publish Code
+    1. Remove project specific config values
+    2. Remove dev files
+    3. Reformat Notebooks
 
 
 ## Time and Allocation  
@@ -213,19 +275,22 @@ Miles and the Scope of Work estimated this work will take 3-4 weeks.
 
 ### Code Repo  
 project_root
-	ds
-		output
-		tpc_binaries
-	h
-		output
-		tpc_binaries
-	downloads
-	(all source code)
+    |---ds
+    |---output
+    |   |---tpc_binaries
+    |
+    |---h
+        |---output
+            |---tpc_binaries
+    |---downloads
+    (all source code)
 
 ### Mounted Persistent Disk  
 The mounted persistent disk is where all data is written using a GCP VM.  A size of 20TB was provisioned to allow complete generation of the 10TB data and then transfer to Cloud Storage.  
 
 ### File Output and Folder Structure  
+
+#### Data Generated  
 Files are written to with dsdgen and dbgen.  Since these tools only support writing to a target directory, for each size in the study a separate folder is created: `1GB`, `100GB`, `1000GB` (1TB), `10000GB` (10TB)
 
 TPC-DS uses underscore delimitation in the generated files
@@ -233,18 +298,47 @@ Example: `customer_demographics_7_12_.dat` is the 7th of 12 fractions of a paral
 
 TPC-H uses simple `tablename.tbl.n` where n is the nth fraction of a parallel generation task.
 Example: `customer.tbl.8` is the 8th part of the customer table data.
-  
-/mnt/disks/20tb
-	|---ds
-	|	|---1GB
-	|	|---100GB
-	|	|---1000GB
-	|	|---10000GB
-	|---h
-		|---1GB
-		|---100GB
-		|---1000GB
-		|---10000GB
+
+/output
+    |---ds
+    |   |---1GB
+    |   |---100GB
+    |   |---1000GB
+    |   |---10000GB
+    |
+    |---h
+        |---1GB
+        |---100GB
+        |---1000GB
+        |---10000GB
+
+
+#### Queries Generated and Modified  
+
+The default SQL is generated in ANSI SQL and must be modified to work in BigQuery and Snowflake.  The `01_ansi` directory is the output of the TPC query gen tools.  The git branch `dev_query` is then used to copy and alter each subsequent improvement of the original queries.  
+
+/query
+    |---ds
+    |   |---01_ansi
+    |   |---02_naive_bq
+    |   |---02_naive_sf
+    |   |---03_ex1_bq
+    |   |---03_ex1_sf
+    |   |---04_ex2_bq
+    |   |---04_ex2_sf
+    |   |---05_ex3_bq
+    |   |---05_ex3_sf
+    |
+    |---h
+        |---01_ansi
+        |---02_naive_bq
+        |---02_naive_sf
+        |---03_ex1_bq
+        |---03_ex1_sf
+        |---04_ex2_bq
+        |---04_ex2_sf
+        |---05_ex3_bq
+        |---05_ex3_sf
 
 ### Google Cloud Storage Bucket Structure  
 Naming for bucket files is a bit different, given that folders don't exist on GCP.  
@@ -256,10 +350,10 @@ Given that TPC-DS uses underscore delimitation and TPC-H uses a dot delimiter on
 
 Abstracting the /mnt/disks/20tb/ structure to:  
 storage-root
-	|---tpc-test
-		|---scale-factor
-			|---one.tbl
-			|---two_data_3_96.dat
+    |---tpc-test
+        |---scale-factor
+            |---one.tbl
+            |---two_data_3_96.dat
 
 The paths would be:
 /storage-root/tpc-test/scale-factor/one.tbl  
@@ -377,6 +471,12 @@ https://github.com/fivetran/benchmark/blob/master/2-GenerateData.sh
 
 #### Loading TPC Data into BigQuery  
 
+
+#### Validating Installation  
+##### TPC-H  
+TPC-H defines query validations to prove the installation is operating correctly.  Specific values are given as inputs to each query must produce pre-defined outputs.  Section 2.4 describes the queries used in the benchmark and the validation inputs and outputs.  For automated testing, `/dbgen/answers` contains the expected outputs.
+
+
 ### Setup Experience  
 
 ### Ops Tasks - Operations Tasks  
@@ -425,8 +525,8 @@ The approximate method of creating things:
 1. develop presto.sh
 2. copy to google storage (see 1-LaunchDataproc.sh)
 3. run 1-LaunchDataproc.sh - this will make a 50 worker cluster to generate data faster
-	a. presto.sh appears to be a copy of Google's.  See
-		https://github.com/GoogleCloudDataproc/initialization-actions
+    a. presto.sh appears to be a copy of Google's.  See
+        https://github.com/GoogleCloudDataproc/initialization-actions
 
 #### AtScale  
 https://github.com/AtScaleInc/benchmark  
@@ -514,7 +614,7 @@ https://googleapis.github.io/google-resumable-media-python/latest/index.html
 
 ### Unrelated Notes:
 1. https://github.com/GoogleCloudDataproc/initialization-actions/tree/master/jupyter
-	is an installer using conda for Python3 and Jupyter in Dataproc.  Look into this more!
+    is an installer using conda for Python3 and Jupyter in Dataproc.  Look into this more!
 
 2. BigQuery Jupyter integrations  
 https://cloud.google.com/bigquery/docs/visualize-jupyter  
@@ -524,7 +624,7 @@ https://www.snowflake.com/blog/quickstart-guide-for-sagemaker-snowflake-part-one
 
 ### SQL Snippets  
 1. Size of table in BQ  
-	https://stackoverflow.com/questions/31266740/how-to-get-bigquery-storage-size-for-a-single-table
+    https://stackoverflow.com/questions/31266740/how-to-get-bigquery-storage-size-for-a-single-table
 2. 
 
 
@@ -570,16 +670,18 @@ Some TPC benchmarks model the operational aspect of the business environment whe
 ## VM Setup  
 An AI Notebook can be used to run all code in this project.  Two instances are suggested to reduce costs:
 1. High CPU Count to create data
-	a. 96 cores, 86.4 GB Ram
-	b. boot disk of 40TB persistent disk
+    a. 96 cores, 86.4 GB Ram
+    b. boot disk of 40TB persistent disk
 2. Modest specs to run queries and modify SQL Queries
 
 
 ## Conda Environment Setup  
 There are two Conda environment files,  
-`environment_gcp.yml` - overkill, almost all possible DS and GCP tools  
 `environment_tpc.yml` - used to update the base conda environment run on GCP AI Notebooks  
 See step 7. in Setup for command line argument to update base conda environment.
+
+### Installing Conda  
+https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html  
 
 
 ### Setup Steps  
