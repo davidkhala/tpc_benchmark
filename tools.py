@@ -5,6 +5,7 @@ Colin Dietrich, SADA 2020
 
 import os
 import zipfile
+import shutil
 
 import config
 
@@ -14,7 +15,18 @@ def make_directories():
     filepath_list_1 = [
         config.fp_ds, config.fp_ds_output,
         config.fp_h, config.fp_h_output,
-        config.fp_download
+        config.fp_download,
+        
+        #config.fp_query_templates,
+        
+        #config.fp_ds_query_template_dir,
+        #config.fp_h_query_template_dir,
+        
+        #config.fp_ds_bq_template_dir,
+        #config.fp_h_bq_template_dir,
+        
+        #config.fp_ds_sf_template_dir,
+        #config.fp_h_sf_template_dir
     ]
 
     filepath_list_1 += [config.fp_h_output +
@@ -23,10 +35,23 @@ def make_directories():
     filepath_list_1 += [config.fp_ds_output +
                         config.sep + str(i) + "GB" for i in config.scale_factors]
 
+    # schema files
+    filepath_list_1 += [config.fp_schema]
+    filepath_list_1 += [config.fp_schema + config.sep + s for s in config.bq_schema]
+    filepath_list_1 += [config.fp_schema + config.sep + s for s in config.sf_schema]
+    
+    # query files
+    filepath_list_1 += [config.fp_query]
+    filepath_list_1 += [config.fp_query + config.sep + s for s in config.bq_queries]
+    filepath_list_1 += [config.fp_query + config.sep + s for s in config.sf_queries]
+    
+    # only generate the folder if it doesn't exist
     for fp in filepath_list_1:
         if not os.path.exists(fp):
+            print("making directory:", fp)
             os.mkdir(fp)
 
+    # externally mounted persisten disk output
     if os.path.exists(config.fp_output_mnt):
         filepath_list_2 = [config.fp_ds_output_mnt,
                            config.fp_h_output_mnt]
@@ -36,15 +61,11 @@ def make_directories():
 
         filepath_list_2 += [config.fp_ds_output_mnt +
                             config.sep + str(i) + "GB" for i in config.scale_factors]
-
+        
+        # only generate the folder if it doesn't exist
         for fp in filepath_list_2:
             if not os.path.exists(fp):
                 os.mkdir(fp)
-
-    with open(config.fp_download + config.sep +
-              "place_tpc_zip_here.txt", "w") as f:
-        f.write("# Place TCP-DS and TPC-H zip files in this directory\n")
-        f.write("# Then run ds_setup.py or h_setup.py\n")
 
 
 def extract_zip(zip_filepath, target):
@@ -205,3 +226,31 @@ def print_inventory(directory):
                             units))
     print("="*width_max)
     print()
+
+
+def move_recursive(old_dir, new_dir):
+    """Move all files in a directory to another
+    
+    Parameters
+    ----------
+    old_dir : str, directory to m
+    """
+    
+    files = os.listdir(old_dir)
+
+    for f in files:
+        shutil.move(old_dir + config.sep + f, new_dir + config.sep + f)
+
+
+def copy_recursive(old_dir, new_dir):
+    """Copy all files in a directory to another
+    
+    Parameters
+    ----------
+    old_dir : str, directory to m
+    """
+    
+    files = os.listdir(old_dir)
+
+    for f in files:
+        shutil.copyfile(old_dir + config.sep + f, new_dir + config.sep + f)

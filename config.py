@@ -115,8 +115,12 @@ ds_schema_ansi_sql_filepath = fp_ds_src + sep + "tools" + sep + "tpcds.sql"
 h_schema_ddl_filepath = fp_h_src + sep + "dbgen" + sep + "dss.ddl"
 
 # 4.2 Basic BigQuery Schema Files
-ds_schema_bq_basic_filepath       = fp_ds_output + sep + "tpcds_schema_bq_basic.sql"
-h_schema_bq_basic_filepath = fp_h_output + sep + "tpc_h_schema_bq_basic.ddl"
+fp_schema = cwd + sep + "schema"
+fp_ds_schema = fp_schema + sep + "ds"
+fp_h_schema  = fp_schema + sep + "h"
+
+ds_schema_bq_basic_filepath = fp_ds_output + sep + "tpcds_schema_bq_basic.sql"
+h_schema_bq_basic_filepath  = fp_h_output + sep + "tpc_h_schema_bq_basic.ddl"
 
 # 4.3 Files output by data generators from either test
 # to ignore
@@ -127,11 +131,36 @@ tests = ["ds", "h"]
 scale_factors = [1, 2, 100, 1000, 10000]  # GB
 scale_factor_mapper = {"1GB": 1, "2GB": 2, "100GB": 100, "1TB": 1000, "10TB": 10000}
 
-# 5.1 Schema Variations
+# 5.1 Query Templates
+fp_query_templates = cwd + sep + "tpl"
+
+fp_ds_ansi_template_dir = fp_query_templates + sep + "ds_ansi"
+fp_h_ansi_template_dir  = fp_query_templates + sep + "h_ansi"
+
+fp_ds_bq_template_dir   = fp_query_templates + sep + "ds_bq"
+fp_h_bq_template_dir    = fp_query_templates + sep + "h_bq"
+
+fp_ds_sf_template_dir   = fp_query_templates + sep + "ds_sf"
+fp_h_sf_template_dir    = fp_query_templates + sep + "h_sf"
+
+# 5.2 Schema Variations
+fp_schema = cwd + sep + "sc"
+
 bq_schema = ["1_basic"]
 sf_schema = ["1_basic"]
 
-# 5.2 Test Schema Combinations
+# 5.3 Query Variations
+fp_query = cwd + sep + "q"
+
+# naive, mimimal conversion of ANSI to BQ or SF syntax
+bq_queries = ["ds_q_ex01_naive"]
+sf_queries = ["h_q_ex01_naive"]
+
+#fp_ds_q_ex01_naive = fp_query + sep + "ds_q_ex01_naive"
+#fp_h_q_ex01_naive  = fp_query + sep + "h_q_ex01_naive"
+
+# 5.4 Test Schema Combinations
+# TODO: perhaps remove?
 test_schema_bq = []
 for test in tests:
     for scale in scale_factors:
