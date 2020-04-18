@@ -133,16 +133,16 @@ select cs1.product_name
      ,cs1.c_street_name
      ,cs1.c_city
      ,cs1.c_zip
-     ,cs1.syear
-     ,cs1.cnt
+     ,cs1.syear as syear1
+     ,cs1.cnt as cnt1
      ,cs1.s1 as s11
      ,cs1.s2 as s21
      ,cs1.s3 as s31
      ,cs2.s1 as s12
      ,cs2.s2 as s22
      ,cs2.s3 as s32
-     ,cs2.syear
-     ,cs2.cnt
+     ,cs2.syear as syear2
+     ,cs2.cnt as cnt2
 from cross_sales cs1,cross_sales cs2
 where cs1.item_sk=cs2.item_sk and
      cs1.syear = [YEAR] and

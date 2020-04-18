@@ -49,7 +49,7 @@
      promotion
  where ss_sold_date_sk = d_date_sk
        and d_date between cast('[SALES_DATE]' as date) 
-                  and (cast('[SALES_DATE]' as date) +  30 days)
+                  and date_add(cast('[SALES_DATE]' as date), interval 30 day)
        and ss_store_sk = s_store_sk
        and ss_item_sk = i_item_sk
        and i_current_price > 50
@@ -70,7 +70,7 @@
      promotion
  where cs_sold_date_sk = d_date_sk
        and d_date between cast('[SALES_DATE]' as date)
-                  and (cast('[SALES_DATE]' as date) +  30 days)
+                  and date_add(cast('[SALES_DATE]' as date), interval 30 day)
         and cs_catalog_page_sk = cp_catalog_page_sk
        and cs_item_sk = i_item_sk
        and i_current_price > 50
@@ -91,7 +91,7 @@ group by cp_catalog_page_id)
      promotion
  where ws_sold_date_sk = d_date_sk
        and d_date between cast('[SALES_DATE]' as date)
-                  and (cast('[SALES_DATE]' as date) +  30 days)
+                  and date_add(cast('[SALES_DATE]' as date), interval 30 day)
         and ws_web_site_sk = web_site_sk
        and ws_item_sk = i_item_sk
        and i_current_price > 50

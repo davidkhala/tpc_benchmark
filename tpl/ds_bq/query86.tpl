@@ -38,10 +38,8 @@
     sum(ws_net_paid) as total_sum
    ,i_category
    ,i_class
-   ,grouping(i_category)+grouping(i_class) as lochierarchy
    ,rank() over (
- 	partition by grouping(i_category)+grouping(i_class),
- 	case when grouping(i_class) = 0 then i_category end 
+ 	partition by i_category, i_class
  	order by sum(ws_net_paid) desc) as rank_within_parent
  from
     web_sales
@@ -53,8 +51,7 @@
  and i_item_sk  = ws_item_sk
  group by rollup(i_category,i_class)
  order by
-   lochierarchy desc,
-   case when lochierarchy = 0 then i_category end,
+   i_category,
    rank_within_parent
  [_LIMITC];
 
