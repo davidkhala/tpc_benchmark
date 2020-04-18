@@ -4,8 +4,10 @@ Colin Dietrich, SADA 2020
 """
 
 import os
+import re
 import zipfile
 import shutil
+import glob
 
 import config
 
@@ -42,8 +44,8 @@ def make_directories():
     
     # query files
     filepath_list_1 += [config.fp_query]
-    filepath_list_1 += [config.fp_query + config.sep + s for s in config.bq_queries]
-    filepath_list_1 += [config.fp_query + config.sep + s for s in config.sf_queries]
+    #filepath_list_1 += [config.fp_query + config.sep + s for s in config.bq_queries]
+    #filepath_list_1 += [config.fp_query + config.sep + s for s in config.sf_queries]
     
     # only generate the folder if it doesn't exist
     for fp in filepath_list_1:
@@ -67,7 +69,13 @@ def make_directories():
             if not os.path.exists(fp):
                 os.mkdir(fp)
 
-
+                
+def mkdir_safe(fp):
+    """Make a directory only if it does not currently exist"""
+    if not os.path.exists(fp):
+        os.mkdir(fp)
+                
+                
 def extract_zip(zip_filepath, target):
     """Extract downloaded TPC-DS test .zip to a standard location as set
     in config.py
@@ -254,3 +262,75 @@ def copy_recursive(old_dir, new_dir):
 
     for f in files:
         shutil.copyfile(old_dir + config.sep + f, new_dir + config.sep + f)
+
+       
+        dtype_mapper = {r' UNION': r' UNION ALL',
+                    r' AS DECIMAL\(\d+,\d+\)\)': r'',
+                    r'CAST\(': r'',
+                    r' union': r' union all',
+                    r' as decimal\(\d+,\d+\)\)': r'',
+                    r'cast\(': r''
+                    }
+    
+def regex_replace(text, replace_mapper):
+    """Replace characters in text using regex
+    
+    Parameters
+    ----------
+    text : str, text to replace characters
+    replace_mapper : dict, keys = old text, values = new replacement text
+    
+    Returns
+    -------
+    str, text replaced
+    """
+    
+    for k, v in replace_mapper.items():
+        regex = re.compile(k)
+        text = regex.sub(v, text)
+    
+    return text
+
+def regex_file(filepath_in, filepath_out, replace_mapper):
+    """Apply regex_replace to a file.  If filepath_in == filepath_out,
+    replaces the file's contents.
+    
+    Parameters
+    ----------
+    filepath_in : str, absolute filepath to file to read text
+    filepath_out : str, absolute filepath to file write replacement text
+    replace_mapper : dict, keys = old text, values = new replacement text
+    
+    Returns
+    -------
+    None, operates on files
+    """
+    text = open(filepath_in).read()
+    
+    text = regex_replace(text, replace_mapper)
+    
+    open(filepath_out, "w").write(text)
+    
+def regex_dir(filepath_dir, file_signature, replace_mapper, verbose=False):
+    """Alter all query templates in a directory"""
+    
+    """Apply regex_replace to a file.  If filepath_in == filepath_out,
+    replaces the file's contents.
+    
+    Parameters
+    ----------
+    filepath_dir : str, absolute filepath to folder to read text files
+    file_signature : str, file selection, for glob.glob input
+    replace_mapper : dict, keys = old text, values = new replacement text
+    
+    Returns
+    -------
+    None, operates on files in directory
+    """
+    
+    files = glob.glob(filepath_dir + config.sep + file_signature)
+    for fp in files:
+        regex_file(fp, fp, replace_mapper)
+        file_name = os.path.basename(fp)
+        if verbose:
+            print(file_name)

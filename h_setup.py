@@ -133,7 +133,7 @@ def make_tpch(verbose=False):
 # alignment filler
 
 
-def run_dbgen(scale=1, verbose=False):
+def run_dbgen(scale=1, total_cpu=None, verbose=False):
     """Create data for TPC-H using the binary dbgen with
     a subprocess for each cpu core on the host machine
     
@@ -150,8 +150,9 @@ def run_dbgen(scale=1, verbose=False):
     env_vars["DSS_PATH"] = config.fp_h_data_out + config.sep + str(scale) + "GB"
     
     cmd = ["./dbgen", "-vf", "-s", str(scale)]
-
-    total_cpu = config.cpu_count
+    
+    if total_cpu is None:
+        total_cpu = config.cpu_count
     binary_folder = config.fp_h_src + config.sep + "dbgen"
     
     pipe_outputs = []
@@ -160,9 +161,13 @@ def run_dbgen(scale=1, verbose=False):
     for n in range(1, total_cpu+1):
         child_cpu = str(n)
         total_cpu = str(total_cpu)
-        n_cmd = cmd + ["-C", total_cpu,
-                       "-S", child_cpu]
-    
+        
+        if total_cpu is None:
+            n_cmd = cmd + ["-C", total_cpu,
+                           "-S", child_cpu]
+        else:
+            n_cmd = cmd
+            
         pipe = subprocess.run(n_cmd, 
                               stdout=subprocess.PIPE, 
                               stderr=subprocess.PIPE, 
@@ -181,6 +186,45 @@ def run_dbgen(scale=1, verbose=False):
             print(stderr)
 
     return stdout, stderr
+
+
+def copy_tpl():
+    """Move query templates and make copies for modification """
+    old_dir = (config.fp_h_src + config.sep + 
+               "dbgen" + config.sep + "queries")
+    
+    # copy of output templates
+    new_dir = config.fp_h_query_template_dir
+    if not os.path.exists(new_dir):
+        tools.copy_recursive(old_dir, new_dir)
+    
+    # for BigQuery templates
+    new_dir = config.fp_h_bq_template_dir
+    if not os.path.exists(new_dir):
+        tools.copy_recursive(old_dir, new_dir)
+    
+    # for Snowflake templates
+    new_dir = config.fp_h_sf_template_dir
+    if not os.path.exists(new_dir):
+        tools.copy_recursive(old_dir, new_dir)
+
+        
+def edit_tpl():
+    """Edit the sqlserver.tpl file such that it will compile ANSI SQL"""
+    
+    tpl = config.fp_ds_src + config.sep + "query_templates" + config.sep + "sqlserver.tpl"
+    
+    def modified():
+        with open(tpl, "r") as f:
+            for line in f:
+                if "define _END" in line:
+                    return True
+            return False
+    
+    if not modified():
+        new_def = '''define _END = "";\n'''
+        with open(tpl, "a") as f:
+            f.write(new_def)
 
 
 def run_qgen(n, scale=1, seed=None, verbose=False):

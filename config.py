@@ -134,8 +134,15 @@ scale_factor_mapper = {"1GB": 1, "2GB": 2, "100GB": 100, "1TB": 1000, "10TB": 10
 # 5.1 Query Templates
 fp_query_templates = cwd + sep + "tpl"
 
-fp_ds_ansi_template_dir = fp_query_templates + sep + "ds_ansi"
-fp_h_ansi_template_dir  = fp_query_templates + sep + "h_ansi"
+# for backup of default outputs
+fp_ds_ansi_gen_template_dir = fp_query_templates + sep + "ds_ansi_gen"
+fp_h_ansi_gen_template_dir  = fp_query_templates + sep + "h_ansi_gen"
+
+fp_ds_bq_gen_template_dir   = fp_query_templates + sep + "ds_bq_gen"
+fp_h_bq_gen_template_dir    = fp_query_templates + sep + "h_bq_gen"
+
+fp_ds_sf_gen_template_dir   = fp_query_templates + sep + "ds_sf_gen"
+fp_h_sf_gen_template_dir    = fp_query_templates + sep + "h_sf_gen"
 
 fp_ds_bq_template_dir   = fp_query_templates + sep + "ds_bq"
 fp_h_bq_template_dir    = fp_query_templates + sep + "h_bq"
@@ -153,8 +160,8 @@ sf_schema = ["1_basic"]
 fp_query = cwd + sep + "q"
 
 # naive, mimimal conversion of ANSI to BQ or SF syntax
-bq_queries = ["ds_q_ex01_naive"]
-sf_queries = ["h_q_ex01_naive"]
+#bq_queries = ["ds_00_default_ansi", "ds_01_naive"]
+#sf_queries = ["h_00_default_ansi", "h_01_naive"]
 
 #fp_ds_q_ex01_naive = fp_query + sep + "ds_q_ex01_naive"
 #fp_h_q_ex01_naive  = fp_query + sep + "h_q_ex01_naive"

@@ -4,6 +4,7 @@ Colin Dietrich, SADA, 2020
 """
 
 import os
+import re
 import subprocess
 import zipfile
 import glob
@@ -199,15 +200,31 @@ def copy_tpl(verbose=False):
     if verbose:
         print("Source directory:", old_dir)
         
-    # copy of output templates
-    new_dir = config.fp_ds_ansi_template_dir
+    # ANSI templates, as generated, for references
+    new_dir = config.fp_ds_ansi_gen_template_dir
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
         tools.copy_recursive(old_dir, new_dir)
         if verbose:
             print("Moved all files to:", new_dir)
             
-    # for BigQuery templates
+    # BigQuery templates, as generated, for references
+    new_dir = config.fp_ds_bq_gen_template_dir
+    if not os.path.exists(new_dir):
+        os.mkdir(new_dir)
+        tools.copy_recursive(old_dir, new_dir)
+        if verbose:
+            print("Moved all files to:", new_dir)
+            
+    # Snowflake templates, as generated, for references
+    new_dir = config.fp_ds_sf_gen_template_dir
+    if not os.path.exists(new_dir):
+        os.mkdir(new_dir)
+        tools.copy_recursive(old_dir, new_dir)
+        if verbose:
+            print("Moved all files to:", new_dir)
+            
+   # BigQuery templates, to be edited by hand before query generation
     new_dir = config.fp_ds_bq_template_dir
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
@@ -215,18 +232,18 @@ def copy_tpl(verbose=False):
         if verbose:
             print("Moved all files to:", new_dir)
             
-    # for Snowflake templates
+    # Snowflake templates, to be edited by hand before query generation
     new_dir = config.fp_ds_sf_template_dir
     if not os.path.exists(new_dir):
         os.mkdir(new_dir)
         tools.copy_recursive(old_dir, new_dir)
         if verbose:
             print("Moved all files to:", new_dir)
-            
-def edit_tpl():
+
+def sqlserver_defines(template_root):
     """Edit the sqlserver.tpl file such that it will compile ANSI SQL"""
     
-    tpl = config.fp_ds_src + config.sep + "query_templates" + config.sep + "sqlserver.tpl"
+    tpl = template_root + config.sep + "sqlserver.tpl"
     
     def modified():
         with open(tpl, "r") as f:
@@ -239,6 +256,29 @@ def edit_tpl():
         new_def = '''define _END = "";\n'''
         with open(tpl, "a") as f:
             f.write(new_def)
+
+            
+def sqlserver_bq_defines(template_root):
+    """Edit the sqlserver.tpl so that dsqgen will generate *more* 
+    compilable SQL for BigQuery - hand modification might still be
+    required
+    
+    Parameters
+    ----------
+    template_root : str, absolute path to 
+    """
+    dialect = "sqlserver_bq"
+    tpl = template_root + config.sep + dialect + ".tpl"
+    
+    defines = '''define __LIMITA = "";
+define __LIMITB = "";
+define __LIMITC = "limit %d";
+define _END = "";
+'''
+    with open(tpl, "w") as f:
+        f.write(defines)
+        
+    return dialect
 
     
 def dsqgen(file=None, 
@@ -356,7 +396,7 @@ def dsqgen(file=None,
         
     if template is not None:
         kwargs.append("-TEMPLATE")
-        kwargs.append(template)
+        kwargs.append(str(template))
         
     if count is not None:
         kwargs.append(-"COUNT")
@@ -420,3 +460,53 @@ def dsqgen(file=None,
     #std_out = std_out_new
     #std_out = "\n".join(std_out)
     return std_out, err_out
+
+
+def tpl_bq_regex_OLD(text):
+    # note that leading and trailing whitespace is used to find only table datatype strings
+    dtype_mapper = {#r' UNION': r' UNION ALL',
+                    #r' AS DECIMAL\(\d+,\d+\)\)': r'',
+                    #r'CAST\(': r'',
+                    r' union': r' union all',
+                    r' as decimal\(\d+,\d+\)\)': r'',
+                    r'cast\(': r''
+                    }
+    
+    for k, v in dtype_mapper.items():
+        regex = re.compile(k)
+        text = regex.sub(v, text)
+    
+    return text
+
+def tpl_bq_regex_file_OLD(filepath_in, filepath_out):
+    """Apply """
+    text = open(filepath_in).read()
+    
+    text = tpl_bq_regex(text)
+    
+    open(filepath_out, "w").write(text)
+
+def tpl_bq_regex_dir_OLD(tpl_dir):
+    """Alter all query templates in a directory"""
+    files = glob.glob(tpl_dir + config.sep + "query*.tpl")
+    for fp in files:
+        ds_setup.tpl_bq_regex_file(fp, fp)
+        file_name = os.path.basename(fp)
+        print(file_name)
+        
+def tpl_bq_regex(tpl_dir, verbose=False):
+    dtype_mapper = {r' UNION\n': r' UNION ALL\n',
+                    r' union\n': r' union all\n',
+                    r' AS DECIMAL\(\d+,\d+\)': r' AS FLOAT64',
+                    r' as decimal\(\d+,\d+\)': r' as float64',
+                    #r' AS DECIMAL\(\d+,\d+\)\)': r'',
+                    #r'CAST\(': r'',
+                    #r' as decimal\(\d+,\d+\)\)': r'',
+                    #r'cast\(': r'',
+                    #r' as decimal\(\d+,\d+\) ': r''
+                    }
+    
+    tools.regex_dir(filepath_dir=tpl_dir,
+                    file_signature="query*.tpl",
+                    replace_mapper=dtype_mapper,
+                    verbose=verbose)
