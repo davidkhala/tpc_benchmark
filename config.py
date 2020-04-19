@@ -153,8 +153,8 @@ fp_h_sf_template_dir    = fp_query_templates + sep + "h_sf"
 # 5.2 Schema Variations
 fp_schema = cwd + sep + "sc"
 
-bq_schema = ["1_basic"]
-sf_schema = ["1_basic"]
+bq_schema = ["ds_1GB_basic"]
+sf_schema = ["sf_1GB_basic"]
 
 # 5.3 Query Variations
 fp_query = cwd + sep + "q"

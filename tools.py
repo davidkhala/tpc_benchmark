@@ -38,9 +38,9 @@ def make_directories():
                         config.sep + str(i) + "GB" for i in config.scale_factors]
 
     # schema files
-    filepath_list_1 += [config.fp_schema]
-    filepath_list_1 += [config.fp_schema + config.sep + s for s in config.bq_schema]
-    filepath_list_1 += [config.fp_schema + config.sep + s for s in config.sf_schema]
+    #filepath_list_1 += [config.fp_schema]
+    #filepath_list_1 += [config.fp_schema + config.sep + s for s in config.bq_schema]
+    #filepath_list_1 += [config.fp_schema + config.sep + s for s in config.sf_schema]
     
     # query files
     filepath_list_1 += [config.fp_query]

@@ -40,16 +40,14 @@ The following items were specified in the SOW:
 
 
 3. Data Generation - Pipeline Development
-    1. TPC-DS
+    1. Sequential generation
+    2. Parallel generation
+    3. TPC-DS
         1. Generate 1GB data locally - DONE
         2. Generate 2GB data locally - DONE
-        3. Generate 1GB data on vm - DONE in ~ 20 min @ 96 cores
-        4. Generate 1GB data on vm - DONE in ~ 20 min @ 96 cores
-    2. TPC-H
+    4. TPC-H
         1. Generate 1GB data locally - DONE
         2. Generate 2GB data locally - DONE
-        3. Generate 1GB data on vm - DONE
-        4. Generate 2GB data on vm - TODO
 
 
 4. Naive BQ Data Loading  
@@ -82,8 +80,8 @@ The following items were specified in the SOW:
 9. Validation Scale Loading GCS > BigQuery
     1. 1GB - TODO again
     2. 2GB - TODO again
-    
-    
+
+
 10. Validation Scale Loading GCS > Snowflake  
     3. 1GB - TODO
     4. 2GB - TODO
@@ -118,7 +116,11 @@ The following items were specified in the SOW:
     1. SF
     
     
-16. Naive Query Execution
+16. Validation Database Loads
+    1. 1GB BQ
+    1. 1GB SF
+    
+17. Naive Query Execution
     a. 1GB Scale Factor
         1. DS suite time
         2. H suite time
@@ -133,27 +135,27 @@ The following items were specified in the SOW:
     f. Identify additional units of measure
     
 
-17. Generate 100GB Scale Factor Data
+18. Generate 100GB Scale Factor Data
     1. DS
     2. H
 
 
-18. Convert Naive Syntax DDL & Queries with Clustering
+19. Convert Naive Syntax DDL & Queries with Clustering
     1. BQ
     1. SF
     
     
-19. Convert Naive Syntax DDL & Queries with Partitions
+20. Convert Naive Syntax DDL & Queries with Partitions
     1. BQ
     1. SF
 
 
-20. Convert Naive Syntax Queries with Query Order
+21. Convert Naive Syntax Queries with Query Order
     1. BQ
     1. SF
 
 
-21. Load 100GB Scale Factor
+22. Load 100GB Scale Factor
     1. H
         1. Naive Queries
         2. Clustering
@@ -166,7 +168,7 @@ The following items were specified in the SOW:
         4. Query Order changes
 
 
-22. Evaluate Test Profiles
+23. Evaluate Test Profiles
     1. 100GB, Naive
     2. 100GB, Clustered
     3. 100GB, Partitioned
@@ -176,18 +178,18 @@ The following items were specified in the SOW:
     7. 100GB, Table Order, Alternative Clustered & Partitioned
 
 
-22. Evaluate Results
+24. Evaluate Results
     1. Summarize Performance
     2. Identify need for further Test Profiles
     3. Identify most performant Test Profile in 100GB
 
 
-23. Generate Datasets on VM
+25. Generate Datasets on VM
     1. 1TB
     2. 10TB
 
 
-24. Load 1TB Data
+26. Load 1TB Data
     1. BQ
         1. Naive
         2. Most performant Test Profile
@@ -196,12 +198,12 @@ The following items were specified in the SOW:
         2. Most performant Test Profile
 
 
-25. Evaluate 1TB Queries
+27. Evaluate 1TB Queries
     1. Summarize Performance
     2. Identify areas of improvement
     
     
-26. Load 10TB Data
+28. Load 10TB Data
     1. BQ
         1. Naive
         2. Most performant Test Profile from 1TB
@@ -210,33 +212,33 @@ The following items were specified in the SOW:
         2. Most performant Test Profile from 1TB
 
 
-27. Best Practices Review
+29. Best Practices Review
     1. BQ
     2. SF
     
 
-28. 2nd round comparisons
-    a. query categories
-    b. query orders
-    c. cold start vs warm start / precached
-    d. replacement queries
+30. 2nd round comparisons
+    1. query categories
+    2. query orders
+    3. cold start vs warm start / precached
+    4. replacement queries
     
     
-29. Draft Results
+31. Draft Results
     1. Comparison Categories
     2. Caching
     3. Plots
     4. Notebook format & Markdown
 
 
-30. Client Feedback  
+32. Client Feedback  
 
 
-31. Rewrite Draft Results
+33. Rewrite Draft Results
     a. Report Draft
     b. blog format
     
-32. Apply License and Publish Code
+34. Apply License and Publish Code
     1. Remove project specific config values
     2. Remove dev files
     3. Reformat Notebooks
@@ -322,23 +324,27 @@ The default SQL is generated in ANSI SQL and must be modified to work in BigQuer
     |   |---01_ansi
     |   |---02_naive_bq
     |   |---02_naive_sf
-    |   |---03_ex1_bq
-    |   |---03_ex1_sf
-    |   |---04_ex2_bq
-    |   |---04_ex2_sf
-    |   |---05_ex3_bq
-    |   |---05_ex3_sf
+    |   |---03_naive_bq_validation
+    |   |---03_naive_sf_validation
+    |   |---04_ex1_bq
+    |   |---04_ex1_sf
+    |   |---05_ex2_bq
+    |   |---05_ex2_sf
+    |   |---06_ex3_bq
+    |   |---06_ex3_sf
     |
     |---h
         |---01_ansi
         |---02_naive_bq
         |---02_naive_sf
-        |---03_ex1_bq
-        |---03_ex1_sf
-        |---04_ex2_bq
-        |---04_ex2_sf
-        |---05_ex3_bq
-        |---05_ex3_sf
+        |---03_naive_bq_validation
+        |---03_naive_sf_validation
+        |---04_ex1_bq
+        |---04_ex1_sf
+        |---05_ex2_bq
+        |---05_ex2_sf
+        |---06_ex3_bq
+        |---06_ex3_sf
 
 ### Google Cloud Storage Bucket Structure  
 Naming for bucket files is a bit different, given that folders don't exist on GCP.  
