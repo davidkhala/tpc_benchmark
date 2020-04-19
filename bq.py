@@ -57,57 +57,6 @@ from google.cloud import bigquery
 import config, tools
 
 
-def rewrite_schema_old(filepath_in, filepath_out, dataset_name):
-    """Convert the sample implementation of the logical schema as described in TPC-DS Specification V1.0.0L ,
-    specifications.pdf, pg 99, Appendix A and contained in  tpc_root/tools/tpcds.sql.
-    
-    Parameters
-    ----------
-    filepath_in : str, path to tpcds.sql file
-    filepath_out : str, path to write BigQuery formatted table schema, named 'tpcds_bq.sql'
-    dataset_name : str, name of BigQuery Dataset to append to existing table names
-    
-    Returns
-    -------
-    None, only writes to file
-    """
-
-    # note that leading and trailing whitespace is used to find only table datatype strings
-    dtype_mapper = {r'  decimal\(\d+,\d+\)  ': r'  FLOAT64  ',
-                    r'  varchar\(\d+\)  ':     r'  STRING  ',
-                    r'  char\(\d+\)  ':        r'  STRING  ',
-                    r'  integer  ':            r'  INT64  ',
-                    # the following are just to have consistent UPPERCASE formatting
-                    r'  time  ':               r'  TIME  ',
-                    r'  date  ':               r'  DATE  '
-                   }
-    
-    text = open(filepath_in).read()
-    
-    for k, v in dtype_mapper.items():
-        regex = re.compile(k)
-        text = regex.sub(v, text)
-
-    text_list_in = text.split("\n")
-    text_list_out = []
-    
-    for line in text_list_in:
-        if "primary key" in line:
-            continue
-        if "create table" in line:
-            split_line = line.split()
-            table_name = split_line[2]
-            new_line = split_line[:2] + [dataset_name + "." + table_name]
-            new_line = " ".join(new_line)
-            text_list_out.append(new_line)
-        else:
-            text_list_out.append(line)
-    
-    text = "\n".join(text_list_out)
-    
-    open(filepath_out, "w").write(text)
-
-
 def create_dataset(dataset_name, verbose=False):
     """Create a dataset on the project
     
@@ -138,7 +87,7 @@ def create_dataset(dataset_name, verbose=False):
     return copy_job
 
 
-def create_schema(schema_file, verbose=False):
+def create_schema(schema_file, dataset, verbose=False):
     """Apply the schema .sql file as reformatted from 
     config.tpcds_schema_ansi_sql_filepath
     to 
@@ -148,13 +97,17 @@ def create_schema(schema_file, verbose=False):
     Parameters
     ----------
     schema_file : str, path to file containing DDL or sql schema query definitions
+    dataset : str, dataset to create table schema in
     verbose : bool, print debug statements
     """
     client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
     with open(schema_file, 'r') as f:
         query_txt = f.read()
-        
-    query_job = client.query(query_txt)  # API request
+    
+    job_config = bigquery.QueryJobConfig()
+    job_config.default_dataset = config.gcp_project.lower() + "." + dataset
+    
+    query_job = client.query(query_txt, job_config=job_config)  # API request
     rows = query_job.result()  # Waits for query to finish
     
     if verbose:

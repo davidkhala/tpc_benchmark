@@ -7,7 +7,7 @@ import re
 import config
 
 
-def rewrite_ds_basic(filepath_out, dataset_name):
+def rewrite_ds_basic(filepath_out, dataset_name, prefix=False):
     """Convert the sample implementation of the logical schema as described in TPC-DS Specification V1.0.0L ,
     specifications.pdf, pg 99, Appendix A and contained in  tpc_root/tools/tpcds.sql.
 
@@ -15,7 +15,9 @@ def rewrite_ds_basic(filepath_out, dataset_name):
     ----------
     #filepath_in : str, path to tpcds.sql file
     filepath_out : str, path to write BigQuery formatted table schema, named 'tpcds_bq.sql'
-    dataset_name : str, name of BigQuery Dataset to append to existing table names
+    dataset_name : str, name of BigQuery Dataset to append to existing table names.
+    prefix : bool, if True dataset_name prefix is added to table names, otherwise table names
+        are left as is.
 
     Returns
     -------
@@ -39,13 +41,14 @@ def rewrite_ds_basic(filepath_out, dataset_name):
         regex = re.compile(k)
         text = regex.sub(v, text)
 
+    
     text_list_in = text.split("\n")
     text_list_out = []
 
     for line in text_list_in:
         if "primary key" in line:
             continue
-        if "create table" in line:
+        if ("create table" in line) & prefix:
             split_line = line.split()
             table_name = split_line[2]
             new_line = split_line[:2] + [dataset_name + "." + table_name]
