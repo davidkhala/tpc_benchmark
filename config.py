@@ -181,3 +181,11 @@ test_schema_sf = []
 for test in tests:
     for schema in sf_schema:
         test_schema_sf.append(test + "_" + schema)
+
+
+# snowflake auth info
+sf_username = "sadadauren"
+sf_password = "Test1234!"
+sf_account = "ed75261.us-central1.gcp"
+sf_warehouse = "TEST1"
+sf_database = "SF_TUTS"
