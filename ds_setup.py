@@ -239,6 +239,8 @@ def copy_tpl(verbose=False):
         tools.copy_recursive(old_dir, new_dir)
         if verbose:
             print("Moved all files to:", new_dir)
+    if verbose:
+        print("Done.  Note: If none printed above, there were no new templates to write.")
 
 def sqlserver_defines(template_root):
     """Edit the sqlserver.tpl file such that it will compile ANSI SQL"""

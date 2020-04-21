@@ -605,6 +605,13 @@ https://cloud.google.com/files/BigQueryTechnicalWP.pdf
 https://cloud.google.com/bigquery/docs/best-practices-costs
 https://cloud.google.com/bigquery/docs/best-practices-storage
 
+### Clustering Partitioning
+Clustering, Time Partitioning and Range Partitioning are possible in BigQuery.  
+Some details:
+* Clustering must be done at table creation.  
+* Clustering is only possible if time partitioning is also specified.(check if this also applies to range partitioning).  
+* Range partitioning is still in beta.  
+
 
 
 ### Google Cloud Storage  
