@@ -11,7 +11,10 @@ import concurrent.futures
 import zipfile
 import glob
 
+from datetime import datetime
 from google.cloud import storage
+
+import pandas as pd
 
 import config, gcp_storage, tools
 
@@ -535,6 +538,7 @@ class DGenPool:
         self.lock = threading.Lock()
         
         self.results = []
+        self.dfr = None
         
     def run(self, child, parallel):
         """Create data for TPC-DS using the binary dsdgen with
@@ -568,6 +572,8 @@ class DGenPool:
         n_cmd = cmd + ["-PARALLEL", parallel,
                        "-CHILD", child]
         
+        t0 = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        
         pipe = subprocess.run(n_cmd,
                               stdout=subprocess.PIPE, 
                               stderr=subprocess.PIPE, 
@@ -576,16 +582,28 @@ class DGenPool:
         stdout = pipe.stdout.decode("utf-8")
         stderr = pipe.stderr.decode("utf-8")
 
+        t1 = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        
         if self.verbose:
             if len(stdout) > 0:
                 print(stdout)
             if len(stderr) > 0:
                 print(stderr)
         with self.lock:
-            self.results.append([child, parallel, stdout, stderr])
+            self.results.append([child, parallel, t0, t1, stdout, stderr])
         return child
     
     def generate(self):
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.n) as executor:
-            results = executor.map(self.run, self.child, self.parallel)
-        return results
+            exe_results = executor.map(self.run, self.child, self.parallel)
+        return exe_results
+    
+    def save_results(self):
+        csv_fp = (config.fp_ds_output + config.sep + 
+          "datagen-" + str(self.scale) + 
+          "GB-" + datetime.utcnow().strftime("%Y%m%d-%H%M%S") + ".csv")
+        
+        columns = ["child", "parallel", "t0", "t1", "stdout", "stderr"]
+        data = list(self.results)
+        self.dfr = pd.DataFrame(data, columns=columns)
+        self.dfr.to_csv(csv_fp)
