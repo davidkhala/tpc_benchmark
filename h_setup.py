@@ -247,6 +247,98 @@ def sqlserver_bq_defines(template_root):
         with open(tpl, "a") as f:
             f.write(new_def)
 
+def qgen(a=None,
+         b=None,
+         c=None,
+         d=None,
+         #h=None,
+         i=None,
+         l=None,
+         n=None,
+         #N=None,
+         o=None,
+         p=None,
+         r=None,
+         s=None,
+         v=None,
+         t=None,
+         x=None):
+    """Run the TPC-H Query substitution program and generate
+    SQL queries
+    
+    TPC-H Parameter Substitution (v. 2.18.0 build 0)
+    Copyright Transaction Processing Performance Council 1994 - 2010
+    USAGE: ./qgen <options> [ queries ]
+    Options:
+        -a        -- use ANSI semantics.
+        -b <str>  -- load distributions from <str>
+        -c        -- retain comments found in template.
+        -d        -- use default substitution values.
+        -h        -- print this usage summary.
+        -i <str>  -- use the contents of file <str> to begin a query.
+        -l <str>  -- log parameters to <str>.
+        -n <str>  -- connect to database <str>.
+        -N        -- use default rowcounts and ignore :n directive.
+        -o <str>  -- set the output file base path to <str>.
+        -p <n>    -- use the query permutation for stream <n>
+        -r <n>    -- seed the random number generator with <n>
+        -s <n>    -- base substitutions on an SF of <n>
+        -v        -- verbose.
+        -t <str>  -- use the contents of file <str> to complete a query
+        -x        -- enable SET EXPLAIN in each query.
+    """
+    
+    kwargs = []
+    
+    if a is not None:
+        kwargs.append("-a")
+        #kwargs.append(a)
+
+    if b is not None:
+        kwargs.append("-b")
+        kwargs.append(b)
+
+    if c is not None:
+        kwargs.append("-c")
+        #kwargs.append(file)
+        
+    if d is not None:
+        kwargs.append("-d")
+        
+    #if h is not None:
+    #    kwargs.append("-h")
+        
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    
 
 def run_qgen(n, scale=1, seed=None, verbose=False):
     """Create queries for TPC-H using the binary qgen with
