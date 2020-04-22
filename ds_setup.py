@@ -454,52 +454,7 @@ def dsqgen(file=None,
             print("=========")
             print(err_out)
     
-    #std_out = std_out.split("\n")
-    #std_out_new = []
-    #keep = False
-    #for line in std_out:
-    #    line = line.rstrip("\r")
-    #    line = line.rstrip("\n")
-    #    if line == "select":
-    #        keep = True
-    #    if keep:
-    #        std_out_new.append(line)
-    #std_out = std_out_new
-    #std_out = "\n".join(std_out)
     return std_out, err_out
-
-
-def tpl_bq_regex_OLD(text):
-    # note that leading and trailing whitespace is used to find only table datatype strings
-    dtype_mapper = {#r' UNION': r' UNION ALL',
-                    #r' AS DECIMAL\(\d+,\d+\)\)': r'',
-                    #r'CAST\(': r'',
-                    r' union': r' union all',
-                    r' as decimal\(\d+,\d+\)\)': r'',
-                    r'cast\(': r''
-                    }
-    
-    for k, v in dtype_mapper.items():
-        regex = re.compile(k)
-        text = regex.sub(v, text)
-    
-    return text
-
-def tpl_bq_regex_file_OLD(filepath_in, filepath_out):
-    """Apply """
-    text = open(filepath_in).read()
-    
-    text = tpl_bq_regex(text)
-    
-    open(filepath_out, "w").write(text)
-
-def tpl_bq_regex_dir_OLD(tpl_dir):
-    """Alter all query templates in a directory"""
-    files = glob.glob(tpl_dir + config.sep + "query*.tpl")
-    for fp in files:
-        ds_setup.tpl_bq_regex_file(fp, fp)
-        file_name = os.path.basename(fp)
-        print(file_name)
         
 def tpl_bq_regex(tpl_dir, verbose=False):
     dtype_mapper = {r' UNION\n': r' UNION ALL\n',
@@ -517,6 +472,7 @@ def tpl_bq_regex(tpl_dir, verbose=False):
                     file_signature="query*.tpl",
                     replace_mapper=dtype_mapper,
                     verbose=verbose)
+
     
 class DGenPool:
     def __init__(self, scale=1, seed=None, n=None, verbose=False):
@@ -560,17 +516,13 @@ class DGenPool:
         if self.seed is not None:
             cmd = cmd + ["-RNGSEED", str(self.seed)]
 
-        total_cpu = config.cpu_count
         binary_folder = config.fp_ds_src + config.sep + "tools"
-        pipe_outputs = []
+
         stdout = ""
         stderr = ""
         
-        child = str(child)
-        parallel = str(parallel)
-        
-        n_cmd = cmd + ["-PARALLEL", parallel,
-                       "-CHILD", child]
+        n_cmd = cmd + ["-PARALLEL", str(parallel),
+                       "-CHILD", str(child)]
         
         t0 = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
         
