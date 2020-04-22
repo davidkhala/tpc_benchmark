@@ -1,4 +1,0 @@
-q/
-test_number_scale_desc
-
-ds_04_100_clustering

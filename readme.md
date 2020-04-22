@@ -519,6 +519,13 @@ http://www.tpc.org/tpcds/
 
 https://www.haidongji.com/2011/03/30/data-generation-with-tpc-hs-dbgen-for-load-testing/  
 
+http://www.tpc.org/tpcds/presentations/tpcds_workload_analysis.pdf
+
+#### Vertica  
+https://www.vertica.com/wp-content/uploads/2017/01/Benchmarks-Prove-the-Value-of-an-Analytical-Database-for-Big-Data.pdf
+
+The literally just reported what queries didn't run out of the TPC-DS 99 query suite and then timed what would on a couple of installs.  No mention of even why they didn't run.
+
 
 #### Fivetran  
 https://fivetran.com/blog/warehouse-benchmark  

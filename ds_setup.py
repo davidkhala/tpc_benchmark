@@ -5,7 +5,9 @@ Colin Dietrich, SADA, 2020
 
 import os
 import re
+import threading
 import subprocess
+import concurrent.futures
 import zipfile
 import glob
 
@@ -512,3 +514,78 @@ def tpl_bq_regex(tpl_dir, verbose=False):
                     file_signature="query*.tpl",
                     replace_mapper=dtype_mapper,
                     verbose=verbose)
+    
+class DGenPool:
+    def __init__(self, scale=1, seed=None, n=None, verbose=False):
+        
+        self.scale = scale
+        self.seed = seed
+        if self.seed is None:
+            self.seed = config.random_seed
+        
+        self.n = n
+        if self.n is None:
+            self.n = config.cpu_count
+        
+        self.child = list(range(1, self.n+1))
+        self.parallel = [self.n] * self.n
+        
+        self.verbose = verbose
+        
+        self.lock = threading.Lock()
+        
+        self.results = []
+        
+    def run(self, child, parallel):
+        """Create data for TPC-DS using the binary dsdgen with
+        a subprocess for each cpu core on the host machine
+
+        Parameters
+        ----------
+        child : int, cpu child thread number
+        parallel : int, total number of cpu threads being used
+        """
+        if self.scale not in config.scale_factors:
+            raise ValueError("Scale must be one of:", config.scale_factors)
+
+        _data_out = config.fp_ds_data_out + config.sep + str(self.scale) + "GB"
+
+        cmd = ["./dsdgen", "-DIR", _data_out, "-SCALE", str(self.scale),
+               "-DELIMITER", "|", "-TERMINATE", "N"]
+
+        if self.seed is not None:
+            cmd = cmd + ["-RNGSEED", str(self.seed)]
+
+        total_cpu = config.cpu_count
+        binary_folder = config.fp_ds_src + config.sep + "tools"
+        pipe_outputs = []
+        stdout = ""
+        stderr = ""
+        
+        child = str(child)
+        parallel = str(parallel)
+        
+        n_cmd = cmd + ["-PARALLEL", parallel,
+                       "-CHILD", child]
+        
+        pipe = subprocess.run(n_cmd,
+                              stdout=subprocess.PIPE, 
+                              stderr=subprocess.PIPE, 
+                              cwd=binary_folder)
+        
+        stdout = pipe.stdout.decode("utf-8")
+        stderr = pipe.stderr.decode("utf-8")
+
+        if self.verbose:
+            if len(stdout) > 0:
+                print(stdout)
+            if len(stderr) > 0:
+                print(stderr)
+        with self.lock:
+            self.results.append([child, parallel, stdout, stderr])
+        return child
+    
+    def generate(self):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.n) as executor:
+            results = executor.map(self.run, self.child, self.parallel)
+        return results
