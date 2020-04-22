@@ -90,7 +90,8 @@ class BQUpload:
             print(e)
             
         while not load_job.done():
-            print("Still loading...")
+            if self.verbose:
+                print("Still loading...")
             
         return load_job
         

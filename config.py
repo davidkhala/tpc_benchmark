@@ -135,20 +135,20 @@ scale_factor_mapper = {"1GB": 1, "2GB": 2, "100GB": 100, "1TB": 1000, "10TB": 10
 fp_query_templates = cwd + sep + "tpl"
 
 # for backup of default outputs
-fp_ds_ansi_gen_template_dir = fp_query_templates + sep + "ds_ansi_gen"
-fp_h_ansi_gen_template_dir  = fp_query_templates + sep + "h_ansi_gen"
+fp_ds_ansi_gen_template_dir = fp_query_templates + sep + "ansi_ds_gen"
+fp_h_ansi_gen_template_dir  = fp_query_templates + sep + "ansi_h_gen"
 
-fp_ds_bq_gen_template_dir   = fp_query_templates + sep + "ds_bq_gen"
-fp_h_bq_gen_template_dir    = fp_query_templates + sep + "h_bq_gen"
+fp_ds_bq_gen_template_dir   = fp_query_templates + sep + "bq_ds_gen"
+fp_h_bq_gen_template_dir    = fp_query_templates + sep + "bq_h_gen"
 
-fp_ds_sf_gen_template_dir   = fp_query_templates + sep + "ds_sf_gen"
-fp_h_sf_gen_template_dir    = fp_query_templates + sep + "h_sf_gen"
+fp_ds_sf_gen_template_dir   = fp_query_templates + sep + "sf_ds_gen"
+fp_h_sf_gen_template_dir    = fp_query_templates + sep + "sf_h_gen"
 
-fp_ds_bq_template_dir   = fp_query_templates + sep + "ds_bq"
-fp_h_bq_template_dir    = fp_query_templates + sep + "h_bq"
+fp_ds_bq_template_dir   = fp_query_templates + sep + "bq_ds"
+fp_h_bq_template_dir    = fp_query_templates + sep + "bq_h"
 
-fp_ds_sf_template_dir   = fp_query_templates + sep + "ds_sf"
-fp_h_sf_template_dir    = fp_query_templates + sep + "h_sf"
+fp_ds_sf_template_dir   = fp_query_templates + sep + "sf_ds"
+fp_h_sf_template_dir    = fp_query_templates + sep + "sf_h"
 
 # 5.2 Schema Variations
 fp_schema = cwd + sep + "sc"
@@ -156,7 +156,7 @@ fp_schema = cwd + sep + "sc"
 bq_schema = ["ds_1GB_basic"]
 sf_schema = ["sf_1GB_basic"]
 
-# 5.3 Query Variations
+# 5.3 Generated Queries  
 fp_query = cwd + sep + "q"
 
 # naive, mimimal conversion of ANSI to BQ or SF syntax
@@ -166,8 +166,13 @@ fp_query = cwd + sep + "q"
 #fp_ds_q_ex01_naive = fp_query + sep + "ds_q_ex01_naive"
 #fp_h_q_ex01_naive  = fp_query + sep + "h_q_ex01_naive"
 
+# 5.4 Qualification Query Answers  
+fp_ds_answers = fp_ds_src + sep + "answer_sets"
+
+
 # 5.4 Test Schema Combinations
 # TODO: perhaps remove?
+"""
 test_schema_bq = []
 for test in tests:
     for scale in scale_factors:
@@ -178,3 +183,5 @@ test_schema_sf = []
 for test in tests:
     for schema in sf_schema:
         test_schema_sf.append(test + "_" + schema)
+"""
+

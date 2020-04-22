@@ -5,11 +5,16 @@ Colin Dietrich, SADA, 2020
 
 import os
 import re
+import threading
 import subprocess
+import concurrent.futures
 import zipfile
 import glob
 
+from datetime import datetime
 from google.cloud import storage
+
+import pandas as pd
 
 import config, gcp_storage, tools
 
@@ -239,6 +244,8 @@ def copy_tpl(verbose=False):
         tools.copy_recursive(old_dir, new_dir)
         if verbose:
             print("Moved all files to:", new_dir)
+    if verbose:
+        print("Done.  Note: If none printed above, there were no new templates to write.")
 
 def sqlserver_defines(template_root):
     """Edit the sqlserver.tpl file such that it will compile ANSI SQL"""
@@ -265,7 +272,8 @@ def sqlserver_bq_defines(template_root):
     
     Parameters
     ----------
-    template_root : str, absolute path to 
+    template_root : str, absolute path to directory to write 
+        new template dialect file
     """
     dialect = "sqlserver_bq"
     tpl = template_root + config.sep + dialect + ".tpl"
@@ -447,52 +455,7 @@ def dsqgen(file=None,
             print("=========")
             print(err_out)
     
-    #std_out = std_out.split("\n")
-    #std_out_new = []
-    #keep = False
-    #for line in std_out:
-    #    line = line.rstrip("\r")
-    #    line = line.rstrip("\n")
-    #    if line == "select":
-    #        keep = True
-    #    if keep:
-    #        std_out_new.append(line)
-    #std_out = std_out_new
-    #std_out = "\n".join(std_out)
     return std_out, err_out
-
-
-def tpl_bq_regex_OLD(text):
-    # note that leading and trailing whitespace is used to find only table datatype strings
-    dtype_mapper = {#r' UNION': r' UNION ALL',
-                    #r' AS DECIMAL\(\d+,\d+\)\)': r'',
-                    #r'CAST\(': r'',
-                    r' union': r' union all',
-                    r' as decimal\(\d+,\d+\)\)': r'',
-                    r'cast\(': r''
-                    }
-    
-    for k, v in dtype_mapper.items():
-        regex = re.compile(k)
-        text = regex.sub(v, text)
-    
-    return text
-
-def tpl_bq_regex_file_OLD(filepath_in, filepath_out):
-    """Apply """
-    text = open(filepath_in).read()
-    
-    text = tpl_bq_regex(text)
-    
-    open(filepath_out, "w").write(text)
-
-def tpl_bq_regex_dir_OLD(tpl_dir):
-    """Alter all query templates in a directory"""
-    files = glob.glob(tpl_dir + config.sep + "query*.tpl")
-    for fp in files:
-        ds_setup.tpl_bq_regex_file(fp, fp)
-        file_name = os.path.basename(fp)
-        print(file_name)
         
 def tpl_bq_regex(tpl_dir, verbose=False):
     dtype_mapper = {r' UNION\n': r' UNION ALL\n',
@@ -510,3 +473,90 @@ def tpl_bq_regex(tpl_dir, verbose=False):
                     file_signature="query*.tpl",
                     replace_mapper=dtype_mapper,
                     verbose=verbose)
+
+    
+class DGenPool:
+    def __init__(self, scale=1, seed=None, n=None, verbose=False):
+        
+        self.scale = scale
+        self.seed = seed
+        if self.seed is None:
+            self.seed = config.random_seed
+        
+        self.n = n
+        if self.n is None:
+            self.n = config.cpu_count
+        
+        self.child = list(range(1, self.n+1))
+        self.parallel = [self.n] * self.n
+        
+        self.verbose = verbose
+        
+        self.lock = threading.Lock()
+        
+        self.results = []
+        self.dfr = None
+        
+    def run(self, child, parallel):
+        """Create data for TPC-DS using the binary dsdgen with
+        a subprocess for each cpu core on the host machine
+
+        Parameters
+        ----------
+        child : int, cpu child thread number
+        parallel : int, total number of cpu threads being used
+        """
+        if self.scale not in config.scale_factors:
+            raise ValueError("Scale must be one of:", config.scale_factors)
+
+        _data_out = config.fp_ds_data_out + config.sep + str(self.scale) + "GB"
+
+        cmd = ["./dsdgen", "-DIR", _data_out, "-SCALE", str(self.scale),
+               "-DELIMITER", "|", "-TERMINATE", "N"]
+
+        if self.seed is not None:
+            cmd = cmd + ["-RNGSEED", str(self.seed)]
+
+        binary_folder = config.fp_ds_src + config.sep + "tools"
+
+        stdout = ""
+        stderr = ""
+        
+        n_cmd = cmd + ["-PARALLEL", str(parallel),
+                       "-CHILD", str(child)]
+        
+        t0 = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        
+        pipe = subprocess.run(n_cmd,
+                              stdout=subprocess.PIPE, 
+                              stderr=subprocess.PIPE, 
+                              cwd=binary_folder)
+        
+        stdout = pipe.stdout.decode("utf-8")
+        stderr = pipe.stderr.decode("utf-8")
+
+        t1 = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        
+        if self.verbose:
+            if len(stdout) > 0:
+                print(stdout)
+            if len(stderr) > 0:
+                print(stderr)
+        with self.lock:
+            self.results.append([child, parallel, t0, t1, stdout, stderr])
+        return child
+    
+    def generate(self):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.n) as executor:
+            exe_results = executor.map(self.run, self.child, self.parallel)
+        return exe_results
+    
+    def save_results(self):
+        csv_fp = (config.fp_ds_output + config.sep + 
+          "datagen-" + str(self.scale) + 
+          "GB-" + datetime.utcnow().strftime("%Y%m%d-%H%M%S") + ".csv")
+        
+        columns = ["child", "parallel", "t0", "t1", "stdout", "stderr"]
+        data = list(self.results)
+        self.dfr = pd.DataFrame(data, columns=columns)
+        self.dfr.to_csv(csv_fp)

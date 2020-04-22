@@ -15,6 +15,7 @@ dependencies:
   - google-cloud-bigquery
   - google-cloud-storage
   - gcsfs
+  - conda-build
   - pip
 
   - pip:

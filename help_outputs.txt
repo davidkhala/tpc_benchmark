@@ -1,5 +1,6 @@
 ## TPC-DS  
 
+# ------------------------------------------------------------------------
 ### Data Generation  
 
 dsdgen Population Generator (Version 2.11.0)
@@ -42,42 +43,8 @@ VCOUNT =  <n>            -- set number of validation rows to be produced
 VSUFFIX =  <s>           -- set file suffix for data validation
 RNGSEED =  <n>           -- set RNG seed
 
+# ------------------------------------------------------------------------
 ### Query Generation  
-
-#### How To  
-
-from /tools/How_To_Guide-DS-V2.0.0.docx:
-
-How to generate query SQL from templates
-The “dsqgen” utility is used to transform the query templates (see query_templates/*.tpl) into executable SQL for your target DBMS. The unmodified templates are not executable.  
-
-Run “dsqgen–h” for the help info. Note that many of the options are “advanced” and usually not needed. 
-
-Since some common SQL features do not have ANSI standard forms (e.g. “LIMIT” and “BEGIN/COMMIT”), the dsqgen utility must be told which “dialect” to use. The following “dialect templates” are supported: db2.tpl, netezza.tpl, oracle.tpl, sqlserver.tpl. The following example generates a SQL file (named query_0.sql) from the query99 template for a 100GB database using Oracle syntax.
-
-dsqgen –template query99.tpl –directory query_templates –dialect oracle –scale 100
-
-Note that dsqgen also reads the “tpcds.idx” file (in the “kit” directory) and the “ansi.tpl” file (in the “kit/query_templates”) so you’ll need to copy something somewhere.
-
-#### Notes  
-ansi.tpl  
-    define __LIMITA = "";
-    define __LIMITB = "top %d";
-    define __LIMITC = "";
-
-sqlserver.tpl
-    define __LIMITA = "";
-    define __LIMITB = "top %d";
-    define __LIMITC = "";
-
-
-
-How to generate query streams
-
-dsqgen –scale <sf> -dir <path to query templates> -streams <n>
-Example:  dsqgen –scale 100 -dir /tmp –streams 5
-
-#### dsqgen help  
 
 qgen2 Population Generator (Version 2.11.0)
 Copyright Transaction Processing Performance Council (TPC) 2001 - 2019
@@ -117,8 +84,46 @@ FILTER =  [Y|N]          -- write generated queries to stdout
 DIALECT =  <s>           -- include query dialect defintions found in <s>.tpl
 DIRECTORY =  <s>         -- look in <s> for templates
 
+# ------------------------------------------------------------------------
+### Query Generation How To  
+
+from /tools/How_To_Guide-DS-V2.0.0.docx:
+
+How to generate query SQL from templates
+The “dsqgen” utility is used to transform the query templates (see query_templates/*.tpl) into executable SQL for your target DBMS. The unmodified templates are not executable.  
+
+Run “dsqgen–h” for the help info. Note that many of the options are “advanced” and usually not needed. 
+
+Since some common SQL features do not have ANSI standard forms (e.g. “LIMIT” and “BEGIN/COMMIT”), the dsqgen utility must be told which “dialect” to use. The following “dialect templates” are supported: db2.tpl, netezza.tpl, oracle.tpl, sqlserver.tpl. The following example generates a SQL file (named query_0.sql) from the query99 template for a 100GB database using Oracle syntax.
+
+dsqgen –template query99.tpl –directory query_templates –dialect oracle –scale 100
+
+Note that dsqgen also reads the “tpcds.idx” file (in the “kit” directory) and the “ansi.tpl” file (in the “kit/query_templates”) so you’ll need to copy something somewhere.
+
+#### Notes  
+ansi.tpl  
+    define __LIMITA = "";
+    define __LIMITB = "top %d";
+    define __LIMITC = "";
+
+sqlserver.tpl
+    define __LIMITA = "";
+    define __LIMITB = "top %d";
+    define __LIMITC = "";
+
+
+
+How to generate query streams
+
+dsqgen –scale <sf> -dir <path to query templates> -streams <n>
+Example:  dsqgen –scale 100 -dir /tmp –streams 5
+
+
+# ========================================================================
+
 ## TPC-H  
 
+# ------------------------------------------------------------------------
 ### Data Generation  
 
 TPC-H Population Generator (Version 2.18.0 build 0)
@@ -162,4 +167,30 @@ To generate the SF=1 (1GB), validation database population, use:
 To generate updates for a SF=1 (1GB), use:
 	dbgen -v -U 1 -s 1
 
+# ------------------------------------------------------------------------
 ### Query Generation  
+
+TPC-H Parameter Substitution (v. 2.18.0 build 0)
+Copyright Transaction Processing Performance Council 1994 - 2010
+USAGE: ./qgen <options> [ queries ]
+Options:
+	-a		-- use ANSI semantics.
+	-b <str>	-- load distributions from <str>
+	-c		-- retain comments found in template.
+	-d		-- use default substitution values.
+	-h		-- print this usage summary.
+	-i <str>	-- use the contents of file <str> to begin a query.
+	-l <str>	-- log parameters to <str>.
+	-n <str>	-- connect to database <str>.
+	-N		-- use default rowcounts and ignore :n directive.
+	-o <str>	-- set the output file base path to <str>.
+	-p <n>		-- use the query permutation for stream <n>
+	-r <n>		-- seed the random number generator with <n>
+	-s <n>		-- base substitutions on an SF of <n>
+	-v		-- verbose.
+	-t <str>	-- use the contents of file <str> to complete a query
+	-x		-- enable SET EXPLAIN in each query.
+
+# ------------------------------------------------------------------------
+### Query How To  
+See ../dbgen/README for details on qgen usage.

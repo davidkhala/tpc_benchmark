@@ -519,6 +519,13 @@ http://www.tpc.org/tpcds/
 
 https://www.haidongji.com/2011/03/30/data-generation-with-tpc-hs-dbgen-for-load-testing/  
 
+http://www.tpc.org/tpcds/presentations/tpcds_workload_analysis.pdf
+
+#### Vertica  
+https://www.vertica.com/wp-content/uploads/2017/01/Benchmarks-Prove-the-Value-of-an-Analytical-Database-for-Big-Data.pdf
+
+The literally just reported what queries didn't run out of the TPC-DS 99 query suite and then timed what would on a couple of installs.  No mention of even why they didn't run.
+
 
 #### Fivetran  
 https://fivetran.com/blog/warehouse-benchmark  
@@ -604,6 +611,13 @@ https://cloud.google.com/files/BigQueryTechnicalWP.pdf
 
 https://cloud.google.com/bigquery/docs/best-practices-costs
 https://cloud.google.com/bigquery/docs/best-practices-storage
+
+### Clustering Partitioning
+Clustering, Time Partitioning and Range Partitioning are possible in BigQuery.  
+Some details:
+* Clustering must be done at table creation.  
+* Clustering is only possible if time partitioning is also specified.(check if this also applies to range partitioning).  
+* Range partitioning is still in beta.  
 
 
 
@@ -709,4 +723,4 @@ https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environme
     ```
     conda env update --file environment_tpc.yml --name base
     ```
-8. 
+8. add the repo to the conda path so notebooks will find the package in the python path:  `conda develop /home/jupyter/code/bq_snowflake_benchmark`

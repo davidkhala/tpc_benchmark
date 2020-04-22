@@ -69,13 +69,13 @@ def make_directories():
             if not os.path.exists(fp):
                 os.mkdir(fp)
 
-                
+
 def mkdir_safe(fp):
     """Make a directory only if it does not currently exist"""
     if not os.path.exists(fp):
         os.mkdir(fp)
-                
-                
+
+
 def extract_zip(zip_filepath, target):
     """Extract downloaded TPC-DS test .zip to a standard location as set
     in config.py

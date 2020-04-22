@@ -5,13 +5,18 @@ Colin Dietrich, SADA, 2020
 
 import os
 import shutil
+import threading
 import subprocess
+import concurrent.futures
 import zipfile
 import glob
 
+from datetime import datetime
 from google.cloud import storage
 
-import config, gcp_storage
+import pandas as pd
+
+import config, tools, gcp_storage
 
 
 def download_zip():
@@ -188,29 +193,45 @@ def run_dbgen(scale=1, total_cpu=None, verbose=False):
     return stdout, stderr
 
 
-def copy_tpl():
+def copy_tpl(verbose=False):
     """Move query templates and make copies for modification """
     old_dir = (config.fp_h_src + config.sep + 
                "dbgen" + config.sep + "queries")
-    
-    # copy of output templates
-    new_dir = config.fp_h_query_template_dir
-    if not os.path.exists(new_dir):
-        tools.copy_recursive(old_dir, new_dir)
-    
-    # for BigQuery templates
-    new_dir = config.fp_h_bq_template_dir
-    if not os.path.exists(new_dir):
-        tools.copy_recursive(old_dir, new_dir)
-    
-    # for Snowflake templates
-    new_dir = config.fp_h_sf_template_dir
-    if not os.path.exists(new_dir):
-        tools.copy_recursive(old_dir, new_dir)
-
+    if verbose:
+        print("Source directory:", old_dir)
         
-def edit_tpl():
+    template_directories = [
+        # ANSI templates, as generated, for references
+        config.fp_h_ansi_gen_template_dir,
+        
+        # BigQuery templates, as generated, for references
+        config.fp_h_bq_gen_template_dir,
+        
+        # Snowflake templates, as generated, for references
+        config.fp_h_sf_gen_template_dir,
+        
+        # BigQuery templates, to be edited by hand before query generation
+        config.fp_h_bq_template_dir,
+        
+        # Snowflake templates, to be edited by hand before query generation
+        config.fp_h_sf_template_dir
+        ]
+    
+    for new_dir in template_directories:
+        if not os.path.exists(new_dir):
+            os.mkdir(new_dir)
+            tools.copy_recursive(old_dir, new_dir)
+            if verbose:
+                print("Moved all files to:", new_dir)
+
+    if verbose:
+        print("Done.  Note: If none printed above, there were no new templates to write.")
+        
+def sqlserver_bq_defines(template_root):
     """Edit the sqlserver.tpl file such that it will compile ANSI SQL"""
+    
+    dialect = "sqlserver_bq"
+    tpl = template_root + config.sep + dialect + ".tpl"
     
     tpl = config.fp_ds_src + config.sep + "query_templates" + config.sep + "sqlserver.tpl"
     
@@ -226,6 +247,98 @@ def edit_tpl():
         with open(tpl, "a") as f:
             f.write(new_def)
 
+def qgen(a=None,
+         b=None,
+         c=None,
+         d=None,
+         #h=None,
+         i=None,
+         l=None,
+         n=None,
+         #N=None,
+         o=None,
+         p=None,
+         r=None,
+         s=None,
+         v=None,
+         t=None,
+         x=None):
+    """Run the TPC-H Query substitution program and generate
+    SQL queries
+    
+    TPC-H Parameter Substitution (v. 2.18.0 build 0)
+    Copyright Transaction Processing Performance Council 1994 - 2010
+    USAGE: ./qgen <options> [ queries ]
+    Options:
+        -a        -- use ANSI semantics.
+        -b <str>  -- load distributions from <str>
+        -c        -- retain comments found in template.
+        -d        -- use default substitution values.
+        -h        -- print this usage summary.
+        -i <str>  -- use the contents of file <str> to begin a query.
+        -l <str>  -- log parameters to <str>.
+        -n <str>  -- connect to database <str>.
+        -N        -- use default rowcounts and ignore :n directive.
+        -o <str>  -- set the output file base path to <str>.
+        -p <n>    -- use the query permutation for stream <n>
+        -r <n>    -- seed the random number generator with <n>
+        -s <n>    -- base substitutions on an SF of <n>
+        -v        -- verbose.
+        -t <str>  -- use the contents of file <str> to complete a query
+        -x        -- enable SET EXPLAIN in each query.
+    """
+    
+    kwargs = []
+    
+    if a is not None:
+        kwargs.append("-a")
+        #kwargs.append(a)
+
+    if b is not None:
+        kwargs.append("-b")
+        kwargs.append(b)
+
+    if c is not None:
+        kwargs.append("-c")
+        #kwargs.append(file)
+        
+    if d is not None:
+        kwargs.append("-d")
+        
+    #if h is not None:
+    #    kwargs.append("-h")
+        
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    if file is not None:
+        kwargs.append("-FILE")
+        kwargs.append(file)
+    
 
 def run_qgen(n, scale=1, seed=None, verbose=False):
     """Create queries for TPC-H using the binary qgen with
@@ -243,7 +356,7 @@ def run_qgen(n, scale=1, seed=None, verbose=False):
     fp = config.fp_h_src + config.sep + "dbgen"
 
     env_vars = dict(os.environ)
-    env_vars["DSS_PATH"] = config.fp_h_data_out + config.sep + str(scale) + "GB"
+    env_vars["DSS_PATH"] = config.fp_h_output + config.sep + str(scale) + "GB"
     env_vars["DSS_QUERY"] = fp + config.sep + "queries"
 
     cmd = ["./qgen"]
@@ -251,7 +364,8 @@ def run_qgen(n, scale=1, seed=None, verbose=False):
     if seed is not None:
         cmd = cmd + ["-r", str(seed)]
     
-    cmd = cmd + [str(n)]
+    if n is not None:
+        cmd = cmd + [str(n)]
     
     pipe = subprocess.run(cmd, 
                           stdout=subprocess.PIPE, 
@@ -285,3 +399,92 @@ def run_qgen(n, scale=1, seed=None, verbose=False):
     std_out = std_out_new
     std_out = "\n".join(std_out)
     return std_out, err_out
+
+class DGenPool:
+    def __init__(self, scale=1, seed=None, n=None, verbose=False):
+        
+        self.scale = scale
+        self.seed = seed
+        if self.seed is None:
+            self.seed = config.random_seed
+        
+        self.n = n
+        if self.n is None:
+            self.n = config.cpu_count
+        
+        self.child = list(range(1, self.n+1))
+        self.parallel = [self.n] * self.n
+        
+        self.verbose = verbose
+        
+        self.lock = threading.Lock()
+        
+        self.results = []
+        self.dfr = None
+
+    def run(self, child, parallel):
+        """Create data for TPC-DS using the binary dsdgen with
+        a subprocess for each cpu core on the host machine
+
+        Parameters
+        ----------
+        child : int, cpu child thread number
+        parallel : int, total number of cpu threads being used
+        """
+        if self.scale not in config.scale_factors:
+            raise ValueError("Scale must be one of:", config.scale_factors)
+        
+        env_vars = dict(os.environ)
+        env_vars["DSS_PATH"] = (config.fp_h_output + 
+                                config.sep + str(self.scale) + "GB")
+        
+        # -f for force overwrite, 
+        # will spam stdout with overwrite questions if not used
+        cmd = ["./dbgen", "-f", "-s", str(self.scale)]
+        
+        # random seed - not used in TPC-H?
+        
+        binary_folder = config.fp_h_src + config.sep + "dbgen"
+    
+        stdout = ""
+        stderr = ""
+        
+        n_cmd = cmd + ["-C", str(parallel),
+                       "-S", str(child)]
+        
+        t0 = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        
+        pipe = subprocess.run(n_cmd,
+                              stdout=subprocess.PIPE, 
+                              stderr=subprocess.PIPE, 
+                              cwd=binary_folder,
+                              env=env_vars)
+        
+        stdout = pipe.stdout.decode("utf-8")
+        stderr = pipe.stderr.decode("utf-8")
+
+        t1 = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        
+        if self.verbose:
+            if len(stdout) > 0:
+                print(stdout)
+            if len(stderr) > 0:
+                print(stderr)
+        with self.lock:
+            self.results.append([child, parallel, t0, t1, stdout, stderr])
+        return child
+    
+    def generate(self):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.n) as executor:
+            exe_results = executor.map(self.run, self.child, self.parallel)
+        return exe_results
+    
+    def save_results(self):
+        csv_fp = (config.fp_h_output + config.sep + 
+          "datagen-" + str(self.scale) + 
+          "GB-" + datetime.utcnow().strftime("%Y%m%d-%H%M%S") + ".csv")
+        
+        columns = ["child", "parallel", "t0", "t1", "stdout", "stderr"]
+        data = list(self.results)
+        self.dfr = pd.DataFrame(data, columns=columns)
+        self.dfr.to_csv(csv_fp)
