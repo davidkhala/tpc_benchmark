@@ -16,7 +16,7 @@ from google.cloud import storage
 
 import pandas as pd
 
-import config, gcp_storage
+import config, tools, gcp_storage
 
 
 def download_zip():
@@ -193,29 +193,45 @@ def run_dbgen(scale=1, total_cpu=None, verbose=False):
     return stdout, stderr
 
 
-def copy_tpl():
+def copy_tpl(verbose=False):
     """Move query templates and make copies for modification """
     old_dir = (config.fp_h_src + config.sep + 
                "dbgen" + config.sep + "queries")
-    
-    # copy of output templates
-    new_dir = config.fp_h_query_template_dir
-    if not os.path.exists(new_dir):
-        tools.copy_recursive(old_dir, new_dir)
-    
-    # for BigQuery templates
-    new_dir = config.fp_h_bq_template_dir
-    if not os.path.exists(new_dir):
-        tools.copy_recursive(old_dir, new_dir)
-    
-    # for Snowflake templates
-    new_dir = config.fp_h_sf_template_dir
-    if not os.path.exists(new_dir):
-        tools.copy_recursive(old_dir, new_dir)
-
+    if verbose:
+        print("Source directory:", old_dir)
         
-def edit_tpl():
+    template_directories = [
+        # ANSI templates, as generated, for references
+        config.fp_h_ansi_gen_template_dir,
+        
+        # BigQuery templates, as generated, for references
+        config.fp_h_bq_gen_template_dir,
+        
+        # Snowflake templates, as generated, for references
+        config.fp_h_sf_gen_template_dir,
+        
+        # BigQuery templates, to be edited by hand before query generation
+        config.fp_h_bq_template_dir,
+        
+        # Snowflake templates, to be edited by hand before query generation
+        config.fp_h_sf_template_dir
+        ]
+    
+    for new_dir in template_directories:
+        if not os.path.exists(new_dir):
+            os.mkdir(new_dir)
+            tools.copy_recursive(old_dir, new_dir)
+            if verbose:
+                print("Moved all files to:", new_dir)
+
+    if verbose:
+        print("Done.  Note: If none printed above, there were no new templates to write.")
+        
+def sqlserver_bq_defines(template_root):
     """Edit the sqlserver.tpl file such that it will compile ANSI SQL"""
+    
+    dialect = "sqlserver_bq"
+    tpl = template_root + config.sep + dialect + ".tpl"
     
     tpl = config.fp_ds_src + config.sep + "query_templates" + config.sep + "sqlserver.tpl"
     
@@ -248,7 +264,7 @@ def run_qgen(n, scale=1, seed=None, verbose=False):
     fp = config.fp_h_src + config.sep + "dbgen"
 
     env_vars = dict(os.environ)
-    env_vars["DSS_PATH"] = config.fp_h_data_out + config.sep + str(scale) + "GB"
+    env_vars["DSS_PATH"] = config.fp_h_output + config.sep + str(scale) + "GB"
     env_vars["DSS_QUERY"] = fp + config.sep + "queries"
 
     cmd = ["./qgen"]
@@ -256,7 +272,8 @@ def run_qgen(n, scale=1, seed=None, verbose=False):
     if seed is not None:
         cmd = cmd + ["-r", str(seed)]
     
-    cmd = cmd + [str(n)]
+    if n is not None:
+        cmd = cmd + [str(n)]
     
     pipe = subprocess.run(cmd, 
                           stdout=subprocess.PIPE, 

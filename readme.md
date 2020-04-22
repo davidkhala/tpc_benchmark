@@ -723,4 +723,4 @@ https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environme
     ```
     conda env update --file environment_tpc.yml --name base
     ```
-8. 
+8. add the repo to the conda path so notebooks will find the package in the python path:  `conda develop /home/jupyter/code/bq_snowflake_benchmark`

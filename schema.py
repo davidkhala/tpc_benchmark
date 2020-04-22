@@ -62,7 +62,7 @@ def rewrite_ds_basic(filepath_out, dataset_name, prefix=False):
     open(filepath_out, "w").write(text)
 
 
-def rewrite_h_basic(filepath_out, dataset_name):
+def rewrite_h_basic(filepath_out, dataset_name, prefix=False):
     """Convert the sample implementation of the logical schema as described in TPC-DS Specification V1.0.0L , specifications.pdf, pg 14, and contained in  tpc_root/dbgen/dss.ddl.
 
     Parameters
@@ -100,7 +100,7 @@ def rewrite_h_basic(filepath_out, dataset_name):
         # if "primary key" in line:
         #    continue
 
-        if "CREATE TABLE" in line:
+        if ("CREATE TABLE" in line) & prefix:
             split_line = line.split()  # split on whitespace of n length
             table_name = split_line[2]
             dataset_table_name = dataset_name + "." + table_name

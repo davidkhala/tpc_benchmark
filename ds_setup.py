@@ -272,7 +272,8 @@ def sqlserver_bq_defines(template_root):
     
     Parameters
     ----------
-    template_root : str, absolute path to 
+    template_root : str, absolute path to directory to write 
+        new template dialect file
     """
     dialect = "sqlserver_bq"
     tpl = template_root + config.sep + dialect + ".tpl"
