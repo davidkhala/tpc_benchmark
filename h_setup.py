@@ -5,11 +5,16 @@ Colin Dietrich, SADA, 2020
 
 import os
 import shutil
+import threading
 import subprocess
+import concurrent.futures
 import zipfile
 import glob
 
+from datetime import datetime
 from google.cloud import storage
+
+import pandas as pd
 
 import config, gcp_storage
 
@@ -285,3 +290,90 @@ def run_qgen(n, scale=1, seed=None, verbose=False):
     std_out = std_out_new
     std_out = "\n".join(std_out)
     return std_out, err_out
+
+class DGenPool:
+    def __init__(self, scale=1, seed=None, n=None, verbose=False):
+        
+        self.scale = scale
+        self.seed = seed
+        if self.seed is None:
+            self.seed = config.random_seed
+        
+        self.n = n
+        if self.n is None:
+            self.n = config.cpu_count
+        
+        self.child = list(range(1, self.n+1))
+        self.parallel = [self.n] * self.n
+        
+        self.verbose = verbose
+        
+        self.lock = threading.Lock()
+        
+        self.results = []
+        self.dfr = None
+
+    def run(self, child, parallel):
+        """Create data for TPC-DS using the binary dsdgen with
+        a subprocess for each cpu core on the host machine
+
+        Parameters
+        ----------
+        child : int, cpu child thread number
+        parallel : int, total number of cpu threads being used
+        """
+        if self.scale not in config.scale_factors:
+            raise ValueError("Scale must be one of:", config.scale_factors)
+        
+        env_vars = dict(os.environ)
+        env_vars["DSS_PATH"] = (config.fp_h_output + 
+                                config.sep + str(self.scale) + "GB")
+        
+        cmd = ["./dbgen", "-vf", "-s", str(self.scale)]
+        
+        # random seed - not used in TPC-H?
+        
+        binary_folder = config.fp_h_src + config.sep + "dbgen"
+    
+        stdout = ""
+        stderr = ""
+        
+        n_cmd = cmd + ["-C", str(parallel),
+                       "-S", str(child)]
+        
+        t0 = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        
+        pipe = subprocess.run(n_cmd,
+                              stdout=subprocess.PIPE, 
+                              stderr=subprocess.PIPE, 
+                              cwd=binary_folder,
+                              env=env_vars)
+        
+        stdout = pipe.stdout.decode("utf-8")
+        stderr = pipe.stderr.decode("utf-8")
+
+        t1 = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        
+        if self.verbose:
+            if len(stdout) > 0:
+                print(stdout)
+            if len(stderr) > 0:
+                print(stderr)
+        with self.lock:
+            self.results.append([child, parallel, t0, t1, stdout, stderr])
+        return child
+    
+    def generate(self):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self.n) as executor:
+            exe_results = executor.map(self.run, self.child, self.parallel)
+        return exe_results
+    
+    def save_results(self):
+        csv_fp = (config.fp_ds_output + config.sep + 
+          "datagen-" + str(self.scale) + 
+          "GB-" + datetime.utcnow().strftime("%Y%m%d-%H%M%S") + ".csv")
+        
+        columns = ["child", "parallel", "t0", "t1", "stdout", "stderr"]
+        data = list(self.results)
+        self.dfr = pd.DataFrame(data, columns=columns)
+        self.dfr.to_csv(csv_fp)
