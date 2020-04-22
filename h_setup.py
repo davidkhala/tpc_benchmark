@@ -329,7 +329,9 @@ class DGenPool:
         env_vars["DSS_PATH"] = (config.fp_h_output + 
                                 config.sep + str(self.scale) + "GB")
         
-        cmd = ["./dbgen", "-vf", "-s", str(self.scale)]
+        # -f for force overwrite, 
+        # will spam stdout with overwrite questions if not used
+        cmd = ["./dbgen", "-f", "-s", str(self.scale)]
         
         # random seed - not used in TPC-H?
         
@@ -369,7 +371,7 @@ class DGenPool:
         return exe_results
     
     def save_results(self):
-        csv_fp = (config.fp_ds_output + config.sep + 
+        csv_fp = (config.fp_h_output + config.sep + 
           "datagen-" + str(self.scale) + 
           "GB-" + datetime.utcnow().strftime("%Y%m%d-%H%M%S") + ".csv")
         
