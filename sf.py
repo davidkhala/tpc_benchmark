@@ -22,13 +22,20 @@ def _open_connection(config):
     """ starts warehouse, opens connection """
     # connect to snowflake using authentication data from config
     # TODO: warehouse and db probably shouldn't be passed here and should be "created if not exist"
+    # conn = snowflake.connector.connect(
+    #     user=config.sf_username,
+    #     password=config.sf_password,
+    #     account=config.sf_account,
+    #     warehouse=config.sf_warehouse,
+    #     database=config.sf_database,
+    # )
+
     conn = snowflake.connector.connect(
-        user=config.sf_username,
-        password=config.sf_password,
-        account=config.sf_account,
-        warehouse=config.sf_warehouse,
-        database=config.sf_database,
+        user='sadadauren',
+        password='Test1234!',
+        account='ed75261.us-central1.gcp'
     )
+
     return conn
 
 
@@ -53,7 +60,9 @@ class SnowflakeHelper:
     def __init__(self, test_type, test_size, config):
         """" initializes helper class """
         # open connection
+        print('preparing to open connection to Snowflake')
         self.conn = _open_connection(config)
+        print('connection opened')
         # save config
         self.config = config
         # save type of test to run: C or DS
@@ -103,8 +112,15 @@ class SnowflakeHelper:
             self.conn = _open_connection()
 
         # suspend warehouse
-        result = self._run_query(f'ALTER WAREHOUSE {self.config.sf_warehouse} START;')
+        query = f'ALTER WAREHOUSE {self.config.sf_warehouse} RESUME;'
+        print(f'running query: {query}')
+        result = self._run_query(query)
         print(f'warehouse start: {result}')
+
+        query = f'USE DATABASE SF_TUTS'
+        print(f'running query: {query}')
+        result = self._run_query(query)
+        print(f'result: {result}')
 
     def warehouse_suspend(self):
         """ suspends warehouse and closes connection """
@@ -131,7 +147,9 @@ class SnowflakeHelper:
 
 
         # first let's get list of files from GCS bucket (we will only create stages for files that exist in bucket)
-        bucket_items = self.list_integration()
+        # bucket_items = self.list_integration()
+        # print('available buckets:')
+        # print(bucket_items)
 
         # go through each table
         for table in self.tables:
@@ -182,7 +200,7 @@ class SnowflakeHelper:
             TYPE = EXTERNAL_STAGE
             STORAGE_PROVIDER = GCS
             ENABLED = TRUE
-            STORAGE_ALLOWED_LOCATIONS = ({GCS_LOCATION}/{st_int_name}.dat);'''
+            STORAGE_ALLOWED_LOCATIONS = ('{GCS_LOCATION}/{st_int_name}.dat');'''
 
         print(f'running query: {query}')
         result = self._run_query(query)
