@@ -33,16 +33,20 @@ def _open_connection(config):
 
 
 # Variables
-TEST_DS = 'DS'
-TEST_H = 'H'
-TABLES_DS = []
+TEST_DS = 'ds'
+TEST_H = 'h'
+TABLES_DS = [
+    'customer_address', 'customer_demographics', 'ship_mode', 'time_dim', 'reason', 'income_band', 'item',
+    'store', 'call_center', 'customer', 'web_site', 'store_returns', 'household_demographics', 'web_page', 'promotion', 'catalog_page',
+    'inventory', 'catalog_returns', 'web_returns', 'web_sales', 'catalog_sales', 'store_sales',
+]
 TABLES_H = ['customer', 'lineitem', 'nation', 'orders', 'part', 'partsupp', 'region', 'supplier']
 DATASET_SIZES = ['1GB', '2GB', '100GB']
-GCS_LOCATIONS = ['gcs://tpc-benchmark-5947/'] #TODO: needs to go to config
+GCS_LOCATION = 'gcs://tpc-benchmark-5947' #TODO: needs to go to config
 SF_ROLE = 'ACCOUNTADMIN' # TODO: needs to go to config
 storage_integration_name = 'gcs_storage_integration' #TODO: needs to go to config
 named_file_format_name = 'csv_file_format' # TODO: move to config
-
+is_integration = False
 
 class SnowflakeHelper:
     """ manages snowflake db  """
@@ -59,6 +63,12 @@ class SnowflakeHelper:
         self.test_type = test_type
         # size of dataset to use
         self.test_size = test_size
+
+        # default file gcs file range:
+        self.gcs_file_range = 12 # 1 GB
+
+        if test_size == '100GB':
+            self.gcs_file_range = 96  # 100 GB
 
         # set tables to be imported to snowflake based on test
         if self.test_type == TEST_H:
@@ -106,26 +116,47 @@ class SnowflakeHelper:
         # reset connection object
         self.conn = None
 
-    def create_integration(self, gcs_location):
+    def is_integrated(self):
+        """ checks to see if we need to run GCS integration again """
+
+        # TODO: for now set it manually
+        return is_integration
+
+    def create_integration(self):
         """ integrates snowflake account with GCS location """
         # Integrating Snowflake and GCS is a multi-step process requiring actions on both Snowflake and GCP IAM side
 
         # STEP 1: tell snowflake about CSV file structures we're expecting to import from GCS
         self._create_named_file_format()
 
-        # link to GCS URI (and creates a service account which needs storage permissions in GCS IAM)
-        self._create_storage_integration()
 
-        # grant snowflake user permissions to access "storage integration" in order to great a STAGE
-        self._grant_storage_integration_access()
+        # first let's get list of files from GCS bucket (we will only create stages for files that exist in bucket)
+        bucket_items = self.list_integration()
 
-        # create STAGE: which knows what GCS URI to pull from, what file in bucket, how to read CSV file
-        self._create_stage()
+        # go through each table
+        for table in self.tables:
+
+            # generate gcs file name for this table and this specific file index
+            for file_idx in range(1, self.gcs_file_range):
+                st_int_name = f'{self.test_type}_{self.test_size}_{table}_{file_idx}_{self.gcs_file_range}'
+                print(f'staging file {st_int_name}')
+                # link to GCS URI (and creates a service account which needs storage permissions in GCS IAM)
+                self._create_storage_integration(st_int_name)
+
+                # grant snowflake user permissions to access "storage integration" in order to great a STAGE
+                self._grant_storage_integration_access(st_int_name)
+
+                # create STAGE: which knows what GCS URI to pull from, what file in bucket, how to read CSV file
+                self._create_stage(st_int_name)
 
         # test storage
         self._list_stage()
 
         return
+
+    def list_integration(self):
+        """ lists all files in GCS bucket """
+        return self._run_query(f'list @{storage_integration_name};')
 
     def _create_named_file_format(self):
         """ creates NAMED FILE FORMATs in snowflake db """
@@ -144,39 +175,40 @@ class SnowflakeHelper:
         print(f'result {result}')
         return
 
-    def _create_storage_integration(self):
+    def _create_storage_integration(self, st_int_name):
         """ creates STORAGE INTEGRATION """
-        query = f'''CREATE STORAGE INTEGRATION {storage_integration_name}
+
+        query = f'''CREATE STORAGE INTEGRATION {st_int_name}
             TYPE = EXTERNAL_STAGE
             STORAGE_PROVIDER = GCS
             ENABLED = TRUE
-            STORAGE_ALLOWED_LOCATIONS = ({GCS_LOCATIONS});'''
+            STORAGE_ALLOWED_LOCATIONS = ({GCS_LOCATION}/{st_int_name}.dat);'''
 
         print(f'running query: {query}')
         result = self._run_query(query)
         print(f'result {result}')
         return
 
-    def _grant_storage_integration_access(self):
+    def _grant_storage_integration_access(self, st_int_name):
         """ grant access to STORAGE INTEGRATION """
         query = f'grant create stage on schema public to role {SF_ROLE}'
         print(f'running query: {query}')
         result = self._run_query(query)
         print(f'result {result}')
 
-        query = f'grant usage on integration {storage_integration_name} to role {SF_ROLE}'
+        query = f'grant usage on integration {st_int_name} to role {SF_ROLE}'
         print(f'running query: {query}')
         result = self._run_query(query)
         print(f'result {result}')
         return
 
-    def _create_stage(self):
-        """ creates STAGE """
-        stage_name = 'gcs_stage'
+    def _create_stage(self, st_int_name):
+        """ creates STAGE for each file needed during import """
+
         # TODO: create stage per each table
-        query = f'''create stage {stage_name}
-          url = {GCS_LOCATIONS[0]} 
-          storage_integration = {storage_integration_name}
+        query = f'''create stage {st_int_name}_stage
+          url = {GCS_LOCATION}
+          storage_integration = {st_int_name}
           file_format = {named_file_format_name};'''
 
         print(f'running query: {query}')
@@ -187,9 +219,9 @@ class SnowflakeHelper:
     def _list_stage(self):
         pass
 
-    def import_data(self):
+    def import_data(self, table, st_int_name):
         """ run import """
-        query = f'copy into part from @h_1gb_stage;'
+        query = f'copy into {table} from @{st_int_name}_stage;'
         print(f'running query: {query}')
         result = self._run_query(query)
         print(f'result {result}')
