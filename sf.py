@@ -116,6 +116,11 @@ class SnowflakeHelper:
             self.conn = _open_connection()
 
         # resume warehouse
+        query = f'USE ROLE {SF_ROLE}'
+        print(f'running query: {query}')
+        result = self._run_query(query)
+        print(f'result: {result}')
+
         query = f'ALTER WAREHOUSE {self.config.sf_warehouse} RESUME;'
         print(f'running query: {query}')
         result = self._run_query(query)
@@ -126,12 +131,7 @@ class SnowflakeHelper:
         result = self._run_query(query)
         print(f'result: {result}')
 
-        query = f'USE DATABASE SF_TUTS'
-        print(f'running query: {query}')
-        result = self._run_query(query)
-        print(f'result: {result}')
-
-        query = f'USE ROLE ACCOUNTADMIN'
+        query = f'USE DATABASE {self.config.sf_database}'
         print(f'running query: {query}')
         result = self._run_query(query)
         print(f'result: {result}')
@@ -177,6 +177,40 @@ class SnowflakeHelper:
 
         print(f'--finished staging "{st_int_name}"\n\n')
         return st_int_name
+
+    def create_schema(self, is_dry_run=False):
+        """ list items in "stage" """
+
+        # open file and read all rows:
+        # with open(self.config.ds_schema_bq_basic_filepath, 'r') as f:
+        #     lines = f.readlines()
+        with open('/home/vagrant/bq_snowflake_benchmark/ds/v2.11.0rc2/tools/tpcds.sql', 'r') as f:
+            lines = f.readlines()
+
+        # extract queries:
+        queries = []
+        current_query = ''
+        for line in lines:
+            # check if this is end of query
+            if ';' in line:
+                # if end of query found, add it and reset
+                current_query += line
+                queries.append(current_query)
+                current_query = ''
+            else:  # end of query not found, keep accumulating
+                current_query += line
+
+        # run queries
+        for query in queries:
+            if is_dry_run:
+                print(f'{query}\n\n\n')
+            else:
+                print(f'running query: {query}')
+                result = self._run_query(query)
+                print(f'result {result}')
+
+        return
+
 
     def list_integration(self, integration_name):
         """ lists all files in GCS bucket """
@@ -232,6 +266,7 @@ class SnowflakeHelper:
             skip_header = 1
             null_if = ('NULL', 'null')
             empty_field_as_null = true
+            encoding = 'iso-8859-1' 
             compression = none;'''
 
         if is_dry_run:
@@ -256,15 +291,15 @@ class SnowflakeHelper:
         return
 
     def _grant_storage_integration_access(self, st_int_name, is_dry_run=False):
-        """ grant access to STORAGE INTEGRATION """
-        # query = f'grant create stage on schema public to role {SF_ROLE};'
-        #
-        # if is_dry_run:
-        #     print(query)
-        # else:
-        #     print(f'running query: {query}')
-        #     result = self._run_query(query)
-        #     print(f'result {result}')
+        """ grant access to STORAGE INTEGRATION and STAGE creation"""
+        query = f'GRANT CREATE STAGE on schema public to ROLE {SF_ROLE};'
+
+        if is_dry_run:
+            print(query)
+        else:
+            print(f'running query: {query}')
+            result = self._run_query(query)
+            print(f'result {result}')
 
         query = f'GRANT USAGE on INTEGRATION {st_int_name} to ROLE {SF_ROLE};'
 
