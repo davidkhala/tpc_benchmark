@@ -33,7 +33,7 @@ from
 				(n1.n_name = ':1' and n2.n_name = ':2')
 				or (n1.n_name = ':2' and n2.n_name = ':1')
 			)
-			and l_shipdate between date '1995-01-01' and date '1996-12-31'
+			and l_shipdate between cast('1995-01-01' as date) and cast('1996-12-31' as date)
 	) as shipping
 group by
 	supp_nation,
@@ -43,4 +43,3 @@ order by
 	supp_nation,
 	cust_nation,
 	l_year;
-:n -1

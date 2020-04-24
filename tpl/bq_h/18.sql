@@ -35,5 +35,5 @@ group by
 	o_totalprice
 order by
 	o_totalprice desc,
-	o_orderdate;
-:n 100
+	o_orderdate
+:n 100;
