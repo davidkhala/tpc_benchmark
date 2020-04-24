@@ -88,6 +88,7 @@ class BQUpload:
             print(table_name, uri)
             print("-"*20)
             print(e)
+            return
             
         while not load_job.done():
             if self.verbose:
@@ -100,7 +101,7 @@ class BQUpload:
         uri = row.uri
         table_name = row.table
         if self.test == "h":
-            table_name = table_name.upper()
+            table_name = table_name #.upper()
             
         for ig in config.ignore_files:
             if ig in row.chunk_name:
