@@ -119,8 +119,8 @@ fp_schema = cwd + sep + "schema"
 fp_ds_schema = fp_schema + sep + "ds"
 fp_h_schema  = fp_schema + sep + "h"
 
-ds_schema_bq_basic_filepath = fp_ds_output + sep + "tpcds_schema_bq_basic.sql"
-h_schema_bq_basic_filepath  = fp_h_output + sep + "tpc_h_schema_bq_basic.ddl"
+#ds_schema_bq_basic_filepath = fp_ds_output + sep + "tpcds_schema_bq_basic.sql"
+#h_schema_bq_basic_filepath  = fp_h_output + sep + "tpc_h_schema_bq_basic.ddl"
 
 # 4.3 Files output by data generators from either test
 # to ignore

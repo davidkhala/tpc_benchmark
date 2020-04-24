@@ -456,7 +456,37 @@ def dsqgen(file=None,
             print(err_out)
     
     return std_out, err_out
+
+def qgen_template(n, directory, scale=1, qual=False, verbose=False):
+    """Generate DS query text for query number n
+    
+    Parameters
+    ----------|
+    n : int, query number to generate BigQuery SQL
+    directory : str, absolute path to directory of query templates
+        to draw from for n.
+    scale : int, scale factor of db being queried
+    qual : bool, generate qualification queries in ascending order
         
+    Returns
+    -------
+    str : BigQuery SQL query
+    """
+    
+    if qual:
+        qual = "Y"
+    else:
+        qual = "N"
+        
+    std_out, err_out = dsqgen(directory=directory,
+                                       dialect="sqlserver_bq",
+                                       scale=scale,
+                                       template="query{}.tpl".format(n),
+                                       filter="Y",  # write to std_out
+                                       qualify=qual
+                                      )
+    return std_out, err_out
+
 def tpl_bq_regex(tpl_dir, verbose=False):
     dtype_mapper = {r' UNION\n': r' UNION ALL\n',
                     r' union\n': r' union all\n',
