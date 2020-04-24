@@ -104,7 +104,7 @@ def make_tpcds(verbose=False):
     return stdout, stderr
 
 
-def run_dsdgen(scale=1, seed=None, verbose=False):
+def run_dsdgen(scale=1, seed=None, total_cpu=None, verbose=False):
     """Create data for TPC-DS using the binary dsdgen with
     a subprocess for each cpu core on the host machine
     
@@ -113,6 +113,7 @@ def run_dsdgen(scale=1, seed=None, verbose=False):
     scale : int, scale factor in GB, acceptable values:
         1, 100, 1000, 10000
     seed : int, random seed value
+    total_cpu : None or int, if None use all cpus on machine
     verbose : bool, print stdout and stderr output
     """
     if scale not in config.scale_factors:
@@ -126,7 +127,9 @@ def run_dsdgen(scale=1, seed=None, verbose=False):
     if seed is not None:
         cmd = cmd + ["-RNGSEED", str(seed)]
 
-    total_cpu = config.cpu_count
+    if total_cpu is None:
+        total_cpu = config.cpu_count
+        
     binary_folder = config.fp_ds_src + config.sep + "tools"
     pipe_outputs = []
     stdout = ""

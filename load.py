@@ -100,8 +100,8 @@ class BQUpload:
         
         uri = row.uri
         table_name = row.table
-        if self.test == "h":
-            table_name = table_name #.upper()
+        #if self.test == "h":
+        #    table_name = table_name #.upper()
             
         for ig in config.ignore_files:
             if ig in row.chunk_name:
