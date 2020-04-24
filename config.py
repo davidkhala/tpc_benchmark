@@ -126,6 +126,9 @@ fp_h_schema  = fp_schema + sep + "h"
 # to ignore
 ignore_files = ["version"]
 
+# 4.4 key to find in queries for project and dataset appending
+p_d_id = "49586899439487868_"
+
 # 5.0 Experimental Setup
 tests = ["ds", "h"]
 scale_factors = [1, 2, 100, 1000, 10000]  # GB
