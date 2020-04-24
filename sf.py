@@ -52,8 +52,8 @@ DATASET_SIZES = ['1GB', '2GB', '100GB']
 GCS_LOCATION = 'gcs://tpc-benchmark-5947' #TODO: needs to go to config
 SF_ROLE = 'ACCOUNTADMIN' # TODO: needs to go to config
 storage_integration_name = 'gcs_storage_integration' #TODO: needs to go to config
-named_file_format_name = 'csv_file_format' # TODO: move to config
-is_integration = False
+named_file_format_name = 'csv_file_format'  # TODO: move to config
+is_integrated = False
 
 class SnowflakeHelper:
     """ manages snowflake db  """
@@ -73,8 +73,8 @@ class SnowflakeHelper:
         # size of dataset to use
         self.test_size = test_size
 
-        # default file gcs file range:
-        self.gcs_file_range = 12 # 1 GB
+        # default file gcs file range (dbgen generates large table datasets in chunks, this value tells how many chunks to load)
+        self.gcs_file_range = 12  # 1 GB
 
         if test_size == '100GB':
             self.gcs_file_range = 96  # 100 GB
@@ -91,14 +91,18 @@ class SnowflakeHelper:
         # close connection
         self.conn.close()
 
-    def _run_query(self, query):
+    def _run_query(self, query, fetch_all=False):
         """ opens cursor, runs query and returns result """
         cs = self.conn.cursor()
         result = None
         try:
             cs.execute(query)
-            one_row = cs.fetchone()
-            result = one_row[0]
+            if not fetch_all:
+                rows = cs.fetchone()
+                return rows[0]
+            else:
+                rows = cs.fetchall()
+                return rows
         except Exception as ex:
             print(f'Error running query {ex}')
         finally:
@@ -111,13 +115,23 @@ class SnowflakeHelper:
         if not self.conn:
             self.conn = _open_connection()
 
-        # suspend warehouse
+        # resume warehouse
         query = f'ALTER WAREHOUSE {self.config.sf_warehouse} RESUME;'
         print(f'running query: {query}')
         result = self._run_query(query)
         print(f'warehouse start: {result}')
 
+        query = f'USE WAREHOUSE {self.config.sf_warehouse}'
+        print(f'running query: {query}')
+        result = self._run_query(query)
+        print(f'result: {result}')
+
         query = f'USE DATABASE SF_TUTS'
+        print(f'running query: {query}')
+        result = self._run_query(query)
+        print(f'result: {result}')
+
+        query = f'USE ROLE ACCOUNTADMIN'
         print(f'running query: {query}')
         result = self._run_query(query)
         print(f'result: {result}')
@@ -136,47 +150,79 @@ class SnowflakeHelper:
         """ checks to see if we need to run GCS integration again """
 
         # TODO: for now set it manually
-        return is_integration
+        return is_integrated
 
-    def create_integration(self):
+    def create_integration(self, is_dry_run=False):
         """ integrates snowflake account with GCS location """
         # Integrating Snowflake and GCS is a multi-step process requiring actions on both Snowflake and GCP IAM side
 
         # STEP 1: tell snowflake about CSV file structures we're expecting to import from GCS
-        self._create_named_file_format()
+        self._create_named_file_format(is_dry_run)
 
+        # STEP 2: for a given test type and size, for each table: we need to "stage" all GCS .dat files before actually importing them
+        # generate "stage" name
+        st_int_name = f'gcs_{self.test_type}_{self.test_size}_integration'
+        print(f'\n\n--integrating "{st_int_name}" ... ')
+        # link to GCS URI (and creates a service account which needs storage permissions in GCS IAM)
+        self._create_storage_integration(st_int_name, is_dry_run)
 
-        # first let's get list of files from GCS bucket (we will only create stages for files that exist in bucket)
-        # bucket_items = self.list_integration()
-        # print('available buckets:')
-        # print(bucket_items)
+        # grant snowflake user permissions to access "storage integration" in order to great a STAGE
+        self._grant_storage_integration_access(st_int_name, is_dry_run)
 
-        # go through each table
-        for table in self.tables:
+        # create STAGE: which knows what GCS URI to pull from, what file in bucket, how to read CSV file
+        self._create_stage(st_int_name, is_dry_run)
 
-            # generate gcs file name for this table and this specific file index
-            for file_idx in range(1, self.gcs_file_range):
-                st_int_name = f'{self.test_type}_{self.test_size}_{table}_{file_idx}_{self.gcs_file_range}'
-                print(f'staging file {st_int_name}')
-                # link to GCS URI (and creates a service account which needs storage permissions in GCS IAM)
-                self._create_storage_integration(st_int_name)
+        # test stage
+        self._list_stage(st_int_name, is_dry_run)
 
-                # grant snowflake user permissions to access "storage integration" in order to great a STAGE
-                self._grant_storage_integration_access(st_int_name)
+        print(f'--finished staging "{st_int_name}"\n\n')
+        return st_int_name
 
-                # create STAGE: which knows what GCS URI to pull from, what file in bucket, how to read CSV file
-                self._create_stage(st_int_name)
-
-        # test storage
-        self._list_stage()
-
-        return
-
-    def list_integration(self):
+    def list_integration(self, integration_name):
         """ lists all files in GCS bucket """
-        return self._run_query(f'list @{storage_integration_name};')
+        rows = self._run_query(f'list @{integration_name}_stage;', fetch_all=True)
 
-    def _create_named_file_format(self):
+        table_files_db = {}
+
+        # cleanup results and split files into buckets based on table name
+        for row in rows:
+            # extract gcs filepath from response
+            gcs_filepath = row[0]
+
+            # expected file prefix
+            gcs_prefix = f'{GCS_LOCATION}/{self.test_type}_{self.test_size}_'
+
+            # ignore everything not matching our TEST TYPE and TEST SIZE
+            if not gcs_filepath.startswith(gcs_prefix):
+                continue
+
+            # get table name from gcs_filepath (note: avoiding conflicts like "customer" and "customer_address")
+            gcs_filepath_table_tokens = gcs_filepath[len(gcs_prefix):].split('_')
+            gcs_filepath_table = gcs_filepath_table_tokens[0]
+            try:  # if second token is not a number, then it's a two_word table
+                file_index = int(gcs_filepath_table_tokens[1])
+            except ValueError as ex:
+                gcs_filepath_table += '_' + gcs_filepath_table_tokens[1]
+
+            # see which table this files belongs to and append to appropriate list
+            is_found_table = False
+            for table in self.tables:
+                if table == gcs_filepath_table:
+                    # first entry
+                    if table not in table_files_db.keys():
+                        table_files_db[table] = []
+                    # add gcs file to table list
+                    table_files_db[table].append(gcs_filepath)
+                    is_found_table = True
+                    break
+            # if file matches no tables, raise and exception!
+            if not is_found_table:
+                print(f'unknown table!!!! {gcs_filepath}')
+                raise
+
+        return table_files_db
+
+    def _create_named_file_format(self, is_dry_run=False):
         """ creates NAMED FILE FORMATs in snowflake db """
         # named_file_format_name = f'{self.test_type}_{self.test_size}_{table}_csv_format'
         # TODO: not sure if we need to create a named file format for each table
@@ -188,59 +234,82 @@ class SnowflakeHelper:
             empty_field_as_null = true
             compression = none;'''
 
-        print(f'running query: {query}')
-        result = self._run_query(query)
-        print(f'result {result}')
+        if is_dry_run:
+            print(query)
+        else:
+            print(f'running query: {query}')
+            result = self._run_query(query)
+            print(f'result {result}')
         return
 
-    def _create_storage_integration(self, st_int_name):
+    def _create_storage_integration(self, st_int_name, is_dry_run=False):
         """ creates STORAGE INTEGRATION """
 
-        query = f'''CREATE STORAGE INTEGRATION {st_int_name}
-            TYPE = EXTERNAL_STAGE
-            STORAGE_PROVIDER = GCS
-            ENABLED = TRUE
-            STORAGE_ALLOWED_LOCATIONS = ('{GCS_LOCATION}/{st_int_name}.dat');'''
+        query = f'''CREATE STORAGE INTEGRATION {st_int_name} TYPE=EXTERNAL_STAGE STORAGE_PROVIDER=GCS ENABLED=TRUE STORAGE_ALLOWED_LOCATIONS=('{GCS_LOCATION}/');'''
 
-        print(f'running query: {query}')
-        result = self._run_query(query)
-        print(f'result {result}')
+        if is_dry_run:
+            print(query)
+        else:
+            print(f'running query: {query}')
+            result = self._run_query(query)
+            print(f'result {result}')
         return
 
-    def _grant_storage_integration_access(self, st_int_name):
+    def _grant_storage_integration_access(self, st_int_name, is_dry_run=False):
         """ grant access to STORAGE INTEGRATION """
-        query = f'grant create stage on schema public to role {SF_ROLE}'
-        print(f'running query: {query}')
-        result = self._run_query(query)
-        print(f'result {result}')
+        # query = f'grant create stage on schema public to role {SF_ROLE};'
+        #
+        # if is_dry_run:
+        #     print(query)
+        # else:
+        #     print(f'running query: {query}')
+        #     result = self._run_query(query)
+        #     print(f'result {result}')
 
-        query = f'grant usage on integration {st_int_name} to role {SF_ROLE}'
-        print(f'running query: {query}')
-        result = self._run_query(query)
-        print(f'result {result}')
+        query = f'GRANT USAGE on INTEGRATION {st_int_name} to ROLE {SF_ROLE};'
+
+        if is_dry_run:
+            print(query)
+        else:
+            print(f'running query: {query}')
+            result = self._run_query(query)
+            print(f'result {result}')
         return
 
-    def _create_stage(self, st_int_name):
+    def _create_stage(self, st_int_name, is_dry_run=False):
         """ creates STAGE for each file needed during import """
 
-        # TODO: create stage per each table
-        query = f'''create stage {st_int_name}_stage
-          url = {GCS_LOCATION}
-          storage_integration = {st_int_name}
-          file_format = {named_file_format_name};'''
+        query = f'''CREATE STAGE {st_int_name}_stage URL='{GCS_LOCATION}' STORAGE_INTEGRATION={st_int_name} FILE_FORMAT={named_file_format_name};'''
 
-        print(f'running query: {query}')
-        result = self._run_query(query)
-        print(f'result {result}')
+        if is_dry_run:
+            print(query)
+        else:
+            print(f'running query: {query}')
+            result = self._run_query(query)
+            print(f'result {result}')
         return
 
-    def _list_stage(self):
-        pass
+    def _list_stage(self, st_int_name, is_dry_run=False):
+        """ list items in "stage" """
 
-    def import_data(self, table, st_int_name):
+        query = f'list  @{st_int_name}_stage;'
+
+        if is_dry_run:
+            print(query)
+        else:
+            print(f'running query: {query}')
+            result = self._run_query(query)
+            print(f'result {result}')
+        return
+
+    def import_data(self, table, gcs_file_path, storage_integration, is_dry_run=False):
         """ run import """
-        query = f'copy into {table} from @{st_int_name}_stage;'
-        print(f'running query: {query}')
-        result = self._run_query(query)
-        print(f'result {result}')
+        query = f'''copy into {table} from '{gcs_file_path}' storage_integration={storage_integration} file_format=(format_name=csv_file_format);'''
+
+        if is_dry_run:
+            print(query)
+        else:
+            print(f'running query: {query}')
+            result = self._run_query(query)
+            print(f'result {result}')
         return
