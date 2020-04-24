@@ -35,4 +35,5 @@ group by
 	c_comment
 order by
 	revenue desc
-:n 20;
+:n 20
+;

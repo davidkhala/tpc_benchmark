@@ -47,4 +47,5 @@ order by
 	n_name,
 	s_name,
 	p_partkey
-:n 100;
+:n 100
+;
