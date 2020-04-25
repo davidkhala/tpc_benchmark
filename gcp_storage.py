@@ -33,7 +33,7 @@ log_format = ["dt", "action", "file", "chunk_size",
 
 
 def parser(data_list):
-    _df = pd.DataFrame(data_list, columns=log_format)
+    _df = pd.DataFrame(data_list) #, columns=log_format)
     return _df
 
 
@@ -102,7 +102,10 @@ class BlobSync:
         self.content_type = "text/csv"  # override this for other files
         self.chunk_size = 256*1024  # min allowed chunk size (TODO: add reference)
         
-        self.log = []
+        self.log = [["dt", "action", "file", "chunk_size", 
+                     "http_code", "bytes_uploaded", "total_bytes", 
+                     "f_size", "exception", "bucket"]]
+        self.delay = 1  # seconds between upload refreshes
         
     def filename_extract(self, filepath):
         fp = filepath.split(config.sep)
@@ -174,18 +177,21 @@ class BlobSync:
         while not upload.finished:
             try:
                 response = upload.transmit_next_chunk(transport)
-                dt = datetime.datetime.now().isoformat()
-                log_line = [dt, "chunk", file_name, self.chunk_size, 
-                            response.status_code, "", "", "", "", ""]
-                self.log.append(log_line)
-                if verbose:
-                    print(" ".join([str(s) for s in log_line]))
+                code = str(response.status_code)
+                if code == "200":
+                    dt = pd.Timestamp()
+                    log_line = [str(dt), "chunk", file_name, self.chunk_size, 
+                                code, "", "", "", "", ""]
+                    self.log.append(log_line)
+                    if verbose:
+                        print(" ".join([str(s) for s in log_line]))
             except common.InvalidResponse:
                 upload.recover(transport)
+            time.sleep(self.delay)
         
         # return upload object and end time
-        dt = datetime.datetime.now().isoformat()
-        log_line = [dt, "done", file_name, "",
+        dt = pd.Timestamp()
+        log_line = [str(dt), "done", file_name, "",
                     "", upload.bytes_uploaded, upload.total_bytes, "", "", ""]
         self.log.append(log_line)
         if verbose:
@@ -209,7 +215,7 @@ class FolderSync:
     
     def __init__(self, client, bucket_name, 
                  local_directory, local_base_directory=None, 
-                 pattern="*"):
+                 pattern="*", verbose=False):
         """Syncronize a folder on the local machine with Google Cloud Storage
         
         Parameters
@@ -235,6 +241,7 @@ class FolderSync:
         if self.local_base_directory[-1] == config.sep:
             self.local_base_directory = self.local_base_directory[:-1]
         self.pattern = pattern
+        self.verbose = verbose
 
         self.local_files = None
         self.local_blobs = None
@@ -260,7 +267,12 @@ class FolderSync:
     def blobify(self):
         self.local_blobs = {}
         for f in self.local_files:
-            self.local_blobs[f] = self.blob_from_path(f, self.local_base_directory)    
+            if self.verbose:
+                print("Blobify:", f)
+            _blob = self.blob_from_path(f, self.local_base_directory)
+            if self.verbose:
+                print("Blob:", _blob)
+            self.local_blobs[f] = _blob
 
     @property
     def df_bucket_blobs(self):
@@ -268,16 +280,16 @@ class FolderSync:
                            columns=["file_name", "size_bytes"])
         return _df
     
-    def sync_upload(self, verbose=False):
+    def sync_upload(self):
         if self.local_files is None:
             self.inventory_local()
         if self.bucket_files is None:
             self.inventory_bucket()
         for f in self.local_files:
-            if verbose:
+            if self.verbose:
                 print("Uploading: {}".format(f))
             if os.path.isdir(f):
-                if verbose:
+                if self.verbose:
                     print("Skipping directory: {}".format(f))
                 continue
             if f not in self.bucket_files:
@@ -288,18 +300,18 @@ class FolderSync:
                                   bucket_name=self.bucket_name,
                                   local_filepath=f,
                                   blob_name=blob_name)
-                    bs.upload_resumable(verbose=verbose)
+                    bs.upload_resumable(verbose=self.verbose)
                     for log_line in bs.log:
                         self.log.append(log_line)
                 except Exception as e:
                     dt = datetime.datetime.now().isoformat()
-                    if verbose:
+                    if self.verbose:
                         print("While uploading", f)
                         response = e.response
                         print(response)
                     self.log.append([dt, "error", f, "", 
                                      response, "", "", "", e.__class__.__name__, ""])
-            if verbose:
+            if self.verbose:
                 print("-"*30)
                 
     def sync_download(self):
@@ -316,7 +328,9 @@ class PooledSync:
     def __init__(self,  client, bucket_name, 
                  local_directory, 
                  local_base_directory=None,
-                 pattern="*", n=None):
+                 pattern="*", n=None, 
+                 test="", scale=0,
+                 verbose=False):
         """Synchronize a folder on the local machine with Google Cloud Storage using
         a pool of threads.
         
@@ -335,6 +349,10 @@ class PooledSync:
         self.local_base_directory = local_base_directory
         self.pattern = pattern
         self.n = n
+        self.test = test
+        self.scale = scale
+        
+        self.verbose = verbose
         
         self.bucket_files = None
         self.local_files = None
@@ -349,7 +367,8 @@ class PooledSync:
                                        bucket_name=self.bucket_name, 
                                        local_directory=self.local_directory,
                                        local_base_directory=self.local_base_directory,
-                                       pattern="*"
+                                       pattern="*",
+                                       verbose=self.verbose
                                        )
         self.control_sync.inventory_local()
         self.control_sync.inventory_bucket()
@@ -361,19 +380,19 @@ class PooledSync:
         
         self.producer_lock = threading.Lock()
         
-    def sync_upload_chunk(self, local_files, n, verbose=False):
+    def sync_upload_chunk(self, local_files, n):
         
         fs = FolderSync(client=self.client,
                         bucket_name=self.bucket_name,
                         local_directory=self.local_directory,
-                        local_base_directory=self.local_base_directory
-                        )
+                        local_base_directory=self.local_base_directory,
+                        verbose=self.verbose)
         fs.local_files = list(local_files)
         fs.blobify()
         
-        if verbose:
+        if self.verbose:
             print("Start thread {}".format(n))
-        fs.sync_upload(verbose=False)
+        fs.sync_upload()
         
         with self.producer_lock:
             for log_line in fs.log:
@@ -384,6 +403,18 @@ class PooledSync:
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.n) as executor:
             executor.map(self.sync_upload_chunk, 
                          self.local_files_chunks, self.n_chunks)
+            
+        df = parser(self.log)
+        
+        output_dir = {"h":config.fp_h_output,
+                      "ds":config.fp_ds_output}
+        output_dir = output_dir[self.test]
+        csv_fp = (output_dir + config.sep + 
+                  "datagen-" + self.test + "_" + str(self.scale) + "GB-" + 
+                  str(pd.Timestamp.now()) + ".csv"
+                  )
+        df.to_csv(csv_fp)
+        return csv_fp
 
 
 def bucket_blobs(bucket_name):
@@ -522,3 +553,36 @@ def get_dataset_rows():
     df["row_count"] = ""
     df.loc[df.max_n == df.n, "row_count"] = rows
     return df
+
+
+def upload(test, scale, verbose=False):
+    """Wrap the PoolSync class in a simple test/scale uploader
+    
+    Parameters
+    ----------
+    test : str, either "ds" or "h"
+    scale : int, TPC scale factor, one of 1, 100, 1000, 10000
+    verbose : bool, print status & debug statements
+    
+    Returns
+    -------
+    PooledSync class instance
+    """
+
+    gcs_client = storage.Client.from_service_account_json(config.gcp_cred_file)
+    
+    bucket_name = config.gcs_data_bucket
+    
+    data_dir = {"h":config.fp_h_output,
+                "ds":config.fp_ds_output}
+    local_directory = data_dir[test] + config.sep + str(scale) + "GB"
+    
+    ps = PooledSync(client=gcs_client,
+                    bucket_name=bucket_name,
+                    local_directory=local_directory,
+                    local_base_directory=config.cwd,
+                    test=test,   # FYI: test and scale are redunant
+                    scale=scale,
+                    verbose=verbose)
+    
+    return ps

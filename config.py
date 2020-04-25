@@ -131,8 +131,8 @@ p_d_id = "49586899439487868_"
 
 # 5.0 Experimental Setup
 tests = ["ds", "h"]
-scale_factors = [1, 2, 100, 1000, 10000]  # GB
-scale_factor_mapper = {"1GB": 1, "2GB": 2, "100GB": 100, "1TB": 1000, "10TB": 10000}
+scale_factors = [1, 100, 1000, 10000]  # GB
+scale_factor_mapper = {"1GB": 1, "100GB": 100, "1TB": 1000, "10TB": 10000}
 
 # 5.1 Query Templates
 fp_query_templates = cwd + sep + "tpl"

@@ -612,6 +612,12 @@ https://cloud.google.com/files/BigQueryTechnicalWP.pdf
 https://cloud.google.com/bigquery/docs/best-practices-costs
 https://cloud.google.com/bigquery/docs/best-practices-storage
 
+Loading CSV Data  
+https://cloud.google.com/bigquery/docs/loading-data-cloud-storage-csv
+(note if there's a batch comment?)
+https://stackoverflow.com/questions/17416562/loading-from-google-cloud-storage-to-big-query-seems-slow
+(useful comment by Jordan)
+
 ### Clustering Partitioning
 Clustering, Time Partitioning and Range Partitioning are possible in BigQuery.  
 Some details:

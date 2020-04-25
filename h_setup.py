@@ -19,6 +19,10 @@ import pandas as pd
 import config, tools, gcp_storage
 
 
+log_column_names = ["test", "scale", "status",
+                    "child", "parallel", 
+                    "t0", "t1", "stdout", "stderr"]
+
 def download_zip():
     """Download the copy of tpcds source.  See README for versioning."""
 
@@ -535,70 +539,9 @@ def qgen_stream(p, templates_dir, scale=1, verbose=False):
 
     return std_out, err_out
 
-'''
-def run_qgen(n, scale=1, seed=None, verbose=False):
-    """Create queries for TPC-H using the binary qgen with
-    a subprocess
+def parse_log(fp):
     
-    Parameters
-    ----------
-    n : int, query number (from 1 to 22)
-    scale : int, scale factor in GB, acceptable values:
-        1, 100, 1000, 10000
-    seed : int, random seed value
-    verbose : bool, print debug statements
-    """
-    
-    fp = config.fp_h_src + config.sep + "dbgen"
-
-    env_vars = dict(os.environ)
-    env_vars["DSS_PATH"] = config.fp_h_output + config.sep + str(scale) + "GB"
-    env_vars["DSS_QUERY"] = fp + config.sep + "queries"
-
-    cmd = ["./qgen"]
-
-    if seed is not None:
-        cmd = cmd + ["-r", str(seed)]
-    
-    if n is not None:
-        cmd = cmd + [str(n)]
-    
-    pipe = subprocess.run(cmd, 
-                          stdout=subprocess.PIPE, 
-                          stderr=subprocess.PIPE, 
-                          cwd=fp,
-                          env=env_vars)
-
-    std_out = pipe.stdout.decode("utf-8")
-    err_out = pipe.stderr.decode("utf-8")
-
-    if verbose:
-        if len(std_out) > 0:
-            print("Standard Out:")
-            print("=============")
-            print(std_out)
-        if len(err_out) > 0:
-            print("Error Out")
-            print("=========")
-            print(err_out)
-    
-    # remove the first line printout on all std_out
-    std_out = std_out.split("\n")
-    std_out_new = []
-    keep = False
-    for line in std_out:
-        line = line.rstrip("\r")
-        line = line.rstrip("\n")
-        if line == "select":
-            keep = True
-        if keep:
-            std_out_new.append(line)
-    std_out = std_out_new
-    std_out = "\n".join(std_out)
-    
-    return std_out, err_out
-'''
-
+    return pd.read_csv(fp, names=log_column_names)
 
 class DGenPool:
     def __init__(self, scale=1, seed=None, n=None, verbose=False):
@@ -652,7 +595,12 @@ class DGenPool:
         n_cmd = cmd + ["-C", str(parallel),
                        "-S", str(child)]
         
-        t0 = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        t0 = pd.Timestamp.now()
+        
+        with self.lock:
+            self.results.append(["h", str(self.scale), "start",
+                                 child, parallel, 
+                                 str(t0), "", "", ""])
         
         pipe = subprocess.run(n_cmd,
                               stdout=subprocess.PIPE, 
@@ -663,15 +611,18 @@ class DGenPool:
         stdout = pipe.stdout.decode("utf-8")
         stderr = pipe.stderr.decode("utf-8")
 
-        t1 = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        t1 = pd.Timestamp.now()
         
         if self.verbose:
             if len(stdout) > 0:
                 print(stdout)
             if len(stderr) > 0:
                 print(stderr)
+                        
         with self.lock:
-            self.results.append([child, parallel, t0, t1, stdout, stderr])
+            self.results.append(["h", str(self.scale), "end",
+                                 child, parallel, 
+                                 str(t0), str(t1), stdout, stderr])
         return child
     
     def generate(self):
@@ -680,11 +631,12 @@ class DGenPool:
         return exe_results
     
     def save_results(self):
-        csv_fp = (config.fp_h_output + config.sep + 
-          "datagen-" + str(self.scale) + 
-          "GB-" + datetime.utcnow().strftime("%Y%m%d-%H%M%S") + ".csv")
         
-        columns = ["child", "parallel", "t0", "t1", "stdout", "stderr"]
+        csv_fp = (config.fp_h_output + config.sep + 
+                  "datagen-h_" + str(self.scale) + "GB-" + 
+                  str(pd.Timestamp.now()) + ".csv"
+                  )
+        
         data = list(self.results)
-        self.dfr = pd.DataFrame(data, columns=columns)
+        self.dfr = pd.DataFrame(data, columns=log_column_names)
         self.dfr.to_csv(csv_fp)
