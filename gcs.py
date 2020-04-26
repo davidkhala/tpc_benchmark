@@ -68,8 +68,8 @@ class GSUtilUpload:
             print(s2)
 
         csv_fp = (self.data_test + config.sep + 
-                  "gsutil_upload-ds_" + str(self.scale) + "GB-" + 
-                  str(pd.Timestamp.now()) + ".csv"
+                  "gsutil_upload-" + self.test + "_" + str(self.scale) + 
+                  "GB-" + str(pd.Timestamp.now()) + ".csv"
                   )
 
         with open(csv_fp, "w") as f:
