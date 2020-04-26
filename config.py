@@ -61,6 +61,8 @@ gcs_h_zip        = "tpc-h_2.18.0_rc2.zip"
 
 # 3.1 TPC File and Data Locations
 # >> Do NOT edit this section
+fp_base_output   = cwd
+
 fp_ds            = cwd + sep + "ds"
 fp_ds_output     = fp_ds
 
@@ -70,11 +72,10 @@ fp_h_output      = fp_h
 # 3.2 contingent generated data output locations
 # >> Do NOT edit this section
 if os.path.exists(fp_output_mnt):
-    fp_ds_output = fp_ds_output_mnt
-
-if os.path.exists(fp_output_mnt):
-    fp_h_output = fp_h_output_mnt
-
+    fp_ds_output   = cwd + sep + "data" + sep + "ds"
+    fp_h_output    = cwd + sep + "data" + sep + "h"
+    fp_base_output = cwd + sep + "data"
+    
 fp_download = cwd + sep + "download"
 
 # 3.3 Extracted TPC Binaries

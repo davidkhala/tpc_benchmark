@@ -312,6 +312,7 @@ class FolderSync:
                     self.log.append([dt, "error", f, "", 
                                      response, "", "", "", e.__class__.__name__, ""])
             if self.verbose:
+                print(self.log)
                 print("-"*30)
                 
     def sync_download(self):
@@ -325,11 +326,14 @@ class FolderSync:
     
 
 class PooledSync:
-    def __init__(self,  client, bucket_name, 
-                 local_directory, 
-                 local_base_directory=None,
+    def __init__(self,  
+                 test, 
+                 scale,
+                 client, 
+                 bucket_name, 
+                 #local_directory, 
+                 #local_base_directory=None,
                  pattern="*", n=None, 
-                 test="", scale=0,
                  verbose=False):
         """Synchronize a folder on the local machine with Google Cloud Storage using
         a pool of threads.
@@ -345,8 +349,6 @@ class PooledSync:
         self.client = client
         self.bucket_name = bucket_name
         self.bucket = self.client.get_bucket(self.bucket_name)
-        self.local_directory = local_directory
-        self.local_base_directory = local_base_directory
         self.pattern = pattern
         self.n = n
         self.test = test
@@ -361,8 +363,14 @@ class PooledSync:
         if self.n is None:
             self.n = config.cpu_count
         
+        self.output_dir = {"h":config.fp_h_output,
+                           "ds":config.fp_ds_output}[self.test]
+        
+        self.local_directory = self.output_dir + config.sep + str(self.scale) + "GB"
+        self.local_base_directory = config.fp_base_output
+        
         self.log = []
-            
+        
         self.control_sync = FolderSync(client=self.client,
                                        bucket_name=self.bucket_name, 
                                        local_directory=self.local_directory,
@@ -381,7 +389,7 @@ class PooledSync:
         self.producer_lock = threading.Lock()
         
     def sync_upload_chunk(self, local_files, n):
-        
+        print("here 1")
         fs = FolderSync(client=self.client,
                         bucket_name=self.bucket_name,
                         local_directory=self.local_directory,
@@ -403,14 +411,14 @@ class PooledSync:
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.n) as executor:
             executor.map(self.sync_upload_chunk, 
                          self.local_files_chunks, self.n_chunks)
-            
+        self.save_log()
+
+    def save_log(self):
+        
         df = parser(self.log)
         
-        output_dir = {"h":config.fp_h_output,
-                      "ds":config.fp_ds_output}
-        output_dir = output_dir[self.test]
-        csv_fp = (output_dir + config.sep + 
-                  "datagen-" + self.test + "_" + str(self.scale) + "GB-" + 
+        csv_fp = (self.output_dir + config.sep + 
+                  "gcs_upload-" + self.test + "_" + str(self.scale) + "GB-" + 
                   str(pd.Timestamp.now()) + ".csv"
                   )
         df.to_csv(csv_fp)

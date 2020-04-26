@@ -143,6 +143,8 @@ def run_dsdgen(scale=1, seed=None, total_cpu=None, verbose=False):
         total_cpu = str(total_cpu)
         n_cmd = cmd + ["-PARALLEL", total_cpu,
                        "-CHILD", child_cpu]
+        
+        
         pipe = subprocess.run(n_cmd,
                               stdout=subprocess.PIPE, 
                               stderr=subprocess.PIPE, 
