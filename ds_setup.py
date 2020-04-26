@@ -546,7 +546,7 @@ class DGenPool:
         if self.scale not in config.scale_factors:
             raise ValueError("Scale must be one of:", config.scale_factors)
 
-        _data_out = config.fp_ds_data_out + config.sep + str(self.scale) + "GB"
+        _data_out = config.fp_ds_output + config.sep + str(self.scale) + "GB"
 
         cmd = ["./dsdgen", "-DIR", _data_out, "-SCALE", str(self.scale),
                "-DELIMITER", "|", "-TERMINATE", "N"]
