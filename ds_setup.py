@@ -143,6 +143,8 @@ def run_dsdgen(scale=1, seed=None, total_cpu=None, verbose=False):
         total_cpu = str(total_cpu)
         n_cmd = cmd + ["-PARALLEL", total_cpu,
                        "-CHILD", child_cpu]
+        
+        
         pipe = subprocess.run(n_cmd,
                               stdout=subprocess.PIPE, 
                               stderr=subprocess.PIPE, 
@@ -555,7 +557,7 @@ class DGenPool:
         if self.scale not in config.scale_factors:
             raise ValueError("Scale must be one of:", config.scale_factors)
 
-        _data_out = config.fp_ds_data_out + config.sep + str(self.scale) + "GB"
+        _data_out = config.fp_ds_output + config.sep + str(self.scale) + "GB"
 
         cmd = ["./dsdgen", "-DIR", _data_out, "-SCALE", str(self.scale),
                "-DELIMITER", "|", "-TERMINATE", "N"]

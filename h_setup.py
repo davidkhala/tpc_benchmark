@@ -179,7 +179,7 @@ def run_dbgen(scale=1, total_cpu=None, verbose=False):
         raise ValueError("Scale must be one of:", config.scale_factors)
     
     env_vars = dict(os.environ)
-    env_vars["DSS_PATH"] = config.fp_h_data_out + config.sep + str(scale) + "GB"
+    env_vars["DSS_PATH"] = config.fp_h_output + config.sep + str(scale) + "GB"
     
     cmd = ["./dbgen", "-vf", "-s", str(scale)]
     

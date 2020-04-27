@@ -14,59 +14,44 @@ import config
 
 def make_directories():
     """Make local directories for TPC DS & H tests"""
-    filepath_list_1 = [
-        config.fp_ds, config.fp_ds_output,
-        config.fp_h, config.fp_h_output,
+    fp_list = [
         config.fp_download,
-        
-        #config.fp_query_templates,
-        
-        #config.fp_ds_query_template_dir,
-        #config.fp_h_query_template_dir,
-        
-        #config.fp_ds_bq_template_dir,
-        #config.fp_h_bq_template_dir,
-        
-        #config.fp_ds_sf_template_dir,
-        #config.fp_h_sf_template_dir
-    ]
-
-    filepath_list_1 += [config.fp_h_output +
-                        config.sep + str(i) + "GB" for i in config.scale_factors]
-
-    filepath_list_1 += [config.fp_ds_output +
-                        config.sep + str(i) + "GB" for i in config.scale_factors]
-
-    # schema files
-    #filepath_list_1 += [config.fp_schema]
-    #filepath_list_1 += [config.fp_schema + config.sep + s for s in config.bq_schema]
-    #filepath_list_1 += [config.fp_schema + config.sep + s for s in config.sf_schema]
+        config.fp_ds, 
+        config.fp_h, 
+        config.fp_ds_output,
+        config.fp_h_output,
+        ]
+    
+    fp_list += [config.fp_h_output +
+                config.sep + str(i) + "GB" for i in config.scale_factors]
+    
+    fp_list += [config.fp_ds_output +
+                config.sep + str(i) + "GB" for i in config.scale_factors]
     
     # query files
-    filepath_list_1 += [config.fp_query]
-    #filepath_list_1 += [config.fp_query + config.sep + s for s in config.bq_queries]
-    #filepath_list_1 += [config.fp_query + config.sep + s for s in config.sf_queries]
+    fp_list += [config.fp_query]
     
     # only generate the folder if it doesn't exist
-    for fp in filepath_list_1:
+    for fp in fp_list:
         if not os.path.exists(fp):
             print("making directory:", fp)
             os.mkdir(fp)
-
+    
     # externally mounted persisten disk output
     if os.path.exists(config.fp_output_mnt):
-        filepath_list_2 = [config.fp_ds_output_mnt,
+        fp_list_2 = [config.fp_ds_output_mnt,
                            config.fp_h_output_mnt]
 
-        filepath_list_2 += [config.fp_h_output_mnt +
+        fp_list_2 += [config.fp_h_output_mnt +
                             config.sep + str(i) + "GB" for i in config.scale_factors]
 
-        filepath_list_2 += [config.fp_ds_output_mnt +
+        fp_list_2 += [config.fp_ds_output_mnt +
                             config.sep + str(i) + "GB" for i in config.scale_factors]
         
         # only generate the folder if it doesn't exist
-        for fp in filepath_list_2:
+        for fp in fp_list_2:
             if not os.path.exists(fp):
+                print("Making data directories on the persistent disk:")
                 os.mkdir(fp)
 
 

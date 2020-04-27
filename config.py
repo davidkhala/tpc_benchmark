@@ -1,6 +1,5 @@
 """BigQuery Snowflake Benchmark config values"""
 
-
 import os
 from pathlib import Path
 
@@ -15,7 +14,6 @@ cpu_count = os.cpu_count()
 
 # 2.0 GCP Service Account Credential File
 # >> Edit this with your credential file location
-#cred_file_name = "sada-colin-dietrich-bd003814fcb1.json"
 cred_file_name = "tpc-benchmarking-9432-3fe6b68089ac.json"
 
 # full path used in method calls
@@ -26,21 +24,18 @@ gcp_cred_file = user_dir + sep + "code" + sep + cred_file_name
 # note: this will have to match your credential file
 # note: if the project name has uppercase, 
 #       the BQ dataset will need to be converted to all lower 
-#gcp_project      = "sada-colin-dietrich"
+
 gcp_project      = "TPC-Benchmarking-9432"
 gcp_location     = "US"
 
 # 2.2 Cloud Storage Buckets
 # >> Edit to correct Link URL of TPC-DS & TPC-H zip files downloaded from TPC
-#gcs_zip_bucket   = "tpc-benchmark-zips-9432"
-#gcs_data_bucket  = "tpc-benchmark-9432"
 
 gcs_zip_bucket   = "tpc-benchmark-zips-5947"
 gcs_data_bucket  = "tpc-benchmark-5947"
 
 # 2.3 BigQuery Datasets
 # >> Do NOT edit this section after dev work
-#gcp_dataset      = "gcprabbit"
 
 dataset_h_1GB_basic    = "h_1GB_basic"
 dataset_h_100GB_basic  = "h_100GB_basic"
@@ -54,12 +49,11 @@ dataset_ds_10TB_basic  = "ds_10TB_basic"
 
 # 2.4 Compute Engine Mounted Persistent Disk
 # >> Edit only if you created a separate persistent disk on the VM
-fp_output_mnt    = "/mnt/disks/data"
+fp_output_mnt    = "/data"
 
-# leave thes as is
+# leave these as is
 fp_ds_output_mnt = fp_output_mnt + sep + "ds"
 fp_h_output_mnt  = fp_output_mnt + sep + "h"
-
 
 # 3.0 TPC installer zip file names
 gcs_ds_zip       = "tpc-ds_v2.11.0rc2.zip"
@@ -67,26 +61,21 @@ gcs_h_zip        = "tpc-h_2.18.0_rc2.zip"
 
 # 3.1 TPC File and Data Locations
 # >> Do NOT edit this section
-fp_ds                  = cwd   + sep + "ds"
-#fp_ds_output           = fp_ds + sep + "output"  # folder local to the user
-fp_ds_output           = fp_ds
+fp_base_output   = cwd
 
-fp_h                   = cwd   + sep + "h"
-#fp_h_output            = fp_h  + sep + "output"
-fp_h_output            = fp_h
+fp_ds            = cwd + sep + "ds"
+fp_ds_output     = fp_ds
+
+fp_h             = cwd + sep + "h"
+fp_h_output      = fp_h
 
 # 3.2 contingent generated data output locations
 # >> Do NOT edit this section
-if os.path.exists(fp_ds_output_mnt):
-    fp_ds_data_out = fp_ds_output_mnt
-else:
-    fp_ds_data_out = fp_ds_output
-
-if os.path.exists(fp_ds_output_mnt):
-    fp_h_data_out = fp_h_output_mnt
-else:
-    fp_h_data_out = fp_h_output
-
+if os.path.exists(fp_output_mnt):
+    fp_ds_output   = cwd + sep + "data" + sep + "ds"
+    fp_h_output    = cwd + sep + "data" + sep + "h"
+    fp_base_output = cwd + sep + "data"
+    
 fp_download = cwd + sep + "download"
 
 # 3.3 Extracted TPC Binaries
