@@ -18,23 +18,23 @@ for Snowflake datatype specifications in standard SQL
 """
 import snowflake.connector
 
+
 def _open_connection(config):
     """ starts warehouse, opens connection """
-    # connect to snowflake using authentication data from config
-    # TODO: warehouse and db probably shouldn't be passed here and should be "created if not exist"
-    # conn = snowflake.connector.connect(
-    #     user=config.sf_username,
-    #     password=config.sf_password,
-    #     account=config.sf_account,
-    #     warehouse=config.sf_warehouse,
-    #     database=config.sf_database,
-    # )
+    print(f'using config: user:{config.sf_username}, pass: {config.sf_password}, account: {config.sf_account}')
 
+    # connect to snowflake
     conn = snowflake.connector.connect(
-        user='sadadauren',
-        password='Test1234!',
-        account='ed75261.us-central1.gcp'
+        user=config.sf_username,
+        password=config.sf_password,
+        account=config.sf_account
     )
+
+    # conn = snowflake.connector.connect(
+    #     user='sadadauren',
+    #     password='Test1234!',
+    #     account='ed75261.us-central1.gcp'
+    # )
 
     return conn
 
@@ -48,7 +48,7 @@ TABLES_DS = [
     'inventory', 'catalog_returns', 'web_returns', 'web_sales', 'catalog_sales', 'store_sales',
 ]
 TABLES_H = ['customer', 'lineitem', 'nation', 'orders', 'part', 'partsupp', 'region', 'supplier']
-DATASET_SIZES = ['1GB', '2GB', '100GB']
+DATASET_SIZES = ['1GB', '2GB', '100GB', '1000GB']
 GCS_LOCATION = 'gcs://tpc-benchmark-5947' #TODO: needs to go to config
 SF_ROLE = 'ACCOUNTADMIN' # TODO: needs to go to config
 storage_integration_name = 'gcs_storage_integration' #TODO: needs to go to config
@@ -65,10 +65,12 @@ class SnowflakeHelper:
         print('connection opened')
         # save config
         self.config = config
-        # save type of test to run: C or DS
+        # validate test type requested
         if test_type not in [TEST_DS, TEST_H]:
-            print(f'Unsupported test: {self.test_type}')
-            raise
+            err = f'Unsupported test: {self.test_type}'
+            print(err)
+            raise err
+        # save type of test to run: C or DS
         self.test_type = test_type
         # size of dataset to use
         self.test_size = test_size
@@ -92,7 +94,7 @@ class SnowflakeHelper:
         self.conn.close()
 
     def _run_query(self, query, fetch_all=False):
-        """ opens cursor, runs query and returns result """
+        """ opens cursor, runs query and returns a single (first) result or all if 'fetch-all' flag is specified """
         cs = self.conn.cursor()
         result = None
         try:
@@ -113,7 +115,7 @@ class SnowflakeHelper:
         """ starts warehouse """
         # check if connection is set
         if not self.conn:
-            self.conn = _open_connection()
+            self.conn = _open_connection(self.config)
 
         # resume warehouse
         query = f'USE ROLE {SF_ROLE}'
@@ -159,7 +161,7 @@ class SnowflakeHelper:
         # STEP 1: tell snowflake about CSV file structures we're expecting to import from GCS
         self._create_named_file_format(is_dry_run)
 
-        # STEP 2: for a given test type and size, for each table: we need to "stage" all GCS .dat files before actually importing them
+        # STEP 2: we need to "stage" all GCS .dat files for Snowflake to import via "COPY INTO" statement
         # generate "stage" name
         st_int_name = f'gcs_{self.test_type}_{self.test_size}_integration'
         print(f'\n\n--integrating "{st_int_name}" ... ')
@@ -180,12 +182,15 @@ class SnowflakeHelper:
 
     def create_schema(self, is_dry_run=False):
         """ list items in "stage" """
+        print(f'\n\n--pushing schema: "{self.config.h_schema_ddl_filepath}"')
 
         # open file and read all rows:
-        # with open(self.config.ds_schema_bq_basic_filepath, 'r') as f:
-        #     lines = f.readlines()
-        with open('/home/vagrant/bq_snowflake_benchmark/ds/v2.11.0rc2/tools/tpcds.sql', 'r') as f:
+        with open(self.config.h_schema_ddl_filepath, 'r') as f:
             lines = f.readlines()
+        # with open('/home/vagrant/bq_snowflake_benchmark/ds/v2.11.0rc2/tools/tpcds.sql') as f:
+        #     lines = f.readlines()
+
+        # TODO: do we need to do `CREATE IF NOT EXIST {DB_NAME}?`
 
         # extract queries:
         queries = []
@@ -209,34 +214,61 @@ class SnowflakeHelper:
                 result = self._run_query(query)
                 print(f'result {result}')
 
+        print(f'\n\n--finished pushing schema')
         return
 
+    def _extract_table_name_from_gcs_filepath(self, gcs_filepath):
+        """ since list @stage returns all files for all tests, we need to match table name, size when importing data """
+
+        print(f'\n\n--extracting table name: "{gcs_filepath}"')
+
+        # validate filename prefix (make sure it belongs to this test and size)
+        gcs_prefix = f'{GCS_LOCATION}/{self.test_type}_{self.test_size}_'
+
+        # TODO: we shouldn't change datafile patterns
+        # see if we have filename that starts with actual dataset name or with prefix "_data_" (then followed by dataset name)
+        data_prefix = '/_data_'
+        if gcs_filepath[len(GCS_LOCATION):].startswith(data_prefix):
+            gcs_prefix = f'{GCS_LOCATION}/{data_prefix}{self.test_type}_{self.test_size}_'
+
+        # before proceeding, check if ignore everything not matching our TEST TYPE and TEST SIZE
+        if not gcs_filepath.startswith(gcs_prefix):
+            return False, None
+
+        # get table name from gcs_filepath (note: avoiding conflicts like "customer" and "customer_address")
+        gcs_filepath_table_tokens = gcs_filepath[len(gcs_prefix):].split('_')
+        print(f'tokens: {gcs_filepath_table_tokens}')
+        gcs_filepath_table = gcs_filepath_table_tokens[0]
+        try:  # if second token is not a number, then it's a two_word table
+            file_index = int(gcs_filepath_table_tokens[1])
+        except ValueError as ex:
+            gcs_filepath_table += '_' + gcs_filepath_table_tokens[1]
+
+        print(f'\n\n--extracted table name: "{gcs_filepath_table}"')
+
+        return True, gcs_filepath_table
 
     def list_integration(self, integration_name):
         """ lists all files in GCS bucket """
+        print(f'\n\n--listing stage: "@{integration_name}_stage"')
+
+        # run query on snowflake db
         rows = self._run_query(f'list @{integration_name}_stage;', fetch_all=True)
 
+        # db for keeping cleaned up and sorted .dat filenames
         table_files_db = {}
 
-        # cleanup results and split files into buckets based on table name
+        # cleanup results and sort files into buckets based on table name
         for row in rows:
             # extract gcs filepath from response
             gcs_filepath = row[0]
 
-            # expected file prefix
-            gcs_prefix = f'{GCS_LOCATION}/{self.test_type}_{self.test_size}_'
+            # extract table name from file being processed
+            matched, gcs_filepath_table = self._extract_table_name_from_gcs_filepath(gcs_filepath)
 
-            # ignore everything not matching our TEST TYPE and TEST SIZE
-            if not gcs_filepath.startswith(gcs_prefix):
+            # skip files found in bucket which are not related to this test
+            if not matched:
                 continue
-
-            # get table name from gcs_filepath (note: avoiding conflicts like "customer" and "customer_address")
-            gcs_filepath_table_tokens = gcs_filepath[len(gcs_prefix):].split('_')
-            gcs_filepath_table = gcs_filepath_table_tokens[0]
-            try:  # if second token is not a number, then it's a two_word table
-                file_index = int(gcs_filepath_table_tokens[1])
-            except ValueError as ex:
-                gcs_filepath_table += '_' + gcs_filepath_table_tokens[1]
 
             # see which table this files belongs to and append to appropriate list
             is_found_table = False
@@ -254,9 +286,12 @@ class SnowflakeHelper:
                 print(f'unknown table!!!! {gcs_filepath}')
                 raise
 
+        print(f'\n\n--done listing stage')
         return table_files_db
 
     def _create_named_file_format(self, is_dry_run=False):
+        print(f'\n\n--creating named file format: "@{named_file_format_name}"')
+
         """ creates NAMED FILE FORMATs in snowflake db """
         # named_file_format_name = f'{self.test_type}_{self.test_size}_{table}_csv_format'
         # TODO: not sure if we need to create a named file format for each table
@@ -275,10 +310,13 @@ class SnowflakeHelper:
             print(f'running query: {query}')
             result = self._run_query(query)
             print(f'result {result}')
+
+        print(f'\n\n--done creating named file format')
         return
 
     def _create_storage_integration(self, st_int_name, is_dry_run=False):
         """ creates STORAGE INTEGRATION """
+        print(f'\n\n--creating storage integration: "{st_int_name}"')
 
         query = f'''CREATE STORAGE INTEGRATION {st_int_name} TYPE=EXTERNAL_STAGE STORAGE_PROVIDER=GCS ENABLED=TRUE STORAGE_ALLOWED_LOCATIONS=('{GCS_LOCATION}/');'''
 
@@ -288,6 +326,8 @@ class SnowflakeHelper:
             print(f'running query: {query}')
             result = self._run_query(query)
             print(f'result {result}')
+
+        print(f'\n\n--finished creating storage integration')
         return
 
     def _grant_storage_integration_access(self, st_int_name, is_dry_run=False):
