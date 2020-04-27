@@ -111,11 +111,13 @@ fp_h_schema  = fp_schema + sep + "h"
 #ds_schema_bq_basic_filepath = fp_ds_output + sep + "tpcds_schema_bq_basic.sql"
 #h_schema_bq_basic_filepath  = fp_h_output + sep + "tpc_h_schema_bq_basic.ddl"
 
-# 4.3 Files output by data generators from either test
-# to ignore
+# 4.3 Files output by data generators from either test to ignore
 ignore_files = ["version"]
 
-# 4.4 key to find in queries for project and dataset appending
+# 4.4 tables to ignore during schema creation or table population
+ignore_tables = ["dbgen_version"]
+
+# 4.5 key to find in queries for project and dataset appending
 p_d_id = "49586899439487868_"
 
 # 5.0 Experimental Setup
@@ -160,20 +162,4 @@ fp_query = cwd + sep + "q"
 
 # 5.4 Qualification Query Answers  
 fp_ds_answers = fp_ds_src + sep + "answer_sets"
-
-
-# 5.4 Test Schema Combinations
-# TODO: perhaps remove?
-"""
-test_schema_bq = []
-for test in tests:
-    for scale in scale_factors:
-        for schema in bq_schema:
-            test_schema_bq.append(test + "_" + str(scale) + "GB_" + schema)
-
-test_schema_sf = []
-for test in tests:
-    for schema in sf_schema:
-        test_schema_sf.append(test + "_" + schema)
-"""
 

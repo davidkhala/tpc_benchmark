@@ -441,8 +441,12 @@ https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.cl
             _d0 = ",".join(log_column_names) + "\n"
             f.write(_d0)
         
+        tables_upload = self.df.table.unique()
+        tables_upload = [t for t in tables_upload if t not in config.ignore_tables]
+        
         d = []
-        for table in self.df.table.unique():
+        for table in tables_upload:
+            
             _df = self.df.loc[self.df.table == table]
             size_bytes = _df.size_bytes.sum()
             total_bytes += size_bytes
