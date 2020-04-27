@@ -300,10 +300,13 @@ class BQUpload:
         self.get_all_table_ids()
     
         self.df = inventory_bucket_df(self.bucket_name)
-    
+        
         self.df = self.df.loc[(self.df.test == self.test) & 
                               (self.df.scale == str(self.scale)+"GB")].copy()
-    
+        
+        a_message = """No files in GCS found matching test {} and scale {}""".format(self.test, self.scale)
+        assert len(self.df) > 0, a_message
+        
         self.df["n"] = self.df.n.astype(int)
         self.df.sort_values(by=["table", "n"], inplace=True)
         self.df.reset_index(inplace=True, drop=True)
@@ -433,7 +436,7 @@ https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.cl
                   self.dataset + "-" + 
                   str(pd.Timestamp.now()) + ".csv"
                   )
-                  
+        
         log_dir = {"h":config.fp_h_output,
                    "ds":config.fp_ds_output}
         fp_log = log_dir[self.test] + config.sep + fp_log
@@ -443,6 +446,11 @@ https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.cl
         
         tables_upload = self.df.table.unique()
         tables_upload = [t for t in tables_upload if t not in config.ignore_tables]
+        
+        if verbose:
+            print("Tables to upload:")
+            for tu in tables_upload:
+                print(tu)
         
         d = []
         for table in tables_upload:
