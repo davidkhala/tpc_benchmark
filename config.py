@@ -54,7 +54,7 @@ dataset_ds_10TB_basic  = "ds_10TB_basic"
 
 # 2.4 Compute Engine Mounted Persistent Disk
 # >> Edit only if you created a separate persistent disk on the VM
-fp_output_mnt    = "/mnt/disks/20tb"
+fp_output_mnt    = "/mnt/disks/data"
 
 # leave thes as is
 fp_ds_output_mnt = fp_output_mnt + sep + "ds"
