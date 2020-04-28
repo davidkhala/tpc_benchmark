@@ -316,7 +316,7 @@ def dsqgen(file=None,
         
     if verbose is not None:
         kwargs.append("-VERBOSE")
-        kwargs.append(verbose)
+        # kwargs.append(verbose)
         
     if help is not None:
         kwargs.append("-HELP")
@@ -328,7 +328,7 @@ def dsqgen(file=None,
     
     if quiet is not None:
         kwargs.append("-QUIET")
-        kwargs.append(quiet)
+        # kwargs.append(quiet)
         
     if streams is not None:
         kwargs.append("-STREAM")
@@ -348,7 +348,7 @@ def dsqgen(file=None,
         
     if qualify is not None:
         kwargs.append("-QUALIFY")
-        kwargs.append(qualify)
+        # kwargs.append(qualify)
         
     if distributions is not None:
         kwargs.append("-DISTRIBUTIONS")
@@ -360,11 +360,11 @@ def dsqgen(file=None,
         
     if rngseed is not None:
         kwargs.append("-RNGSEED")
-        kwargs.append(rngseed)
+        kwargs.append(str(rngseed))
         
     if release is not None:
         kwargs.append("-RELEASE")
-        kwargs.append(release)
+        # kwargs.append(release)
         
     if template is not None:
         kwargs.append("-TEMPLATE")
@@ -376,11 +376,11 @@ def dsqgen(file=None,
         
     if debug is not None:
         kwargs.append("-DEBUG")
-        kwargs.append(debug)
+        # kwargs.append(debug)
         
     if filter is not None:
         kwargs.append("-FILTER")
-        kwargs.append(filter)
+        # kwargs.append(filter)
         
     if dialect is not None:
         kwargs.append("-DIALECT")

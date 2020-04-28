@@ -33,8 +33,8 @@ def query_n(n, project, dataset, scale,
     df : Pandas DataFrame containing results of query
     """
     query_text, err_out = h_setup.qgen_template(n=n, 
-                                                scale=scale, 
                                                 templates_dir=template_dir,
+                                                scale=scale, 
                                                 qual=qual,
                                                 verbose=verbose)
     
