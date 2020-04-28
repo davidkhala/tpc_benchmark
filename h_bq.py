@@ -50,8 +50,9 @@ def query_n(n, project, dataset, scale,
     
     return t0, t1, bytes_processed, bytes_billed, df
 
+
 def stream_p(p, project, dataset, scale, 
-            template_dir, qual=None, dry_run=False, use_cache=False, verbose=False):
+             template_dir, qual=None, dry_run=False, use_cache=False, verbose=False):
     """Query BigQuery with TPC-D query permutation number p.  
     See specification.pdf Appendix A for orders.
     
@@ -79,9 +80,10 @@ def stream_p(p, project, dataset, scale,
         be the query results for the last query in the stream.
     """
 
-    query_text, err_out = h_setup.qgen_stream(p=p, 
-                                              scale=scale, 
-                                              templates_dir=template_dir, 
+    query_text, err_out = h_setup.qgen_stream(p=p,
+                                              templates_dir=template_dir,
+                                              scale=scale,
+                                              qual=qual,
                                               verbose=verbose)
     
     query_job = bq.query(query_text=query_text, 

@@ -358,7 +358,9 @@ def qgen(path_dir=None, config_dir=None, templates_dir=None,
     if l is not None:
         kwargs.append("-l")
         kwargs.append(str(l))
-        
+
+    # NOTE: kwarg n meaning is overridden to query number not
+    # the qgen meaning, connect to database
     # if n is not None:
     #     kwargs.append("-n")
     #     kwargs.append(n)
@@ -413,9 +415,8 @@ def qgen(path_dir=None, config_dir=None, templates_dir=None,
     cmd = ["./qgen"] + kwargs
 
     if verbose:
-        print("="*40)
         print("TPC-H qgen parameters")
-        print("---------------------")
+        print("=====================")
         print("cmd & kwargs:", cmd)
         print("path_dir:", path_dir)
         print("templates_dir:", templates_dir)
@@ -487,7 +488,7 @@ def qgen_template(n, templates_dir, scale=1, qual=None, verbose=False):
     else:
         r = None
 
-    std_out, err_out = qgen(n=n, 
+    std_out, err_out = qgen(n=n,
                             r=r,
                             d=qual,
                             s=scale,
@@ -499,12 +500,67 @@ def qgen_template(n, templates_dir, scale=1, qual=None, verbose=False):
     std_out = std_out_filter(std_out)
     
     if verbose:
+        print("QUERY:", n)
+        print("=========")
+        print()
+
         std_err_print(std_out, err_out)
-    
+
+
     return std_out, err_out
 
 
-def qgen_stream_single(p, templates_dir, output_dir, scale=1, qual=None, verbose=False):
+def qgen_stream(p, templates_dir, scale=1, qual=None, verbose=False):
+    """Generate TPC-H query number n and write it to disk.
+
+    Parameters
+    ----------
+    p : int, query stream number to generate BigQuery SQL where:
+        p = -1 = queries in order 1-22
+        p = 0 = power test
+        p = 1+ = throughput tests 1-40
+    templates_dir : str, absolute path to directory of query templates
+        to draw from for n.
+    output_dir : str, absolute path to directory to write compiled sql query streams
+    scale : int, scale factor of db being queried
+    qual : bool, generate qualification queries in ascending order
+    verbose : bool, print debug statements
+
+    Returns
+    -------
+    std_out : str, terminal messages if generation succeeds
+    std_err : str, error message if generation fails
+    """
+
+    if config.random_seed is not None:
+        r = config.random_seed
+    else:
+        r = None
+
+    if p == -1:
+        p = None
+
+    std_out, err_out = qgen(p=p,
+                            r=r,
+                            d=qual,
+                            s=scale,
+                            templates_dir=templates_dir,
+                            verbose=verbose
+                            )
+
+    std_out = std_out_filter(std_out)
+
+    if verbose:
+        print("QUERY STREAM:", p)
+        print("=================")
+        print()
+
+        std_err_print(std_out, err_out)
+
+    return std_out, err_out
+
+
+def qgen_stream_file(p, templates_dir, output_dir, scale=1, qual=None, verbose=False):
     """Generate TPC-H query number n and write it to disk.
     
     Parameters
@@ -548,7 +604,7 @@ def qgen_stream_single(p, templates_dir, output_dir, scale=1, qual=None, verbose
     return std_out, err_out
 
 
-def qgen_streams(m, templates_dir, output_dir, scale=1, qual=None, verbose=False):
+def qgen_streams_file(m, templates_dir, output_dir, scale=1, qual=None, verbose=False):
     """Generate TPC-H query number 0-m and write them to disk.
 
     Parameters
@@ -571,7 +627,7 @@ def qgen_streams(m, templates_dir, output_dir, scale=1, qual=None, verbose=False
     err_out = ""
     for _p in range(1, m):
 
-        _so, _eo = qgen_stream_single(p=_p,
+        _so, _eo = qgen_stream_file(p=_p,
                                       templates_dir=templates_dir,
                                       output_dir=output_dir,
                                       scale=scale,
