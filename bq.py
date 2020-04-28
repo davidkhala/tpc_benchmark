@@ -238,6 +238,7 @@ def validate(directory, dataset, byte_multiplier=1):
     df["bq_percent"] = (df.bq_rows / df.local_rows) * 100
     return df
 
+
 def parse_log(fp):
     
     return pd.read_csv(fp, names=log_column_names)
@@ -249,8 +250,8 @@ class BQUpload:
         """
         Parameters
         ----------
-        client : GCP storage client instance
-        project : str, GCP project name
+        test : str, TPC test name, either "ds" or "h"
+        dataset : str, GCP BigQuery dataset running this query
         dataset : str, BigQuery dataset name
         """
         self.client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
@@ -336,7 +337,7 @@ class BQUpload:
         for t in self.tables:
             _s = table_size(client=self.client, 
                             project=config.gcp_project, 
-                            dataset=config.gcp_dataset,
+                            dataset=self.dataset,
                             table=t)
             _t = self.get_table(table_id=t)
             _r = _t.num_rows
@@ -510,4 +511,88 @@ https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.cl
             print("Speed: {:.3f} GB/s".format(GBsx))
                   
         return fp_log
-            
+
+
+def add_view(query_text, project, dataset):
+    """Handle the unhelpful behavior of the Python DDL API and views:
+    The API allows setting a default dataset but does not honor that
+    attribute when creating views"""
+
+    pdt = project + "." + dataset + "."
+    return query_text.replace(config.p_d_id, pdt)
+
+
+def query(query_text, project, dataset, dry_run=False, use_cache=False):
+    """Run a DDL SQL query on BigQuery
+
+    Parameters
+    ----------
+    query_text : str, query text to execute
+    project : str, GCP project running this query
+    dataset : str, GCP BigQuery dataset running this query
+    dry_run : bool, execute query as a dry run
+        Default: False
+    use_cache : bool, attempt to use cached results from previous queries
+        Default: False
+
+    Returns
+    -------
+    query_job : bigquery.query_job object
+    """
+
+    client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
+    job_config = bigquery.QueryJobConfig()
+
+    default_dataset = project + "." + dataset
+
+    job_config.default_dataset = default_dataset
+
+    job_config.dry_run = dry_run  # only approximate the time and cost
+    job_config.use_query_cache = use_cache  # default is True, (try to used cached results)
+
+    query_text = add_view(query_text, project, dataset)
+
+    query_job = client.query(query_text, job_config=job_config)
+
+    return query_job
+
+
+def parse_query_job(query_job, verbose=False):
+    """
+
+    Parameters
+    ----------
+    query_job : bigquery.query_job object
+    verbose : bool, print results
+
+    Returns
+    -------
+    t0 : datetime object, time query started
+    t1 : datetime object, time query ended
+    bytes_processed : int, bytes processed with query
+    bytes_billed : int, bytes billed for query
+    df : Pandas DataFrame containing results of query
+    """
+
+    result = query_job.result()
+    df = result.to_dataframe()
+
+    t0 = query_job.started
+    t1 = query_job.ended
+    dt = t1 - t0
+    bytes_processed = query_job.total_bytes_processed
+    bytes_billed = query_job.total_bytes_billed
+
+    if verbose:
+        print("Total Time Elapsed: {}".format(dt))
+        print("Bytes Processed: {}".format(bytes_processed))
+        print("Bytes Billed: {}".format(bytes_billed))
+
+        if len(df) < 25:
+            print("Result:")
+            print(df)
+        else:
+            print("Head of Result:")
+            print(df.head())
+
+    return t0, t1, bytes_processed, bytes_billed, df

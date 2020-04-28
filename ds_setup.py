@@ -437,7 +437,7 @@ def qgen_template(n, templates_dir, scale=1, qual=None, verbose=False):
     scale : int, scale factor of db being queried
     qual : bool, generate qualification queries in ascending order
     verbose : bool, print debug statements
-        
+    
     Returns
     -------
     std_out : str, BigQuery SQL query
