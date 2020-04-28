@@ -187,5 +187,4 @@ for test in tests:
 sf_username = "sadadauren"
 sf_password = "Test1234!"
 sf_account = "ed75261.us-central1.gcp"
-sf_warehouse = "TEST1"
-sf_database = "H_100GB"
+sf_warehouse = "TEST2"

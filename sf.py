@@ -47,8 +47,8 @@ TABLES_DS = [
     'store', 'call_center', 'customer', 'web_site', 'store_returns', 'household_demographics', 'web_page', 'promotion', 'catalog_page',
     'inventory', 'catalog_returns', 'web_returns', 'web_sales', 'catalog_sales', 'store_sales',
 ]
-TABLES_H = ['customer', 'lineitem', 'nation', 'orders', 'part', 'partsupp', 'region', 'supplier']
-DATASET_SIZES = ['1GB', '2GB', '100GB', '1000GB']
+TABLES_H = ['lineitem', 'customer', 'nation', 'orders', 'part', 'partsupp', 'region', 'supplier']
+DATASET_SIZES = ['1GB', '2GB', '100GB', '1000GB', '10000GB']
 GCS_LOCATION = 'gcs://tpc-benchmark-5947' #TODO: needs to go to config
 SF_ROLE = 'ACCOUNTADMIN' # TODO: needs to go to config
 storage_integration_name = 'gcs_storage_integration' #TODO: needs to go to config
@@ -75,11 +75,8 @@ class SnowflakeHelper:
         # size of dataset to use
         self.test_size = test_size
 
-        # default file gcs file range (dbgen generates large table datasets in chunks, this value tells how many chunks to load)
-        self.gcs_file_range = 12  # 1 GB
-
-        if test_size == '100GB':
-            self.gcs_file_range = 96  # 100 GB
+        # TODO: this should be based on number of CPUs
+        self.gcs_file_range = 96
 
         # set tables to be imported to snowflake based on test
         if self.test_type == TEST_H:
@@ -133,7 +130,7 @@ class SnowflakeHelper:
         result = self._run_query(query)
         print(f'result: {result}')
 
-        query = f'USE DATABASE {self.config.sf_database}'
+        query = f'USE DATABASE {self.test_type}_{self.test_size}'
         print(f'running query: {query}')
         result = self._run_query(query)
         print(f'result: {result}')
@@ -220,31 +217,39 @@ class SnowflakeHelper:
     def _extract_table_name_from_gcs_filepath(self, gcs_filepath):
         """ since list @stage returns all files for all tests, we need to match table name, size when importing data """
 
-        print(f'\n\n--extracting table name: "{gcs_filepath}"')
-
-        # validate filename prefix (make sure it belongs to this test and size)
-        gcs_prefix = f'{GCS_LOCATION}/{self.test_type}_{self.test_size}_'
-
-        # TODO: we shouldn't change datafile patterns
-        # see if we have filename that starts with actual dataset name or with prefix "_data_" (then followed by dataset name)
-        data_prefix = '/_data_'
-        if gcs_filepath[len(GCS_LOCATION):].startswith(data_prefix):
-            gcs_prefix = f'{GCS_LOCATION}/{data_prefix}{self.test_type}_{self.test_size}_'
-
-        # before proceeding, check if ignore everything not matching our TEST TYPE and TEST SIZE
-        if not gcs_filepath.startswith(gcs_prefix):
+        # ignore debug files
+        filename = gcs_filepath[len(GCS_LOCATION) + 1:]  # +1 is for slash
+        if filename.startswith('_data_'):
             return False, None
 
-        # get table name from gcs_filepath (note: avoiding conflicts like "customer" and "customer_address")
-        gcs_filepath_table_tokens = gcs_filepath[len(gcs_prefix):].split('_')
-        print(f'tokens: {gcs_filepath_table_tokens}')
-        gcs_filepath_table = gcs_filepath_table_tokens[0]
-        try:  # if second token is not a number, then it's a two_word table
-            file_index = int(gcs_filepath_table_tokens[1])
-        except ValueError as ex:
-            gcs_filepath_table += '_' + gcs_filepath_table_tokens[1]
+        # different tests have different naming conventions
+        if self.test_type == TEST_DS:
+            # validate filename prefix (make sure it belongs to this test and size)
+            gcs_prefix = f'{GCS_LOCATION}/{self.test_type}_{self.test_size}_'
 
-        print(f'\n\n--extracted table name: "{gcs_filepath_table}"')
+            # before proceeding, check if ignore everything not matching our TEST TYPE and TEST SIZE
+            if not gcs_filepath.startswith(gcs_prefix):
+                return False, None
+
+            # get table name from gcs_filepath (note: avoiding conflicts like "customer" and "customer_address")
+            gcs_filepath_table_tokens = gcs_filepath[len(gcs_prefix):].split('_')
+            gcs_filepath_table = gcs_filepath_table_tokens[0]
+
+            try:  # if second token is not a number, then it's a two_word table
+                file_index = int(gcs_filepath_table_tokens[1])
+            except ValueError as ex:
+                gcs_filepath_table += '_' + gcs_filepath_table_tokens[1]
+        else:
+            # validate filename prefix (make sure it belongs to this test and size)
+            gcs_prefix = f'{GCS_LOCATION}/{self.test_type}_{self.test_size}_'
+
+            # before proceeding, check if ignore everything not matching our TEST TYPE and TEST SIZE
+            if not gcs_filepath.startswith(gcs_prefix):
+                return False, None
+
+            # get table name from gcs_filepath (note: avoiding conflicts like "customer" and "customer_address")
+            gcs_filepath_table_tokens = gcs_filepath[len(gcs_prefix):].split('.')
+            gcs_filepath_table = gcs_filepath_table_tokens[0]
 
         return True, gcs_filepath_table
 
@@ -255,8 +260,25 @@ class SnowflakeHelper:
         # run query on snowflake db
         rows = self._run_query(f'list @{integration_name}_stage;', fetch_all=True)
 
+        if len(rows) == 0:
+            print('Error listing integration')
+            raise
+
         # db for keeping cleaned up and sorted .dat filenames
         table_files_db = {}
+
+        # for TPC-H test we do not need to scan the list due to the way snowflake treats filenames (as regex),
+        # so file ending with `tbl.1` will match all files following the pattern (ie: `tbl.11`, `tbl.12`, etc.)
+        if self.test_type == TEST_H:
+            for table in self.tables:
+                if table not in table_files_db.keys():
+                    table_files_db[table] = []
+                if table in ('nation', 'region'):
+                    table_files_db[table].append(f'{GCS_LOCATION}/{self.test_type}_{self.test_size}_{table}.tbl')
+                    continue
+                for i in range(1, 10):
+                    table_files_db[table].append(f'{GCS_LOCATION}/{self.test_type}_{self.test_size}_{table}.tbl.{i}')
+            return table_files_db
 
         # cleanup results and sort files into buckets based on table name
         for row in rows:
