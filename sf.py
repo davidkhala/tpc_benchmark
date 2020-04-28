@@ -130,6 +130,11 @@ class SnowflakeHelper:
         result = self._run_query(query)
         print(f'result: {result}')
 
+        query = f'CREATE DATABASE IF NOT EXISTS {self.test_type}_{self.test_size}'
+        print(f'running query: {query}')
+        result = self._run_query(query)
+        print(f'result: {result}')
+
         query = f'USE DATABASE {self.test_type}_{self.test_size}'
         print(f'running query: {query}')
         result = self._run_query(query)
