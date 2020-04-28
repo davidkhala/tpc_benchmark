@@ -455,14 +455,20 @@ def std_out_filter(std_out):
 
 
 def std_err_print(std_out, err_out):
+    print("Standard Out:")
+    print("=============")
     if len(std_out) > 0:
-        print("Standard Out:")
-        print("=============")
         print(std_out)
+    else:
+        print("No Standard Output.")
+    print()
+    print("Error Out")
+    print("=========")
     if len(err_out) > 0:
-        print("Error Out")
-        print("=========")
         print(err_out)
+    else:
+        print("No Error Output.")
+    print()
 
 
 def qgen_template(n, templates_dir, scale=1, qual=None, verbose=False):
@@ -497,7 +503,7 @@ def qgen_template(n, templates_dir, scale=1, qual=None, verbose=False):
                             x=True
                             )
     
-    std_out = std_out_filter(std_out)
+    query_text = std_out_filter(std_out)
     
     if verbose:
         print("QUERY:", n)
@@ -506,8 +512,7 @@ def qgen_template(n, templates_dir, scale=1, qual=None, verbose=False):
 
         std_err_print(std_out, err_out)
 
-
-    return std_out, err_out
+    return query_text
 
 
 def qgen_stream(p, templates_dir, scale=1, qual=None, verbose=False):
@@ -548,7 +553,7 @@ def qgen_stream(p, templates_dir, scale=1, qual=None, verbose=False):
                             verbose=verbose
                             )
 
-    std_out = std_out_filter(std_out)
+    query_text = std_out_filter(std_out)
 
     if verbose:
         print("QUERY STREAM:", p)
@@ -557,7 +562,7 @@ def qgen_stream(p, templates_dir, scale=1, qual=None, verbose=False):
 
         std_err_print(std_out, err_out)
 
-    return std_out, err_out
+    return query_text
 
 
 def qgen_stream_file(p, templates_dir, output_dir, scale=1, qual=None, verbose=False):

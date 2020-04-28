@@ -396,9 +396,8 @@ def dsqgen(file=None,
     cmd = cmd + kwargs
 
     if verbose:
-        print("="*40)
         print("TPC-DS dsqgen parameters")
-        print("------------------------")
+        print("========================")
         print("command & kwargs:", cmd)
         print("cwd:", fp)
         print()
@@ -416,14 +415,20 @@ def dsqgen(file=None,
 
 
 def std_err_print(std_out, err_out):
+    print("Standard Out:")
+    print("=============")
     if len(std_out) > 0:
-        print("Standard Out:")
-        print("=============")
         print(std_out)
+    else:
+        print("No Standard Output.")
+    print()
+    print("Error Out")
+    print("=========")
     if len(err_out) > 0:
-        print("Error Out")
-        print("=========")
         print(err_out)
+    else:
+        print("No Error Output.")
+    print()
 
 
 def qgen_template(n, templates_dir, scale=1, qual=None, verbose=False):
@@ -460,12 +465,18 @@ def qgen_template(n, templates_dir, scale=1, qual=None, verbose=False):
                               )
 
     if verbose:
+        print("QUERY:", n)
+        print("=========")
+        print()
+
         std_err_print(std_out, err_out)
 
-    return std_out, err_out
+    query_text = std_out  # just to be clear and match other methods
+
+    return query_text
 
 
-def qgen_stream(p, templates_dir, template_list, dialect, scale=1, qual=None, verbose=False):
+def qgen_stream(p, templates_dir, dialect, scale=1, qual=None, verbose=False):
     """Generate DS query text for query template number n
 
     Parameters
@@ -492,22 +503,33 @@ def qgen_stream(p, templates_dir, template_list, dialect, scale=1, qual=None, ve
     else:
         r = None
 
+    # make temporary query directory
+    temp_dir = config.fp_ds_output + config.sep + "temp_queries"
+    tools.mkdir_safe(temp_dir)
+
     std_out, err_out = dsqgen(directory=templates_dir,
                               dialect=dialect,
                               scale=scale,
-                              # template="query{}.tpl".format(n),
-                              filter="Y",  # write to std_out
-                              streams=p,
-                              input=template_list,
+                              # filter="Y",  # write to std_out
+                              streams=p+1,
+                              input=templates_dir + config.sep + "templates.lst",
                               rngseed=r,
                               qualify=qual,
-                              verbose=verbose
+                              verbose=verbose,
+                              output_dir=temp_dir,
                               )
 
+    with open(temp_dir + config.sep + "query_{}.sql".format(p), "r") as f:
+        query_text = f.read()
+
     if verbose:
+        print("QUERY STREAM:", p)
+        print("=================")
+        print()
+
         std_err_print(std_out, err_out)
 
-    return std_out, err_out
+    return query_text
 
 
 def qgen_streams(p, templates_dir, output_dir, scale=1, qual=None, verbose=False):

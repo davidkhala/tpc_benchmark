@@ -226,7 +226,8 @@ def move_recursive(old_dir, new_dir):
     
     Parameters
     ----------
-    old_dir : str, directory to m
+    old_dir : str, directory to move FROM
+    new_dir : str, directory to move TO
     """
     
     files = os.listdir(old_dir)
@@ -240,7 +241,8 @@ def copy_recursive(old_dir, new_dir):
     
     Parameters
     ----------
-    old_dir : str, directory to m
+    old_dir : str, directory to move FROM
+    new_dir : str, directory to move TO
     """
     
     files = os.listdir(old_dir)
@@ -248,14 +250,6 @@ def copy_recursive(old_dir, new_dir):
     for f in files:
         shutil.copyfile(old_dir + config.sep + f, new_dir + config.sep + f)
 
-       
-        dtype_mapper = {r' UNION': r' UNION ALL',
-                    r' AS DECIMAL\(\d+,\d+\)\)': r'',
-                    r'CAST\(': r'',
-                    r' union': r' union all',
-                    r' as decimal\(\d+,\d+\)\)': r'',
-                    r'cast\(': r''
-                    }
     
 def regex_replace(text, replace_mapper):
     """Replace characters in text using regex
@@ -276,6 +270,7 @@ def regex_replace(text, replace_mapper):
     
     return text
 
+
 def regex_file(filepath_in, filepath_out, replace_mapper):
     """Apply regex_replace to a file.  If filepath_in == filepath_out,
     replaces the file's contents.
@@ -295,7 +290,8 @@ def regex_file(filepath_in, filepath_out, replace_mapper):
     text = regex_replace(text, replace_mapper)
     
     open(filepath_out, "w").write(text)
-    
+
+
 def regex_dir(filepath_dir, file_signature, replace_mapper, verbose=False):
     """Alter all query templates in a directory"""
     
