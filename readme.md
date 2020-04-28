@@ -612,6 +612,12 @@ https://cloud.google.com/files/BigQueryTechnicalWP.pdf
 https://cloud.google.com/bigquery/docs/best-practices-costs
 https://cloud.google.com/bigquery/docs/best-practices-storage
 
+Loading CSV Data  
+https://cloud.google.com/bigquery/docs/loading-data-cloud-storage-csv
+(note if there's a batch comment?)
+https://stackoverflow.com/questions/17416562/loading-from-google-cloud-storage-to-big-query-seems-slow
+(useful comment by Jordan)
+
 ### Clustering Partitioning
 Clustering, Time Partitioning and Range Partitioning are possible in BigQuery.  
 Some details:
@@ -707,20 +713,29 @@ https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environme
 ### Setup Steps  
 
 1. Create an new AI Notebook on GCP
-2. Start instance and open Jupyter Lab
-3. Open new terminal from the plus menu (+)
-4. Add ssh key to github repo if required
+2. Add an additional persistent disk larger than 20TB
+3. Start instance and open Jupyter Lab
+4. Open new terminal from the plus menu (+)
+5. Add ssh key to github repo if required
     see: https://help.github.com/en/github/authenticating-to-github/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent  
-5. Once the ssh key is generated, you can view the hash in a Notebook with:
+6. Once the ssh key is generated, you can view the hash in a Notebook with:
     ```
     with open("/home/jupyter/.ssh/id_rsa.pub", "r") as f:
         for line in f:
             print(line)
     ``` 
     and paste into github.com credential page
-6. git clone the repo
-7. cd to the repo and update the base conda environment with
+7. git clone the repo
+8. cd to the repo and update the base conda environment with
     ```
     conda env update --file environment_tpc.yml --name base
     ```
-8. add the repo to the conda path so notebooks will find the package in the python path:  `conda develop /home/jupyter/code/bq_snowflake_benchmark`
+9. add the repo to the conda path so notebooks will find the package in the python path:  `conda develop /home/jupyter/code/bq_snowflake_benchmark`
+10. add the persistent disk to a mount point
+    https://devopscube.com/mount-extra-disks-on-google-cloud/
+    mount the persistent disk to the same value as `config.fp_output_mnt`, this will likely be "/mnt/disks/data"
+11. Since Jupyter loads in the `jupyter` user directory, create a symbolic link to the /data mount point with:  
+`$ln -s /data /home/jupyter/code/bq_snowflake_benchmark/data`  
+(a new directory `data` should appear in the project folderin in Jupyter Lab)
+
+

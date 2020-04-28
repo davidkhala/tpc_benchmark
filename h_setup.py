@@ -19,6 +19,10 @@ import pandas as pd
 import config, tools, gcp_storage
 
 
+log_column_names = ["test", "scale", "status",
+                    "child", "parallel", 
+                    "t0", "t1", "stdout", "stderr"]
+
 def download_zip():
     """Download the copy of tpcds source.  See README for versioning."""
 
@@ -135,8 +139,31 @@ def make_tpch(verbose=False):
 
     return stdout, stderr
 
-# alignment filler
-
+def edit_tpcd_h():
+    """Edit the SET_ROWCOUNT value under the SQLSERVER section
+    of the C header file.  
+    
+    Note: the file references TPC-D, 
+    this was a previous TPC benchmark tool and probably 
+    this source is derivative."""
+    
+    fp = config.fp_h_src + config.sep + "dbgen" + config.sep + "tpcd.h"
+    
+    # make a backup of the original
+    f_out = shutil.copyfile(fp, fp[:-2]+".h_backup")
+    
+    d = []
+    section = False
+    with open(fp, "r") as f:
+        for line in f:
+            if "#ifdef 	SQLSERVER" in line:
+                section = True
+            if ("#define SET_ROWCOUNT" in line) & section:
+                line = '''#define SET_ROWCOUNT    "limit %d\\n"''' + '\n'
+            d.append(line)
+    with open(fp, "w") as f:
+        for line in d:
+            f.write(line)
 
 def run_dbgen(scale=1, total_cpu=None, verbose=False):
     """Create data for TPC-H using the binary dbgen with
@@ -152,7 +179,7 @@ def run_dbgen(scale=1, total_cpu=None, verbose=False):
         raise ValueError("Scale must be one of:", config.scale_factors)
     
     env_vars = dict(os.environ)
-    env_vars["DSS_PATH"] = config.fp_h_data_out + config.sep + str(scale) + "GB"
+    env_vars["DSS_PATH"] = config.fp_h_output + config.sep + str(scale) + "GB"
     
     cmd = ["./dbgen", "-vf", "-s", str(scale)]
     
@@ -247,14 +274,17 @@ def sqlserver_bq_defines(template_root):
         with open(tpl, "a") as f:
             f.write(new_def)
 
-def qgen(a=None,
+
+def qgen(path_dir=None, config_dir=None, templates_dir=None,
+         n=None,
+         a=None,
          b=None,
          c=None,
          d=None,
          #h=None,
          i=None,
          l=None,
-         n=None,
+         #n=None,
          #N=None,
          o=None,
          p=None,
@@ -262,7 +292,8 @@ def qgen(a=None,
          s=None,
          v=None,
          t=None,
-         x=None):
+         x=None,
+         verbose=False):
     """Run the TPC-H Query substitution program and generate
     SQL queries
     
@@ -286,87 +317,112 @@ def qgen(a=None,
         -v        -- verbose.
         -t <str>  -- use the contents of file <str> to complete a query
         -x        -- enable SET EXPLAIN in each query.
+
+    Environment variables are used to control features of DBGEN and QGEN
+    which are unlikely to change from one execution to another.
+
+    Variable    Default     Action
+    -------     -------     ------
+    DSS_PATH    .           Directory in which to build flat files
+    DSS_CONFIG  .           Directory in which to find configuration files
+    DSS_DIST    dists.dss   Name of distribution definition file
+    DSS_QUERY   .           Directory in which to find query templates
+    
+    Note: this project does not alter the distributions of the generated data.
     """
     
     kwargs = []
     
     if a is not None:
         kwargs.append("-a")
-        #kwargs.append(a)
+        # kwargs.append(a)
 
     if b is not None:
         kwargs.append("-b")
-        kwargs.append(b)
+        kwargs.append(str(b))
 
     if c is not None:
         kwargs.append("-c")
-        #kwargs.append(file)
+        # kwargs.append(file)
         
     if d is not None:
         kwargs.append("-d")
         
-    #if h is not None:
-    #    kwargs.append("-h")
+    # if h is not None:
+    #     kwargs.append("-h")
         
-    if file is not None:
-        kwargs.append("-FILE")
-        kwargs.append(file)
-    if file is not None:
-        kwargs.append("-FILE")
-        kwargs.append(file)
-    if file is not None:
-        kwargs.append("-FILE")
-        kwargs.append(file)
-    if file is not None:
-        kwargs.append("-FILE")
-        kwargs.append(file)
-    if file is not None:
-        kwargs.append("-FILE")
-        kwargs.append(file)
-    if file is not None:
-        kwargs.append("-FILE")
-        kwargs.append(file)
-    if file is not None:
-        kwargs.append("-FILE")
-        kwargs.append(file)
-    if file is not None:
-        kwargs.append("-FILE")
-        kwargs.append(file)
-    if file is not None:
-        kwargs.append("-FILE")
-        kwargs.append(file)
-    if file is not None:
-        kwargs.append("-FILE")
-        kwargs.append(file)
-    
+    if i is not None:
+        kwargs.append("-i")
+        kwargs.append(i)
+        
+    if l is not None:
+        kwargs.append("-l")
+        kwargs.append(str(l))
 
-def run_qgen(n, scale=1, seed=None, verbose=False):
-    """Create queries for TPC-H using the binary qgen with
-    a subprocess
+    # NOTE: kwarg n meaning is overridden to query number not
+    # the qgen meaning, connect to database
+    # if n is not None:
+    #     kwargs.append("-n")
+    #     kwargs.append(n)
+        
+    # if N is not None:
+    #     kwargs.append("-N")
+    #     kwargs.append(N)
+        
+    if o is not None:
+        kwargs.append("-o")
+        kwargs.append(o)
+        
+    if p is not None:
+        kwargs.append("-p")
+        kwargs.append(str(p))
+        
+    if r is not None:
+        kwargs.append("-r")
+        kwargs.append(str(r))
+        
+    if s is not None:
+        kwargs.append("-s")
+        kwargs.append(str(s))
+        
+    if v:
+        kwargs.append("-v")
+        
+    if t is not None:
+        kwargs.append("-t")
+        kwargs.append(str(t))
     
-    Parameters
-    ----------
-    n : int, query number (from 1 to 22)
-    scale : int, scale factor in GB, acceptable values:
-        1, 100, 1000, 10000
-    seed : int, random seed value
-    verbose : bool, print debug statements
-    """
-    
+    if x is not None:
+        kwargs.append("-x")
+            
+    if type(n) == int:
+        n = str(n)
+        kwargs.append(n)
+    elif type(n) == list:
+        n = " ".join([str(_) for _ in x])
+        kwargs.append(n)
+   
     fp = config.fp_h_src + config.sep + "dbgen"
 
     env_vars = dict(os.environ)
-    env_vars["DSS_PATH"] = config.fp_h_output + config.sep + str(scale) + "GB"
-    env_vars["DSS_QUERY"] = fp + config.sep + "queries"
-
-    cmd = ["./qgen"]
-
-    if seed is not None:
-        cmd = cmd + ["-r", str(seed)]
+    if path_dir is not None:
+        env_vars["DSS_PATH"] = path_dir
+    # if config_dir is not None:
+    #     env_vars["DSS_CONFIG"] = config_dir
+    if templates_dir is not None:
+        env_vars["DSS_QUERY"] = templates_dir
     
-    if n is not None:
-        cmd = cmd + [str(n)]
-    
+    cmd = ["./qgen"] + kwargs
+
+    if verbose:
+        print("TPC-H qgen parameters")
+        print("=====================")
+        print("cmd & kwargs:", cmd)
+        print("path_dir:", path_dir)
+        print("templates_dir:", templates_dir)
+        print("cwd:", fp)
+        print()
+
     pipe = subprocess.run(cmd, 
                           stdout=subprocess.PIPE, 
                           stderr=subprocess.PIPE, 
@@ -375,16 +431,13 @@ def run_qgen(n, scale=1, seed=None, verbose=False):
 
     std_out = pipe.stdout.decode("utf-8")
     err_out = pipe.stderr.decode("utf-8")
+    
+    return std_out, err_out
 
-    if verbose:
-        if len(std_out) > 0:
-            print("Standard Out:")
-            print("=============")
-            print(std_out)
-        if len(err_out) > 0:
-            print("Error Out")
-            print("=========")
-            print(err_out)
+
+def std_out_filter(std_out):
+    """Filter off the beginning cruft of a std_out query 
+    generated by qgen"""
     
     std_out = std_out.split("\n")
     std_out_new = []
@@ -392,13 +445,209 @@ def run_qgen(n, scale=1, seed=None, verbose=False):
     for line in std_out:
         line = line.rstrip("\r")
         line = line.rstrip("\n")
-        if line == "select":
+        if line[:6] in ["select", "create"]:
             keep = True
         if keep:
             std_out_new.append(line)
     std_out = std_out_new
     std_out = "\n".join(std_out)
+    return std_out
+
+
+def std_err_print(std_out, err_out):
+    print("Standard Out:")
+    print("=============")
+    if len(std_out) > 0:
+        print(std_out)
+    else:
+        print("No Standard Output.")
+    print()
+    print("Error Out")
+    print("=========")
+    if len(err_out) > 0:
+        print(err_out)
+    else:
+        print("No Error Output.")
+    print()
+
+
+def qgen_template(n, templates_dir, scale=1, qual=None, verbose=False):
+    """Generate H query text for query template number n
+    
+    Parameters
+    ----------
+    n : int, query number to generate SQL
+    templates_dir : str, absolute path to directory of query templates
+        to draw from for n.
+    scale : int, scale factor of db being queried
+    qual : bool, generate qualification queries in ascending order
+    verbose : bool, print debug statements
+
+    Returns
+    -------
+    std_out : str, BigQuery SQL query
+    std_err : str, error message if generation fails
+    """
+
+    if config.random_seed is not None:
+        r = config.random_seed
+    else:
+        r = None
+
+    std_out, err_out = qgen(n=n,
+                            r=r,
+                            d=qual,
+                            s=scale,
+                            templates_dir=templates_dir,
+                            verbose=verbose,
+                            x=True
+                            )
+    
+    query_text = std_out_filter(std_out)
+    
+    if verbose:
+        print("QUERY:", n)
+        print("=========")
+        print()
+
+        std_err_print(std_out, err_out)
+
+    return query_text
+
+
+def qgen_stream(p, templates_dir, scale=1, qual=None, verbose=False):
+    """Generate TPC-H query number n and write it to disk.
+
+    Parameters
+    ----------
+    p : int, query stream number to generate BigQuery SQL where:
+        p = -1 = queries in order 1-22
+        p = 0 = power test
+        p = 1+ = throughput tests 1-40
+    templates_dir : str, absolute path to directory of query templates
+        to draw from for n.
+    output_dir : str, absolute path to directory to write compiled sql query streams
+    scale : int, scale factor of db being queried
+    qual : bool, generate qualification queries in ascending order
+    verbose : bool, print debug statements
+
+    Returns
+    -------
+    std_out : str, terminal messages if generation succeeds
+    std_err : str, error message if generation fails
+    """
+
+    if config.random_seed is not None:
+        r = config.random_seed
+    else:
+        r = None
+
+    if p == -1:
+        p = None
+
+    std_out, err_out = qgen(p=p,
+                            r=r,
+                            d=qual,
+                            s=scale,
+                            templates_dir=templates_dir,
+                            verbose=verbose
+                            )
+
+    query_text = std_out_filter(std_out)
+
+    if verbose:
+        print("QUERY STREAM:", p)
+        print("=================")
+        print()
+
+        std_err_print(std_out, err_out)
+
+    return query_text
+
+
+def qgen_stream_file(p, templates_dir, output_dir, scale=1, qual=None, verbose=False):
+    """Generate TPC-H query number n and write it to disk.
+    
+    Parameters
+    ----------
+    p : int, query stream number to generate BigQuery SQL where:
+        p = -1 = queries in order 1-22
+        p = 0 = power test
+        p = 1+ = throughput tests 1-40
+    templates_dir : str, absolute path to directory of query templates
+        to draw from for n.
+    output_dir : str, absolute path to directory to write compiled sql query streams
+    scale : int, scale factor of db being queried
+    qual : bool, generate qualification queries in ascending order
+    verbose : bool, print debug statements
+
+    Returns
+    -------
+    std_out : str, terminal messages if generation succeeds
+    std_err : str, error message if generation fails
+    """
+
+    if config.random_seed is not None:
+        r = config.random_seed
+    else:
+        r = None
+
+    if p == -1: 
+        p = None
+    
+    std_out, err_out = qgen(p=p,
+                            r=r,
+                            d=qual,
+                            s=scale,
+                            o=output_dir,
+                            templates_dir=templates_dir,
+                            verbose=verbose
+                            )
+
+    std_out = std_out_filter(std_out)
+
     return std_out, err_out
+
+
+def qgen_streams_file(m, templates_dir, output_dir, scale=1, qual=None, verbose=False):
+    """Generate TPC-H query number 0-m and write them to disk.
+
+    Parameters
+    ----------
+    m : int, number of query streams to generate SQL, 0-m combinations
+    templates_dir : str, absolute path to directory of query templates
+        to draw from for n.
+    output_dir : str, absolute path to directory to write compiled sql query streams
+    scale : int, scale factor of db being queried
+    qual : bool, generate qualification queries in ascending order
+    verbose : bool, print debug statements
+
+    Returns
+    -------
+    std_out : str, terminal messages if generation succeeds
+    std_err : str, error message if generation fails
+    """
+
+    std_out = ""
+    err_out = ""
+    for _p in range(1, m):
+
+        _so, _eo = qgen_stream_file(p=_p,
+                                      templates_dir=templates_dir,
+                                      output_dir=output_dir,
+                                      scale=scale,
+                                      qual=qual,
+                                      verbose=verbose)
+        std_out += _so + "\n"
+        err_out += _eo + "\n"
+
+    return std_out, err_out
+
+
+def parse_log(fp):
+    
+    return pd.read_csv(fp, names=log_column_names)
+
 
 class DGenPool:
     def __init__(self, scale=1, seed=None, n=None, verbose=False):
@@ -452,7 +701,12 @@ class DGenPool:
         n_cmd = cmd + ["-C", str(parallel),
                        "-S", str(child)]
         
-        t0 = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        t0 = pd.Timestamp.now()
+        
+        with self.lock:
+            self.results.append(["h", str(self.scale), "start",
+                                 child, parallel, 
+                                 str(t0), "", "", ""])
         
         pipe = subprocess.run(n_cmd,
                               stdout=subprocess.PIPE, 
@@ -463,15 +717,18 @@ class DGenPool:
         stdout = pipe.stdout.decode("utf-8")
         stderr = pipe.stderr.decode("utf-8")
 
-        t1 = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        t1 = pd.Timestamp.now()
         
         if self.verbose:
             if len(stdout) > 0:
                 print(stdout)
             if len(stderr) > 0:
                 print(stderr)
+                        
         with self.lock:
-            self.results.append([child, parallel, t0, t1, stdout, stderr])
+            self.results.append(["h", str(self.scale), "end",
+                                 child, parallel, 
+                                 str(t0), str(t1), stdout, stderr])
         return child
     
     def generate(self):
@@ -480,11 +737,12 @@ class DGenPool:
         return exe_results
     
     def save_results(self):
-        csv_fp = (config.fp_h_output + config.sep + 
-          "datagen-" + str(self.scale) + 
-          "GB-" + datetime.utcnow().strftime("%Y%m%d-%H%M%S") + ".csv")
         
-        columns = ["child", "parallel", "t0", "t1", "stdout", "stderr"]
+        csv_fp = (config.fp_h_output + config.sep + 
+                  "datagen-h_" + str(self.scale) + "GB-" + 
+                  str(pd.Timestamp.now()) + ".csv"
+                  )
+        
         data = list(self.results)
-        self.dfr = pd.DataFrame(data, columns=columns)
+        self.dfr = pd.DataFrame(data, columns=log_column_names)
         self.dfr.to_csv(csv_fp)

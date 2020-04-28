@@ -52,10 +52,17 @@ for BigQuery datatype specifications in standard SQL
 """
 
 import re
+import pandas as pd
 from google.cloud import bigquery
 
 import config, tools
+from gcp_storage import inventory_bucket_df
 
+
+log_column_names = ["test", "scale", "dataset",
+                    "table", "status", 
+                    "t0", "t1", 
+                    "size_bytes", "job_id"]
 
 def create_dataset(dataset_name, verbose=False):
     """Create a dataset on the project
@@ -232,23 +239,37 @@ def validate(directory, dataset, byte_multiplier=1):
     return df
 
 
+def parse_log(fp):
+    
+    return pd.read_csv(fp, names=log_column_names)
+
+
 class BQUpload:
-    """Upload CSV data from a file location"""
-    def __init__(self, client, project, dataset):
+    """Upload data from a file location"""
+    def __init__(self, test, scale, dataset):
         """
         Parameters
         ----------
-        client : GCP storage client instance
-        project : str, GCP project name
+        test : str, TPC test name, either "ds" or "h"
+        dataset : str, GCP BigQuery dataset running this query
         dataset : str, BigQuery dataset name
         """
-        self.client = client
-        self.project = project
+        self.client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
+        
+        self.project = config.gcp_project
+        self.bucket_name = config.gcs_data_bucket
+        
+        self.test = test
+        self.scale = scale
         self.dataset = dataset
         
         self.job_config = None
         
         self.tables = None
+        self.table_uris = None
+        self.table_size_bytes = None
+        
+        self.df = None
         
         # apply CSV specific setup
         # values can be altered as parameters of self.job_config
@@ -278,7 +299,21 @@ class BQUpload:
         self.job_config.source_format = bigquery.SourceFormat.CSV
 
         self.get_all_table_ids()
+    
+        self.df = inventory_bucket_df(self.bucket_name)
         
+        self.df = self.df.loc[(self.df.test == self.test) & 
+                              (self.df.scale == str(self.scale)+"GB")].copy()
+        
+        a_message = """No files in GCS found matching test {} and scale {}""".format(self.test, self.scale)
+        assert len(self.df) > 0, a_message
+        
+        self.df["n"] = self.df.n.astype(int)
+        self.df.sort_values(by=["table", "n"], inplace=True)
+        self.df.reset_index(inplace=True, drop=True)
+        
+        #self.collate_table_uris(verbose=False)
+    
     def get_all_table_ids(self):
         _tables = self.client.list_tables(dataset=self.dataset)
         self.tables = [_t.table_id for _t in _tables]
@@ -302,24 +337,22 @@ class BQUpload:
         for t in self.tables:
             _s = table_size(client=self.client, 
                             project=config.gcp_project, 
-                            dataset=config.gcp_dataset,
+                            dataset=self.dataset,
                             table=t)
             _t = self.get_table(table_id=t)
             _r = _t.num_rows
             _sizes[t] = (_s, _r)
         return _sizes
         
-    def upload_local_csv(self, table, filepath, delimiter="|", verbose=False):
-        """Upload a CSV file to BigQuery
+    def upload_local(self, table, filepath, verbose=False):
+        """Upload a file to BigQuery
 
-        https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.client.Client.html#google.cloud.bigquery.client.Client.load_table_from_file
+https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.client.Client.html#google.cloud.bigquery.client.Client.load_table_from_file
 
         Parameters
         ----------
         table : str, table name to upload data to
         filepath : str, path to file to upload
-        delimiter : str, delimiting character of CSV file
-            default = "|"
         verbose : bool, print debug statements
 
         Returns
@@ -334,6 +367,7 @@ class BQUpload:
                 print("Starting Upload...")
                 print("From:", filepath)
                 print("To:", destination)
+                
             load_job = self.client.load_table_from_file(file_obj=f_open,
                                                         destination=destination,
                                                         job_config=self.job_config
@@ -346,18 +380,16 @@ class BQUpload:
                 
         return load_job
 
-    def upload_uri_csv(self, table, gs_path, delimiter="|", verbose=False):
-        """Upload a CSV file to BigQuery
+    def upload_uri(self, table, source_uris, verbose=False):
+        """Upload a file to BigQuery
 
-        https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.client.Client.html#google.cloud.bigquery.client.Client.load_table_from_uri
+https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.client.Client.html#google.cloud.bigquery.client.Client.load_table_from_uri
 
         Parameters
         ----------
         table : str, table name to upload data to
-        filepath : str or sequence of str, single path to a GCS file 
+        uris : str or sequence of str, single path to a GCS file 
             to upload, or a sequence of strings of the same
-        delimiter : str, delimiting character of CSV file
-            default = "|"
         verbose : bool, print debug statements
             
         Returns
@@ -365,17 +397,202 @@ class BQUpload:
         google.cloud.bigquery.job.LoadJob
         """
         
-        destination = ".".join([self.project, self.dataset, table])
-        
-        #with open(gs_path, "rb") as gs_open:
+        destination = ".".join([self.project.lower(), self.dataset, table])
 
-        load_job = self.client.load_table_from_uri(source_uris=gs_path,
+        load_job = self.client.load_table_from_uri(source_uris=source_uris,
                                                    destination=destination,
                                                    job_config=self.job_config
                                                    )
         if verbose:
             print("Starting job {}".format(load_job.job_id))
-            load_job.result()  # Waits for table load to complete.
+        load_job.result()  # Waits for table load to complete.
+        if verbose:
             print("Job finished.".format(load_job.done()))
                 
         return load_job
+        
+    def upload(self, verbose=False):
+        """Batch upload data to each table in the dataset.
+        Saves a log file to config.fp_ds_output or config.fp_h_output.
+        
+        Note: this assumes previous methods created data into
+        GCS with consistent formatting and the dataset schema
+        was done the same way.
+        
+        Parameters
+        ----------
+        verbose : bool, print status
+        
+        Returns
+        -------
+        fp_log : str, filepath to log of upload process
+        """
+        
+        t0x = pd.Timestamp.now()
+        total_bytes = 0
+        d_prefix = [self.test, str(self.scale), self.dataset]
+        
+        fp_log = ("bq_upload-" + self.test + "_" + 
+                  str(self.scale) + "GB-" + 
+                  self.dataset + "-" + 
+                  str(pd.Timestamp.now()) + ".csv"
+                  )
+        
+        log_dir = {"h":config.fp_h_output,
+                   "ds":config.fp_ds_output}
+        fp_log = log_dir[self.test] + config.sep + fp_log
+        with open(fp_log, "a") as f:
+            _d0 = ",".join(log_column_names) + "\n"
+            f.write(_d0)
+        
+        tables_upload = self.df.table.unique()
+        tables_upload = [t for t in tables_upload if t not in config.ignore_tables]
+        
+        if verbose:
+            print("Tables to upload:")
+            for tu in tables_upload:
+                print(tu)
+        
+        d = []
+        for table in tables_upload:
+            
+            _df = self.df.loc[self.df.table == table]
+            size_bytes = _df.size_bytes.sum()
+            total_bytes += size_bytes
+            uris = _df.uri.to_list()
+            
+            t0 = pd.Timestamp.now()
+            
+            d0 = d_prefix + [table, "start", 
+                             str(t0), "", 
+                             str(size_bytes), ""]
+            with open(fp_log, "a") as f:
+                _d0 = ",".join(d0) + "\n"
+                f.write(_d0)
+                  
+            if verbose:
+                print("Loading Table: {}".format(table))
+                print("t0: {}".format(t0))
+                print("...")
+               
+            load_job = self.upload_uri(table=table, 
+                                       source_uris=uris)
+            
+            t1 = pd.Timestamp.now()
+            done = load_job.done()
+            job_id = load_job.job_id
+            
+            if verbose:
+                print("t1: {}".format(t1))
+                print("Load Job Done: {}".format(done))
+                print("ID: {}".format(job_id))
+                dt = t1-t0
+                print("dt: {}".format(dt))
+                GBs = (size_bytes/1e9)/dt.total_seconds()
+                print("GB/s: {:.2f}".format(GBs))
+                print("-"*30)
+                
+            d1 = d_prefix + [table, "end", 
+                             str(t0), str(t1), 
+                             str(size_bytes), job_id]
+            with open(fp_log, "a") as f:
+                _d1 = ",".join(d1) + "\n"
+                f.write(_d1)
+            
+            d.append(d1)
+        
+        if verbose:
+            t1x = pd.Timestamp.now()
+            dtx = t1x-t0x
+            print("="*40)
+            print("Total load time: {}".format(dtx))
+            print("Total size: {:.3f} GB".format(total_bytes/1e9))
+            GBsx = (total_bytes/1e9)/dtx.total_seconds()
+            print("Speed: {:.3f} GB/s".format(GBsx))
+                  
+        return fp_log
+
+
+def add_view(query_text, project, dataset):
+    """Handle the unhelpful behavior of the Python DDL API and views:
+    The API allows setting a default dataset but does not honor that
+    attribute when creating views"""
+
+    pdt = project + "." + dataset + "."
+    return query_text.replace(config.p_d_id, pdt)
+
+
+def query(query_text, project, dataset, dry_run=False, use_cache=False):
+    """Run a DDL SQL query on BigQuery
+
+    Parameters
+    ----------
+    query_text : str, query text to execute
+    project : str, GCP project running this query
+    dataset : str, GCP BigQuery dataset running this query
+    dry_run : bool, execute query as a dry run
+        Default: False
+    use_cache : bool, attempt to use cached results from previous queries
+        Default: False
+
+    Returns
+    -------
+    query_job : bigquery.query_job object
+    """
+
+    client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
+    job_config = bigquery.QueryJobConfig()
+
+    default_dataset = project + "." + dataset
+
+    job_config.default_dataset = default_dataset
+
+    job_config.dry_run = dry_run  # only approximate the time and cost
+    job_config.use_query_cache = use_cache  # default is True, (try to used cached results)
+
+    query_text = add_view(query_text, project, dataset)
+
+    query_job = client.query(query_text, job_config=job_config)
+
+    return query_job
+
+
+def parse_query_job(query_job, verbose=False):
+    """
+
+    Parameters
+    ----------
+    query_job : bigquery.query_job object
+    verbose : bool, print results
+
+    Returns
+    -------
+    t0 : datetime object, time query started
+    t1 : datetime object, time query ended
+    bytes_processed : int, bytes processed with query
+    bytes_billed : int, bytes billed for query
+    df : Pandas DataFrame containing results of query
+    """
+
+    result = query_job.result()
+    df = result.to_dataframe()
+
+    t0 = query_job.started
+    t1 = query_job.ended
+    dt = t1 - t0
+    bytes_processed = query_job.total_bytes_processed
+    bytes_billed = query_job.total_bytes_billed
+
+    if verbose:
+        print("Total Time Elapsed: {}".format(dt))
+        print("Bytes Processed: {}".format(bytes_processed))
+        print("Bytes Billed: {}".format(bytes_billed))
+
+        if len(df) < 25:
+            print("Result:")
+            print(df)
+        else:
+            print("Head of Result:")
+            print(df.head())
+
+    return t0, t1, bytes_processed, bytes_billed, df

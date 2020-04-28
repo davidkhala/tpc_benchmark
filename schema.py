@@ -3,6 +3,7 @@
 Colin Dietrich, SADA 2020"""
 
 import re
+import shutil
 
 import config
 
@@ -61,15 +62,28 @@ def rewrite_ds_basic(filepath_out, dataset_name, prefix=False):
 
     open(filepath_out, "w").write(text)
 
+def copy_h_ansi(filepath_out):
+    """Make a copy and move the source ANSI schema file to have for 
+    reference in the filepath_out directory
+    
+    Parameters
+    ----------
+    filepath_out : str, absolute path to directory to move file to
+    """
+    original_file = config.h_schema_ddl_filepath
+    shutil.copyfile(original_file, filepath_out + config.sep + "ansi_h.ddl")
+    
 
-def rewrite_h_basic(filepath_out, dataset_name, prefix=False):
+def rewrite_h_basic(filepath_out, dataset_name, 
+                    lower=False, prefix=False):
     """Convert the sample implementation of the logical schema as described in TPC-DS Specification V1.0.0L , specifications.pdf, pg 14, and contained in  tpc_root/dbgen/dss.ddl.
 
     Parameters
     ----------
-    #filepath_in : str, path to dss.ddl file
     filepath_out : str, path to write BigQuery formatted table schema, named 'tpch_bq.ddl'
     dataset_name : str, name of BigQuery Dataset to append to existing table names
+    lower : bool, convert all text in dss.ddl to lowercase
+    prefix : bool, if True prepend dataset_name to table names
 
     Returns
     -------
@@ -106,8 +120,12 @@ def rewrite_h_basic(filepath_out, dataset_name, prefix=False):
             dataset_table_name = dataset_name + "." + table_name
             split_line[2] = dataset_table_name
             new_line = " ".join(split_line)
+            if lower:
+                new_line = new_line.lower()
             text_list_out.append(new_line)
         else:
+            if lower:
+                line = line.lower()
             text_list_out.append(line)
 
     text = "\n".join(text_list_out)

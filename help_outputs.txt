@@ -194,3 +194,46 @@ Options:
 # ------------------------------------------------------------------------
 ### Query How To  
 See ../dbgen/README for details on qgen usage.
+
+    Enviroment variables are used to control features of DBGEN and QGEN 
+    which are unlikely to change from one execution to another.
+
+    Variable    Default     Action
+    -------     -------     ------
+    DSS_PATH    .           Directory in which to build flat files
+    DSS_CONFIG  .           Directory in which to find configuration files
+    DSS_DIST    dists.dss   Name of distribution definition file
+    DSS_QUERY   .           Directory in which to find query templates
+    
+
+QGEN is a simple ASCII text filter, meant to translate query generalized
+query syntax("query template") into the executable query text(EQT) re-
+quired by the benchmarks. It provides a number of shorthands and syntactic 
+extensions that allow the automatic generation of query parameters and some 
+control over the operation of the benchmark implementation.
+
+QGEN first strips all comments from the query template, recognizing both
+{comment} and --comment styles. Next it traverses the query template
+one line at a time, locating required substitution points, called
+parameter tags. The values substituted for a given tag are summarized
+below.  QGEN does not support nested substitutions. That is, if
+the text substituted for tag itself contains a valid tag the second tag
+will not be expanded.
+
+Tag             Converted To                    Based on
+===             ============                    ========
+:c		        database <dbname>;(1)           -n from the command line
+:x              set explain on;(1)              -x from the command line
+:<number>       paremeter <number>
+:s              stream number
+:o              output to outpath/qnum.stream;  (1) -o from command line, -s from 
+                                                command line
+:b              BEGIN WORK;(1)                  -a from comand line
+:e              COMMIT WORK(1)                  -a from command line
+:q              query number
+:n <number>                                     sets rowcount to be returned 
+                                                to <number>, unless -N appears on the command line
+
+Notes:
+   (1)  This is Informix-specific syntax. Refer to Porting.Notes for
+   tailoring the generated text to your database environment.

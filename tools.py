@@ -14,59 +14,44 @@ import config
 
 def make_directories():
     """Make local directories for TPC DS & H tests"""
-    filepath_list_1 = [
-        config.fp_ds, config.fp_ds_output,
-        config.fp_h, config.fp_h_output,
+    fp_list = [
         config.fp_download,
-        
-        #config.fp_query_templates,
-        
-        #config.fp_ds_query_template_dir,
-        #config.fp_h_query_template_dir,
-        
-        #config.fp_ds_bq_template_dir,
-        #config.fp_h_bq_template_dir,
-        
-        #config.fp_ds_sf_template_dir,
-        #config.fp_h_sf_template_dir
-    ]
-
-    filepath_list_1 += [config.fp_h_output +
-                        config.sep + str(i) + "GB" for i in config.scale_factors]
-
-    filepath_list_1 += [config.fp_ds_output +
-                        config.sep + str(i) + "GB" for i in config.scale_factors]
-
-    # schema files
-    #filepath_list_1 += [config.fp_schema]
-    #filepath_list_1 += [config.fp_schema + config.sep + s for s in config.bq_schema]
-    #filepath_list_1 += [config.fp_schema + config.sep + s for s in config.sf_schema]
+        config.fp_ds, 
+        config.fp_h, 
+        config.fp_ds_output,
+        config.fp_h_output,
+        ]
+    
+    fp_list += [config.fp_h_output +
+                config.sep + str(i) + "GB" for i in config.scale_factors]
+    
+    fp_list += [config.fp_ds_output +
+                config.sep + str(i) + "GB" for i in config.scale_factors]
     
     # query files
-    filepath_list_1 += [config.fp_query]
-    #filepath_list_1 += [config.fp_query + config.sep + s for s in config.bq_queries]
-    #filepath_list_1 += [config.fp_query + config.sep + s for s in config.sf_queries]
+    fp_list += [config.fp_query]
     
     # only generate the folder if it doesn't exist
-    for fp in filepath_list_1:
+    for fp in fp_list:
         if not os.path.exists(fp):
             print("making directory:", fp)
             os.mkdir(fp)
-
+    
     # externally mounted persisten disk output
     if os.path.exists(config.fp_output_mnt):
-        filepath_list_2 = [config.fp_ds_output_mnt,
+        fp_list_2 = [config.fp_ds_output_mnt,
                            config.fp_h_output_mnt]
 
-        filepath_list_2 += [config.fp_h_output_mnt +
+        fp_list_2 += [config.fp_h_output_mnt +
                             config.sep + str(i) + "GB" for i in config.scale_factors]
 
-        filepath_list_2 += [config.fp_ds_output_mnt +
+        fp_list_2 += [config.fp_ds_output_mnt +
                             config.sep + str(i) + "GB" for i in config.scale_factors]
         
         # only generate the folder if it doesn't exist
-        for fp in filepath_list_2:
+        for fp in fp_list_2:
             if not os.path.exists(fp):
+                print("Making data directories on the persistent disk:")
                 os.mkdir(fp)
 
 
@@ -241,7 +226,8 @@ def move_recursive(old_dir, new_dir):
     
     Parameters
     ----------
-    old_dir : str, directory to m
+    old_dir : str, directory to move FROM
+    new_dir : str, directory to move TO
     """
     
     files = os.listdir(old_dir)
@@ -255,7 +241,8 @@ def copy_recursive(old_dir, new_dir):
     
     Parameters
     ----------
-    old_dir : str, directory to m
+    old_dir : str, directory to move FROM
+    new_dir : str, directory to move TO
     """
     
     files = os.listdir(old_dir)
@@ -263,14 +250,6 @@ def copy_recursive(old_dir, new_dir):
     for f in files:
         shutil.copyfile(old_dir + config.sep + f, new_dir + config.sep + f)
 
-       
-        dtype_mapper = {r' UNION': r' UNION ALL',
-                    r' AS DECIMAL\(\d+,\d+\)\)': r'',
-                    r'CAST\(': r'',
-                    r' union': r' union all',
-                    r' as decimal\(\d+,\d+\)\)': r'',
-                    r'cast\(': r''
-                    }
     
 def regex_replace(text, replace_mapper):
     """Replace characters in text using regex
@@ -291,6 +270,7 @@ def regex_replace(text, replace_mapper):
     
     return text
 
+
 def regex_file(filepath_in, filepath_out, replace_mapper):
     """Apply regex_replace to a file.  If filepath_in == filepath_out,
     replaces the file's contents.
@@ -310,7 +290,8 @@ def regex_file(filepath_in, filepath_out, replace_mapper):
     text = regex_replace(text, replace_mapper)
     
     open(filepath_out, "w").write(text)
-    
+
+
 def regex_dir(filepath_dir, file_signature, replace_mapper, verbose=False):
     """Alter all query templates in a directory"""
     
