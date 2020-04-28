@@ -548,7 +548,7 @@ def query(query_text, project, dataset, dry_run=False, use_cache=False):
     job_config.default_dataset = default_dataset
 
     job_config.dry_run = dry_run  # only approximate the time and cost
-    job_config.use_query_cache = use_cache  # default is True, (try to used cached results)
+    job_config.use_query_cache = use_cache  # API default is True
 
     query_text = add_view(query_text, project, dataset)
 
@@ -584,15 +584,19 @@ def parse_query_job(query_job, verbose=False):
     bytes_billed = query_job.total_bytes_billed
 
     if verbose:
+        print("Query Statistics")
+        print("================")
         print("Total Time Elapsed: {}".format(dt))
         print("Bytes Processed: {}".format(bytes_processed))
         print("Bytes Billed: {}".format(bytes_billed))
-
+        print()
         if len(df) < 25:
             print("Result:")
+            print("=======")
             print(df)
         else:
             print("Head of Result:")
+            print("===============")
             print(df.head())
 
     return t0, t1, bytes_processed, bytes_billed, df

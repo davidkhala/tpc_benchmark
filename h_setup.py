@@ -471,22 +471,21 @@ def std_err_print(std_out, err_out):
     print()
 
 
-def qgen_template(n, templates_dir, scale=1, qual=None, verbose=False):
+def qgen_template(n, templates_dir, scale, qual=None,
+                  verbose=False):
     """Generate H query text for query template number n
     
     Parameters
     ----------
     n : int, query number to generate SQL
-    templates_dir : str, absolute path to directory of query templates
-        to draw from for n.
-    scale : int, scale factor of db being queried
-    qual : bool, generate qualification queries in ascending order
+    templates_dir : str, abs path to templates to use for query generation
+    scale : int, database scale factor (i.e. 1, 100, 1000 etc)
+    qual : None, or True to use qualifying values (to test 1GB qualification db)
     verbose : bool, print debug statements
 
     Returns
     -------
-    std_out : str, BigQuery SQL query
-    std_err : str, error message if generation fails
+    query_text : str, query text generated for query
     """
 
     if config.random_seed is not None:
@@ -515,26 +514,25 @@ def qgen_template(n, templates_dir, scale=1, qual=None, verbose=False):
     return query_text
 
 
-def qgen_stream(p, templates_dir, scale=1, qual=None, verbose=False):
-    """Generate TPC-H query number n and write it to disk.
+def qgen_stream(p, templates_dir, scale, qual=None,
+                verbose=False):
+    """Generate TPC-H query stream number p return the SQL query text.
+    See specification.pdf Appendix A for orders.
 
     Parameters
     ----------
-    p : int, query stream number to generate BigQuery SQL where:
+    p : int, query stream number to generate SQL query stream where:
         p = -1 = queries in order 1-22
         p = 0 = power test
         p = 1+ = throughput tests 1-40
-    templates_dir : str, absolute path to directory of query templates
-        to draw from for n.
-    output_dir : str, absolute path to directory to write compiled sql query streams
-    scale : int, scale factor of db being queried
-    qual : bool, generate qualification queries in ascending order
+    templates_dir : str, abs path to templates to use for query generation
+    scale : int, database scale factor (i.e. 1, 100, 1000 etc)
+    qual : None, or True to use qualifying values (to test 1GB qualification db)
     verbose : bool, print debug statements
 
     Returns
     -------
-    std_out : str, terminal messages if generation succeeds
-    std_err : str, error message if generation fails
+    query_text : str, query text generated for query
     """
 
     if config.random_seed is not None:
