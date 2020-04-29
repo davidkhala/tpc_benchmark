@@ -13,7 +13,7 @@ def query_n(n, templates_dir, scale,
             project, dataset,
             qual=None,
             dry_run=False, use_cache=False,
-            verbose=False):
+            verbose=False, verbose_out=False):
     """Query BigQuery with TPC-H query template number n
     
     Parameters
@@ -29,6 +29,7 @@ def query_n(n, templates_dir, scale,
     use_cache : bool, False to disable BigQuery cached results
         Default: False
     verbose : bool, print debug statements
+    verbose_out : bool, print std_out and std_err output
 
     Returns
     -------
@@ -45,7 +46,8 @@ def query_n(n, templates_dir, scale,
                                        templates_dir=templates_dir,
                                        scale=scale,
                                        qual=qual,
-                                       verbose=verbose)
+                                       verbose=verbose,
+                                       verbose_out=verbose_out)
     
     query_job = bq.query(query_text=query_text, 
                          project=project, 

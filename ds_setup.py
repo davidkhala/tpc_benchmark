@@ -23,6 +23,7 @@ log_column_names = ["test", "scale", "status",
                     "child", "parallel", 
                     "t0", "t1", "stdout", "stderr"]
 
+
 def download_zip():
     """Download the copy of tpcds source.  See README for versioning."""
 
@@ -432,7 +433,7 @@ def std_err_print(std_out, err_out):
 
 
 def qgen_template(n, templates_dir, scale, qual=None,
-                  verbose=False):
+                  verbose=False, verbose_out=False):
     """Generate DS query text for query template number n
     
     Parameters
@@ -442,7 +443,8 @@ def qgen_template(n, templates_dir, scale, qual=None,
     scale : int, database scale factor (i.e. 1, 100, 1000 etc)
     qual : None, or True to use qualifying values (to test 1GB qualification db)
     verbose : bool, print debug statements
-    
+    verbose_out : bool, print std_out and std_err output
+
     Returns
     -------
     query_text : str, query text generated for query
@@ -463,7 +465,7 @@ def qgen_template(n, templates_dir, scale, qual=None,
                               verbose=verbose
                               )
 
-    if verbose:
+    if verbose_out:
         print("QUERY:", n)
         print("=========")
         print()

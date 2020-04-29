@@ -253,7 +253,8 @@ def copy_tpl(verbose=False):
 
     if verbose:
         print("Done.  Note: If none printed above, there were no new templates to write.")
-        
+
+
 def sqlserver_bq_defines(template_root):
     """Edit the sqlserver.tpl file such that it will compile ANSI SQL"""
     
@@ -472,7 +473,7 @@ def std_err_print(std_out, err_out):
 
 
 def qgen_template(n, templates_dir, scale, qual=None,
-                  verbose=False):
+                  verbose=False, verbose_out=False):
     """Generate H query text for query template number n
     
     Parameters
@@ -482,6 +483,7 @@ def qgen_template(n, templates_dir, scale, qual=None,
     scale : int, database scale factor (i.e. 1, 100, 1000 etc)
     qual : None, or True to use qualifying values (to test 1GB qualification db)
     verbose : bool, print debug statements
+    verbose_out : bool, print std_out and std_err output
 
     Returns
     -------
@@ -504,7 +506,7 @@ def qgen_template(n, templates_dir, scale, qual=None,
     
     query_text = std_out_filter(std_out)
     
-    if verbose:
+    if verbose_out:
         print("QUERY:", n)
         print("=========")
         print()
