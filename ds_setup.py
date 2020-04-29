@@ -239,7 +239,7 @@ def sqlserver_bq_defines(template_root):
     template_root : str, absolute path to directory to write 
         new template dialect file
     """
-    dialect = "sqlserver_bq"
+    dialect = "sqlserver_tpc"
     tpl = template_root + config.sep + dialect + ".tpl"
     
     defines = '''define __LIMITA = "";
@@ -431,22 +431,21 @@ def std_err_print(std_out, err_out):
     print()
 
 
-def qgen_template(n, templates_dir, scale=1, qual=None, verbose=False):
+def qgen_template(n, templates_dir, scale, qual=None,
+                  verbose=False):
     """Generate DS query text for query template number n
     
     Parameters
     ----------
     n : int, query number to generate BigQuery SQL
-    templates_dir : str, absolute path to directory of query templates
-        to draw from for n.
-    scale : int, scale factor of db being queried
-    qual : bool, generate qualification queries in ascending order
+    templates_dir : str, absolute path to templates to use for query generation
+    scale : int, database scale factor (i.e. 1, 100, 1000 etc)
+    qual : None, or True to use qualifying values (to test 1GB qualification db)
     verbose : bool, print debug statements
     
     Returns
     -------
-    std_out : str, BigQuery SQL query
-    std_err : str, error message if generation fails
+    query_text : str, query text generated for query
     """
 
     if config.random_seed is not None:
@@ -476,7 +475,7 @@ def qgen_template(n, templates_dir, scale=1, qual=None, verbose=False):
     return query_text
 
 
-def qgen_stream(p, templates_dir, dialect, scale=1, qual=None, verbose=False):
+def qgen_stream(p, templates_dir, scale=1, qual=None, verbose=False):
     """Generate DS query text for query template number n
 
     Parameters
@@ -486,8 +485,8 @@ def qgen_stream(p, templates_dir, dialect, scale=1, qual=None, verbose=False):
         to draw from for n.
     template_list : str, name of file that contains the list of
         templates to load
-    dialect : str, name of file that describes the SQL dialect
-        being generated
+    #dialect : str, name of file that describes the SQL dialect
+    #    being generated
     scale : int, scale factor of db being queried
     qual : bool, generate qualification queries in ascending order
     verbose : bool, print debug statements
@@ -508,7 +507,7 @@ def qgen_stream(p, templates_dir, dialect, scale=1, qual=None, verbose=False):
     tools.mkdir_safe(temp_dir)
 
     std_out, err_out = dsqgen(directory=templates_dir,
-                              dialect=dialect,
+                              dialect="sqlserver_tpc",
                               scale=scale,
                               # filter="Y",  # write to std_out
                               streams=p+1,
@@ -519,12 +518,17 @@ def qgen_stream(p, templates_dir, dialect, scale=1, qual=None, verbose=False):
                               output_dir=temp_dir,
                               )
 
-    with open(temp_dir + config.sep + "query_{}.sql".format(p), "r") as f:
+    query_fp = temp_dir + config.sep + "query_{}.sql".format(p)
+    with open(query_fp, "r") as f:
         query_text = f.read()
 
     if verbose:
         print("QUERY STREAM:", p)
         print("=================")
+        print()
+        print("Source File")
+        print("===========")
+        print(query_fp)
         print()
 
         std_err_print(std_out, err_out)

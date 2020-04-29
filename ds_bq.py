@@ -7,36 +7,42 @@ from google.cloud import bigquery
 import config, tools, bq, ds_setup
 
 
-def query_n(n, project, dataset, scale, 
-            template_dir, qual=None, dry_run=False, use_cache=False, verbose=False):
-    """Query BigQuery with TPC-DS query #n
+def query_n(n, template_dir, scale,
+            project, dataset,
+            qual=None,
+            dry_run=False, use_cache=False,
+            verbose=False):
+    """Query BigQuery with TPC-DS query template number n
     
     Parameters
     ----------
     n : int, query number to execute
+    templates_dir : str, abs path to templates to use for query generation
+    scale : int, database scale factor (i.e. 1, 100, 1000 etc)
     project : str, GCP project running this query
     dataset : str, GCP BigQuery dataset running this query
-    scale : int, database scale factor (i.e. 1, 100, 1000 etc)
-    template_dir : str, abs path to templates to use for query generation
-    qual : None or True, use qualifying values (to test 1GB qualification db)
+    qual : None, or True to use qualifying values (to test 1GB qualification db)
     dry_run : bool, have BigQuery perform a dry run on the query
         Default: False
     use_cache : bool, False to disable BigQuery cached results
         Default: False
+    verbose : bool, print debug statements
     
     Returns
     -------
+    n : int, query number executed
     t0 : datetime object, time query started
     t1 : datetime object, time query ended
     bytes_processed : int, bytes processed with query
     bytes_billed : int, bytes billed for query
+    query_text : str, query text generated for query
     df : Pandas DataFrame containing results of query
     """
-    query_text, err_out = ds_setup.qgen_template(n=n, 
-                                                 templates_dir=template_dir,
-                                                 scale=scale, 
-                                                 qual=qual,
-                                                 verbose=verbose)
+    query_text = ds_setup.qgen_template(n=n,
+                                        templates_dir=template_dir,
+                                        scale=scale,
+                                        qual=qual,
+                                        verbose=verbose)
     
     query_job = bq.query(query_text=query_text, 
                          project=project, 
@@ -45,10 +51,10 @@ def query_n(n, project, dataset, scale,
                          use_cache=use_cache)
     
     (t0, t1, 
-     bytes_processed, bytes_billed, 
-     df) = bq.parse_query_job(query_job=query_job, verbose=verbose)
+        bytes_processed, bytes_billed,
+        df) = bq.parse_query_job(query_job=query_job, verbose=verbose)
     
-    return t0, t1, bytes_processed, bytes_billed, df
+    return n, t0, t1, bytes_processed, bytes_billed, query_text, df
 
 
 def stream_p(p, project, dataset, scale, 
@@ -71,28 +77,30 @@ def stream_p(p, project, dataset, scale,
     
     Returns
     -------
+    p : int, query stream number of generated SQL query stream
     t0 : datetime object, time query started
     t1 : datetime object, time query ended
     bytes_processed : int, bytes processed with query
     bytes_billed : int, bytes billed for query
+    query_text : str, query text generated for query
     df : Pandas DataFrame containing results of query
         note: in the case of stream permutations, this will
         be the query results for the last query in the stream.
     """
 
-    query_text, err_out = ds_setup.qgen_stream(p=p,
-                                              scale=scale, 
-                                              templates_dir=template_dir, 
-                                              verbose=verbose)
+    query_text = ds_setup.qgen_stream(p=p,
+                                      scale=scale,
+                                      templates_dir=template_dir,
+                                      verbose=verbose)
     
-    query_job = query(query_text=query_text, 
-                      project=project, 
-                      dataset=dataset, 
-                      dry_run=dry_run,
-                      use_cache=use_cache)
+    query_job = bq.query(query_text=query_text,
+                         project=project,
+                         dataset=dataset,
+                         dry_run=dry_run,
+                         use_cache=use_cache)
     
-    (t0, t1, 
-     bytes_processed, bytes_billed, 
-     df) = parse_query_job(query_job=query_job, verbose=verbose)
+    (t0, t1,
+        bytes_processed, bytes_billed, df
+     ) = bq.parse_query_job(query_job=query_job, verbose=verbose)
     
-    return t0, t1, bytes_processed, bytes_billed, df
+    return p, t0, t1, bytes_processed, bytes_billed, query_text, df

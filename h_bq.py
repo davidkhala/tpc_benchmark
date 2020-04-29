@@ -111,8 +111,8 @@ def stream_p(p, templates_dir, scale,
                          dry_run=dry_run,
                          use_cache=use_cache)
     
-    (p, t0, t1,
-        bytes_processed, bytes_billed,
-        df) = bq.parse_query_job(query_job=query_job, verbose=verbose)
+    (t0, t1,
+        bytes_processed, bytes_billed, df
+     ) = bq.parse_query_job(query_job=query_job, verbose=verbose)
     
-    return t0, t1, bytes_processed, bytes_billed, query_text, df
+    return p, t0, t1, bytes_processed, bytes_billed, query_text, df

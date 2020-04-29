@@ -478,7 +478,7 @@ def qgen_template(n, templates_dir, scale, qual=None,
     Parameters
     ----------
     n : int, query number to generate SQL
-    templates_dir : str, abs path to templates to use for query generation
+    templates_dir : str, absolute path to templates to use for query generation
     scale : int, database scale factor (i.e. 1, 100, 1000 etc)
     qual : None, or True to use qualifying values (to test 1GB qualification db)
     verbose : bool, print debug statements
