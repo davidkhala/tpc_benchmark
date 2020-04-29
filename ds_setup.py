@@ -475,7 +475,8 @@ def qgen_template(n, templates_dir, scale, qual=None,
     return query_text
 
 
-def qgen_stream(p, templates_dir, scale=1, qual=None, verbose=False):
+def qgen_stream(p, templates_dir, scale, qual=None,
+                verbose=False, verbose_out=False):
     """Generate DS query text for query template number n
 
     Parameters
@@ -483,18 +484,14 @@ def qgen_stream(p, templates_dir, scale=1, qual=None, verbose=False):
     p : int, query number to generate BigQuery SQL
     templates_dir : str, absolute path to directory of query templates
         to draw from for n.
-    template_list : str, name of file that contains the list of
-        templates to load
-    #dialect : str, name of file that describes the SQL dialect
-    #    being generated
     scale : int, scale factor of db being queried
     qual : bool, generate qualification queries in ascending order
     verbose : bool, print debug statements
+    verbose_out : bool, print std_out and std_err output
 
     Returns
     -------
-    std_out : str, BigQuery SQL query
-    std_err : str, error message if generation fails
+    query_text : str, query text generated for query
     """
 
     if config.random_seed is not None:
@@ -522,7 +519,7 @@ def qgen_stream(p, templates_dir, scale=1, qual=None, verbose=False):
     with open(query_fp, "r") as f:
         query_text = f.read()
 
-    if verbose:
+    if verbose_out:
         print("QUERY STREAM:", p)
         print("=================")
         print()
@@ -534,46 +531,6 @@ def qgen_stream(p, templates_dir, scale=1, qual=None, verbose=False):
         std_err_print(std_out, err_out)
 
     return query_text
-
-
-def qgen_streams(p, templates_dir, output_dir, scale=1, qual=None, verbose=False):
-    """Generate H query text for query number n
-
-    Parameters
-    ----------
-    p : int, number of query streams to generate SQL, 0-m combinations
-    templates_dir : str, absolute path to directory of query templates
-        to draw from for n.
-    output_dir : str, absolute path to directory to write compiled sql query streams
-    scale : int, scale factor of db being queried
-    qual : bool, generate qualification queries in ascending order
-    verbose : bool, print debug statements
-
-    Returns
-    -------
-    std_out : str, terminal messages if generation succeeds
-    std_err : str, error message if generation fails
-    """
-
-    if config.random_seed is not None:
-        r = config.random_seed
-    else:
-        r = None
-
-    std_out, err_out = dsqgen(directory=templates_dir,
-                              dialect="sqlserver_bq",
-                              scale=scale,
-                              output_dir=output_dir,
-                              streams=p,
-                              rngseed=r,
-                              qualify=qual,
-                              verbose=verbose
-                              )
-
-    if verbose:
-        std_err_print(std_out, err_out)
-
-    return std_out, err_out
 
 
 def tpl_bq_regex(tpl_dir, verbose=False):

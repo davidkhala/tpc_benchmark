@@ -20,6 +20,9 @@ def make_directories():
         config.fp_h, 
         config.fp_ds_output,
         config.fp_h_output,
+        config.fp_results,
+        config.fp_schema,
+        config.fp_query
         ]
     
     fp_list += [config.fp_h_output +
@@ -37,16 +40,16 @@ def make_directories():
             print("making directory:", fp)
             os.mkdir(fp)
     
-    # externally mounted persisten disk output
+    # externally mounted persistent disk output
     if os.path.exists(config.fp_output_mnt):
         fp_list_2 = [config.fp_ds_output_mnt,
                            config.fp_h_output_mnt]
 
         fp_list_2 += [config.fp_h_output_mnt +
-                            config.sep + str(i) + "GB" for i in config.scale_factors]
+                      config.sep + str(i) + "GB" for i in config.scale_factors]
 
         fp_list_2 += [config.fp_ds_output_mnt +
-                            config.sep + str(i) + "GB" for i in config.scale_factors]
+                      config.sep + str(i) + "GB" for i in config.scale_factors]
         
         # only generate the folder if it doesn't exist
         for fp in fp_list_2:

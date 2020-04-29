@@ -515,7 +515,7 @@ def qgen_template(n, templates_dir, scale, qual=None,
 
 
 def qgen_stream(p, templates_dir, scale, qual=None,
-                verbose=False):
+                verbose=False, verbose_out=False):
     """Generate TPC-H query stream number p return the SQL query text.
     See specification.pdf Appendix A for orders.
 
@@ -529,6 +529,7 @@ def qgen_stream(p, templates_dir, scale, qual=None,
     scale : int, database scale factor (i.e. 1, 100, 1000 etc)
     qual : None, or True to use qualifying values (to test 1GB qualification db)
     verbose : bool, print debug statements
+    verbose_out : bool, print std_out and std_err output
 
     Returns
     -------
@@ -553,7 +554,7 @@ def qgen_stream(p, templates_dir, scale, qual=None,
 
     query_text = std_out_filter(std_out)
 
-    if verbose:
+    if verbose_out:
         print("QUERY STREAM:", p)
         print("=================")
         print()
