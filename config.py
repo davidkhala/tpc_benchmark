@@ -184,7 +184,7 @@ for test in tests:
 
 
 # snowflake auth info
-sf_username = "sadadauren"
-sf_password = "Test1234!"
+sf_username = "dauren"
+sf_password = "239nj8834uffe"
 sf_account = "sl19096.us-central1.gcp"
 sf_warehouse = "TEST2"

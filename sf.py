@@ -22,20 +22,12 @@ import snowflake.connector
 def _open_connection(config):
     """ starts warehouse, opens connection """
     print(f'using config: user:{config.sf_username}, pass: {config.sf_password}, account: {config.sf_account}')
-
     # connect to snowflake
     conn = snowflake.connector.connect(
         user=config.sf_username,
         password=config.sf_password,
         account=config.sf_account
     )
-
-    # conn = snowflake.connector.connect(
-    #     user='sadadauren',
-    #     password='Test1234!',
-    #     account='ed75261.us-central1.gcp'
-    # )
-
     return conn
 
 
@@ -47,7 +39,7 @@ TABLES_DS = [
     'store', 'call_center', 'customer', 'web_site', 'store_returns', 'household_demographics', 'web_page', 'promotion', 'catalog_page',
     'inventory', 'catalog_returns', 'web_returns', 'web_sales', 'catalog_sales', 'store_sales',
 ]
-TABLES_H = ['lineitem', 'customer', 'nation', 'orders', 'part', 'partsupp', 'region', 'supplier']
+TABLES_H = ['nation', 'lineitem', 'customer', 'orders', 'part', 'partsupp', 'region', 'supplier']
 DATASET_SIZES = ['1GB', '2GB', '100GB', '1000GB', '10000GB']
 GCS_LOCATION = 'gcs://tpc-benchmark-5947' #TODO: needs to go to config
 SF_ROLE = 'ACCOUNTADMIN' # TODO: needs to go to config
