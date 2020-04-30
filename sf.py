@@ -22,20 +22,12 @@ import snowflake.connector
 def _open_connection(config):
     """ starts warehouse, opens connection """
     print(f'using config: user:{config.sf_username}, pass: {config.sf_password}, account: {config.sf_account}')
-
     # connect to snowflake
     conn = snowflake.connector.connect(
         user=config.sf_username,
         password=config.sf_password,
         account=config.sf_account
     )
-
-    # conn = snowflake.connector.connect(
-    #     user='sadadauren',
-    #     password='Test1234!',
-    #     account='ed75261.us-central1.gcp'
-    # )
-
     return conn
 
 
@@ -47,10 +39,12 @@ TABLES_DS = [
     'store', 'call_center', 'customer', 'web_site', 'store_returns', 'household_demographics', 'web_page', 'promotion', 'catalog_page',
     'inventory', 'catalog_returns', 'web_returns', 'web_sales', 'catalog_sales', 'store_sales',
 ]
-TABLES_H = ['lineitem', 'customer', 'nation', 'orders', 'part', 'partsupp', 'region', 'supplier']
+TABLE_DS_SKIP = ['date_dim']
+TABLES_H = ['nation', 'lineitem', 'customer', 'orders', 'part', 'partsupp', 'region', 'supplier']
 DATASET_SIZES = ['1GB', '2GB', '100GB', '1000GB', '10000GB']
 GCS_LOCATION = 'gcs://tpc-benchmark-5947' #TODO: needs to go to config
 SF_ROLE = 'ACCOUNTADMIN' # TODO: needs to go to config
+#SF_ROLE = 'SYSADMIN'
 storage_integration_name = 'gcs_storage_integration' #TODO: needs to go to config
 named_file_format_name = 'csv_file_format'  # TODO: move to config
 is_integrated = False
@@ -130,6 +124,11 @@ class SnowflakeHelper:
         result = self._run_query(query)
         print(f'result: {result}')
 
+        query = f'CREATE DATABASE IF NOT EXISTS {self.test_type}_{self.test_size}'
+        print(f'running query: {query}')
+        result = self._run_query(query)
+        print(f'result: {result}')
+
         query = f'USE DATABASE {self.test_type}_{self.test_size}'
         print(f'running query: {query}')
         result = self._run_query(query)
@@ -182,12 +181,9 @@ class SnowflakeHelper:
         print(f'\n\n--pushing schema: "{self.config.h_schema_ddl_filepath}"')
 
         # open file and read all rows:
-        with open(self.config.h_schema_ddl_filepath, 'r') as f:
+        # with open(self.config.h_schema_ddl_filepath, 'r') as f:
+        with open('/home/vagrant/bq_snowflake_benchmark/ds/v2.11.0rc2/tools/tpcds.sql') as f:
             lines = f.readlines()
-        # with open('/home/vagrant/bq_snowflake_benchmark/ds/v2.11.0rc2/tools/tpcds.sql') as f:
-        #     lines = f.readlines()
-
-        # TODO: do we need to do `CREATE IF NOT EXIST {DB_NAME}?`
 
         # extract queries:
         queries = []
@@ -306,7 +302,6 @@ class SnowflakeHelper:
             # if file matches no tables, raise and exception!
             if not is_found_table:
                 print(f'unknown table!!!! {gcs_filepath}')
-                raise
 
         print(f'\n\n--done listing stage')
         return table_files_db
