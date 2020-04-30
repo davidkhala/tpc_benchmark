@@ -746,7 +746,7 @@ def query_seq(name, test, seq, templates_dir, scale,
               dataset + "-" + name + "-" +
               str(pd.Timestamp.now()) + ".csv"
               )
-    df.to_csv(csv_fp)
+    df.to_csv(csv_fp, index=False)
 
     return True
 
@@ -898,6 +898,6 @@ def stream_seq(name, test, seq, templates_dir, scale,
               dataset + "-" + name + "-" +
               str(pd.Timestamp.now()) + ".csv"
               )
-    df.to_csv(csv_fp)
+    df.to_csv(csv_fp, index=False)
 
     return True
