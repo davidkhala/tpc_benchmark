@@ -582,6 +582,7 @@ def parse_query_job(query_job, verbose=False):
     dt = t1 - t0
     bytes_processed = query_job.total_bytes_processed
     bytes_billed = query_job.total_bytes_billed
+    query_plan = {k: v.__dict__ for k, v in enumerate(query_job.query_plan)}
 
     if verbose:
         print("Query Statistics")
@@ -599,7 +600,7 @@ def parse_query_job(query_job, verbose=False):
             print("===============")
             print(df.head())
 
-    return t0, t1, bytes_processed, bytes_billed, df
+    return t0, t1, bytes_processed, bytes_billed, query_plan, df
 
 
 def query_n(n, test, templates_dir, scale,
@@ -664,9 +665,9 @@ def query_n(n, test, templates_dir, scale,
 
     (t0, t1,
      bytes_processed, bytes_billed,
-     df) = parse_query_job(query_job=query_job, verbose=verbose)
+     query_plan, df) = parse_query_job(query_job=query_job, verbose=verbose)
 
-    return n, t0, t1, bytes_processed, bytes_billed, query_text, df
+    return n, t0, t1, bytes_processed, bytes_billed, query_text, query_plan, df
 
 
 def query_seq(desc, test, seq, templates_dir, scale,
@@ -710,8 +711,8 @@ def query_seq(desc, test, seq, templates_dir, scale,
     for n in seq:
         (n, t0, t1,
          bytes_processed,
-         bytes_billed,
-         query_text, df) = query_n(n=n,
+         bytes_billed, query_text,
+         query_plan, df) = query_n(n=n,
                                    test=test,
                                    templates_dir=templates_dir,
                                    scale=scale,
@@ -724,7 +725,7 @@ def query_seq(desc, test, seq, templates_dir, scale,
                                    verbose_out=False
                                    )
         _d = ["bq", test, scale, dataset, desc, n,
-              t0, t1, bytes_processed, bytes_billed]
+              t0, t1, bytes_processed, bytes_billed, query_plan]
         query_data.append(_d)
 
         if verbose_iter:
@@ -738,7 +739,7 @@ def query_seq(desc, test, seq, templates_dir, scale,
             print()
 
     columns = ["db", "test", "scale", "bq_dataset", "desc", "query_n",
-               "t0", "t1", "bytes_processed", "bytes_billed"]
+               "t0", "t1", "bytes_processed", "bytes_billed", "query_plan"]
     df = pd.DataFrame(query_data, columns=columns)
     csv_fp = (config.fp_results + config.sep +
               "bq_{}_query_times-".format(test) +
@@ -816,10 +817,10 @@ def stream_p(p, test, templates_dir, scale,
                       use_cache=use_cache)
 
     (t0, t1,
-     bytes_processed, bytes_billed, df
-     ) = parse_query_job(query_job=query_job, verbose=verbose)
+     bytes_processed, bytes_billed,
+     query_plan, df) = parse_query_job(query_job=query_job, verbose=verbose)
 
-    return p, t0, t1, bytes_processed, bytes_billed, query_text, df
+    return p, t0, t1, bytes_processed, bytes_billed, query_text, query_plan, df
 
 
 def stream_seq(desc, test, seq, templates_dir, scale,
@@ -863,8 +864,8 @@ def stream_seq(desc, test, seq, templates_dir, scale,
     stream_data = []
     for p in seq:
         (p, t0, t1,
-         bytes_processed, bytes_billed,
-         query_text, df) = stream_p(p=p,
+         bytes_processed, bytes_billed, query_text,
+         query_plan, df) = stream_p(p=p,
                                     test=test,
                                     templates_dir=templates_dir,
                                     scale=scale,
@@ -877,7 +878,7 @@ def stream_seq(desc, test, seq, templates_dir, scale,
                                     verbose_out=False
                                     )
         _s = ["bq", "ds", scale, dataset, desc, p,
-              t0, t1, bytes_processed, bytes_billed]
+              t0, t1, bytes_processed, bytes_billed, query_plan]
         stream_data.append(_s)
 
         if verbose_iter:
@@ -891,7 +892,7 @@ def stream_seq(desc, test, seq, templates_dir, scale,
             print()
 
     columns = ["db", "test", "scale", "bq_dataset", "desc", "stream_p",
-               "t0", "t1", "bytes_processed", "bytes_billed"]
+               "t0", "t1", "bytes_processed", "bytes_billed", "query_plan"]
     df = pd.DataFrame(stream_data, columns=columns)
     csv_fp = (config.fp_results + config.sep +
               "bq_{}_stream_times-".format(test) + 
