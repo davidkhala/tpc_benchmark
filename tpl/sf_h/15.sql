@@ -3,7 +3,7 @@
 -- Functional Query Definition
 -- Approved February 1998
 :x
-create view revenue:s (supplier_no, total_revenue) as
+create view if not exists revenue:s (supplier_no, total_revenue) as
 	select
 		l_suppkey,
 		sum(l_extendedprice * (1 - l_discount))
@@ -11,7 +11,7 @@ create view revenue:s (supplier_no, total_revenue) as
 		lineitem
 	where
 		l_shipdate >= date ':1'
-		and l_shipdate < date ':1' + interval '3' month
+		and l_shipdate < dateadd(month, 3, to_date(':1'))
 	group by
 		l_suppkey;
 
@@ -37,4 +37,3 @@ order by
 	s_suppkey;
 
 drop view revenue:s;
-:n -1

@@ -34,11 +34,10 @@ where
 					l_partkey = ps_partkey
 					and l_suppkey = ps_suppkey
 					and l_shipdate >= date ':2'
-					and l_shipdate < date ':2' + interval '1' year
+					and l_shipdate < dateadd(year, 1, to_date(':2'))
 			)
 	)
 	and s_nationkey = n_nationkey
 	and n_name = ':3'
 order by
 	s_name;
-:n -1

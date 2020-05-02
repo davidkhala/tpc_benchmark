@@ -23,9 +23,8 @@ where
 	and n_regionkey = r_regionkey
 	and r_name = ':1'
 	and o_orderdate >= date ':2'
-	and o_orderdate < date ':2' + interval '1' year
+	and o_orderdate < dateadd(year, 1, to_date(':2'))
 group by
 	n_name
 order by
 	revenue desc;
-:n -1

@@ -17,7 +17,8 @@ for Snowflake datatype specifications in standard SQL
 
 """
 import snowflake.connector
-
+import time
+import logging
 
 def _open_connection(config):
     """ starts warehouse, opens connection """
@@ -84,23 +85,69 @@ class SnowflakeHelper:
         # close connection
         self.conn.close()
 
-    def _run_query(self, query, fetch_all=False):
+    def _get_cost(self, running_time):
+        """ estimates cost for query runtime based on warehouse size """
+        # TODO: review this
+        return running_time * self.config.sf_warehouse_cost
+
+    def run_queries(self, queries):
+        """ opens cursor, runs query and returns a single (first) result or all if 'fetch-all' flag is specified """
+
+        batch_start_ts = None
+        batch_running_time = 0
+        batch_end_ts = None
+        batch_row_count = 0
+        batch_cost = 0.0
+        batch_data = []
+
+        for query in queries:
+            (start_ts, end_ts, bytes, row_count, cost, rows) = self.run_query(query)
+            # properly count times (only count execution time):
+
+            # first query sets start time
+            if not batch_start_ts:
+                batch_start_ts = start_ts
+
+            # add this query time to batch total running time
+            batch_running_time += end_ts - start_ts
+
+            # add rest of data
+            batch_row_count += row_count
+            batch_cost += cost
+            if len(rows) > 0:
+                batch_data.append(rows)
+
+        # calculate batch end time running time by adding runtime duration to start time
+        batch_end_ts = batch_start_ts + batch_running_time
+
+        return batch_start_ts, batch_end_ts, -1, batch_row_count, batch_cost, batch_data[1]  # return data just for second select query
+
+    def run_query(self, query):
         """ opens cursor, runs query and returns a single (first) result or all if 'fetch-all' flag is specified """
         cs = self.conn.cursor()
-        result = None
+        row_count = 0
+        start_ts = None
+        end_ts = None
+        rows = []
+        cost = None
         try:
+            # execute query and capture time
+            start_ts = time.time()
             cs.execute(query)
-            if not fetch_all:
-                rows = cs.fetchone()
-                return rows[0]
-            else:
-                rows = cs.fetchall()
-                return rows
+            end_ts = time.time()
+
+            # extract row count and data
+            row_count = cs.rowcount
+            rows = cs.fetchall()
+            cost = self._get_cost(end_ts-start_ts)
         except Exception as ex:
             print(f'Error running query {ex}')
         finally:
             cs.close()
-        return result
+
+        logging.debug(f'query results: {start_ts}, {end_ts}, {row_count}, {len(rows)}, {cost}')
+
+        return start_ts, end_ts, -1, row_count, cost, rows
 
     def warehouse_start(self):
         """ starts warehouse """
@@ -111,33 +158,33 @@ class SnowflakeHelper:
         # resume warehouse
         query = f'USE ROLE {SF_ROLE}'
         print(f'running query: {query}')
-        result = self._run_query(query)
+        result = self.run_query(query)
         print(f'result: {result}')
 
         query = f'ALTER WAREHOUSE {self.config.sf_warehouse} RESUME;'
         print(f'running query: {query}')
-        result = self._run_query(query)
+        result = self.run_query(query)
         print(f'warehouse start: {result}')
 
         query = f'USE WAREHOUSE {self.config.sf_warehouse}'
         print(f'running query: {query}')
-        result = self._run_query(query)
+        result = self.run_query(query)
         print(f'result: {result}')
 
         query = f'CREATE DATABASE IF NOT EXISTS {self.test_type}_{self.test_size}'
         print(f'running query: {query}')
-        result = self._run_query(query)
+        result = self.run_query(query)
         print(f'result: {result}')
 
         query = f'USE DATABASE {self.test_type}_{self.test_size}'
         print(f'running query: {query}')
-        result = self._run_query(query)
+        result = self.run_query(query)
         print(f'result: {result}')
 
     def warehouse_suspend(self):
         """ suspends warehouse and closes connection """
         # suspend warehouse
-        result = self._run_query(f'ALTER WAREHOUSE {self.config.sf_warehouse} SUSPEND;')
+        result = self.run_query(f'ALTER WAREHOUSE {self.config.sf_warehouse} SUSPEND;')
         print(f'warehouse suspend: {result}')
         # close connection
         self.conn.close()
@@ -204,7 +251,7 @@ class SnowflakeHelper:
                 print(f'{query}\n\n\n')
             else:
                 print(f'running query: {query}')
-                result = self._run_query(query)
+                result = self.run_query(query)
                 print(f'result {result}')
 
         print(f'\n\n--finished pushing schema')
@@ -254,7 +301,7 @@ class SnowflakeHelper:
         print(f'\n\n--listing stage: "@{integration_name}_stage"')
 
         # run query on snowflake db
-        rows = self._run_query(f'list @{integration_name}_stage;', fetch_all=True)
+        rows = self.run_query(f'list @{integration_name}_stage;', fetch_all=True)
 
         if len(rows) == 0:
             print('Error listing integration')
@@ -315,7 +362,7 @@ class SnowflakeHelper:
         query = f'''create or replace file format {named_file_format_name}
             type = csv
             field_delimiter = '|'
-            skip_header = 1
+            skip_header = 0
             null_if = ('NULL', 'null')
             empty_field_as_null = true
             encoding = 'iso-8859-1' 
@@ -325,7 +372,7 @@ class SnowflakeHelper:
             print(query)
         else:
             print(f'running query: {query}')
-            result = self._run_query(query)
+            result = self.run_query(query)
             print(f'result {result}')
 
         print(f'\n\n--done creating named file format')
@@ -341,7 +388,7 @@ class SnowflakeHelper:
             print(query)
         else:
             print(f'running query: {query}')
-            result = self._run_query(query)
+            result = self.run_query(query)
             print(f'result {result}')
 
         print(f'\n\n--finished creating storage integration')
@@ -355,7 +402,7 @@ class SnowflakeHelper:
             print(query)
         else:
             print(f'running query: {query}')
-            result = self._run_query(query)
+            result = self.run_query(query)
             print(f'result {result}')
 
         query = f'GRANT USAGE on INTEGRATION {st_int_name} to ROLE {SF_ROLE};'
@@ -364,7 +411,7 @@ class SnowflakeHelper:
             print(query)
         else:
             print(f'running query: {query}')
-            result = self._run_query(query)
+            result = self.run_query(query)
             print(f'result {result}')
         return
 
@@ -377,7 +424,7 @@ class SnowflakeHelper:
             print(query)
         else:
             print(f'running query: {query}')
-            result = self._run_query(query)
+            result = self.run_query(query)
             print(f'result {result}')
         return
 
@@ -390,7 +437,7 @@ class SnowflakeHelper:
             print(query)
         else:
             print(f'running query: {query}')
-            result = self._run_query(query)
+            result = self.run_query(query)
             print(f'result {result}')
         return
 
@@ -402,6 +449,6 @@ class SnowflakeHelper:
             print(query)
         else:
             print(f'running query: {query}')
-            result = self._run_query(query)
+            result = self.run_query(query)
             print(f'result {result}')
         return
