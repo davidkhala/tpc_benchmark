@@ -669,7 +669,7 @@ def query_n(n, test, templates_dir, scale,
     return n, t0, t1, bytes_processed, bytes_billed, query_text, df
 
 
-def query_seq(name, test, seq, templates_dir, scale,
+def query_seq(desc, test, seq, templates_dir, scale,
               project, dataset,
               qual=None,
               dry_run=False, use_cache=False,
@@ -678,7 +678,7 @@ def query_seq(name, test, seq, templates_dir, scale,
 
     Parameters
     ----------
-    name : str, name of sequence for record keeping
+    desc : str, description of sequence for record keeping
     test : str, TPC test being executed, either "ds" or "h"
     seq : iterable sequence int, query numbers to execute between 1 and 99
     templates_dir : str, abs path to templates to use for query generation
@@ -723,7 +723,7 @@ def query_seq(name, test, seq, templates_dir, scale,
                                    verbose=verbose,
                                    verbose_out=False
                                    )
-        _d = ["bq", test, scale, dataset, n,
+        _d = ["bq", test, scale, dataset, desc, n,
               t0, t1, bytes_processed, bytes_billed]
         query_data.append(_d)
 
@@ -737,13 +737,13 @@ def query_seq(name, test, seq, templates_dir, scale,
             print("-" * 40)
             print()
 
-    columns = ["db", "test", "scale", "bq_dataset", "query_n",
+    columns = ["db", "test", "scale", "bq_dataset", "desc", "query_n",
                "t0", "t1", "bytes_processed", "bytes_billed"]
     df = pd.DataFrame(query_data, columns=columns)
     csv_fp = (config.fp_results + config.sep +
               "bq_{}_query_times-".format(test) +
               str(scale) + "GB-" +
-              dataset + "-" + name + "-" +
+              dataset + "-" + desc + "-" +
               str(pd.Timestamp.now()) + ".csv"
               )
     df.to_csv(csv_fp, index=False)
@@ -822,7 +822,7 @@ def stream_p(p, test, templates_dir, scale,
     return p, t0, t1, bytes_processed, bytes_billed, query_text, df
 
 
-def stream_seq(name, test, seq, templates_dir, scale,
+def stream_seq(desc, test, seq, templates_dir, scale,
                project, dataset,
                qual=None,
                dry_run=False, use_cache=False,
@@ -832,7 +832,7 @@ def stream_seq(name, test, seq, templates_dir, scale,
 
     Parameters
     ----------
-    name : str, name of sequence for record keeping
+    desc : str, description of sequence for record keeping
     test : str, TPC test being executed, either "ds" or "h"
     seq : iterable sequence int, query numbers to execute between 1 and 99
     templates_dir : str, abs path to templates to use for query generation
@@ -876,7 +876,7 @@ def stream_seq(name, test, seq, templates_dir, scale,
                                     verbose=verbose,
                                     verbose_out=False
                                     )
-        _s = ["bq", "ds", scale, dataset, p,
+        _s = ["bq", "ds", scale, dataset, desc, p,
               t0, t1, bytes_processed, bytes_billed]
         stream_data.append(_s)
 
@@ -890,12 +890,13 @@ def stream_seq(name, test, seq, templates_dir, scale,
             print("-" * 40)
             print()
 
-    columns = ["db", "test", "scale", "bq_dataset", "stream_p",
+    columns = ["db", "test", "scale", "bq_dataset", "desc", "stream_p",
                "t0", "t1", "bytes_processed", "bytes_billed"]
     df = pd.DataFrame(stream_data, columns=columns)
     csv_fp = (config.fp_results + config.sep +
-              "bq_ds_stream_times-" + str(scale) + "GB-" +
-              dataset + "-" + name + "-" +
+              "bq_{}_stream_times-".format(test) + 
+              str(scale) + "GB-" +
+              dataset + "-" + desc + "-" +
               str(pd.Timestamp.now()) + ".csv"
               )
     df.to_csv(csv_fp, index=False)

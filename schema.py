@@ -8,6 +8,18 @@ import shutil
 import config
 
 
+def copy_ds_ansi(filepath_out):
+    """Make a copy and move the source ANSI schema file to have for
+    reference in the filepath_out directory
+
+    Parameters
+    ----------
+    filepath_out : str, absolute path to directory to move file to
+    """
+    original_file = config.ds_schema_ansi_sql_filepath
+    shutil.copyfile(original_file, filepath_out + config.sep + "ansi_ds.sql")
+
+
 def rewrite_ds_basic(filepath_out, dataset_name, prefix=False):
     """Convert the sample implementation of the logical schema as described in TPC-DS Specification V1.0.0L ,
     specifications.pdf, pg 99, Appendix A and contained in  tpc_root/tools/tpcds.sql.
@@ -42,7 +54,6 @@ def rewrite_ds_basic(filepath_out, dataset_name, prefix=False):
         regex = re.compile(k)
         text = regex.sub(v, text)
 
-    
     text_list_in = text.split("\n")
     text_list_out = []
 
@@ -62,6 +73,7 @@ def rewrite_ds_basic(filepath_out, dataset_name, prefix=False):
 
     open(filepath_out, "w").write(text)
 
+
 def copy_h_ansi(filepath_out):
     """Make a copy and move the source ANSI schema file to have for 
     reference in the filepath_out directory
@@ -71,8 +83,8 @@ def copy_h_ansi(filepath_out):
     filepath_out : str, absolute path to directory to move file to
     """
     original_file = config.h_schema_ddl_filepath
-    shutil.copyfile(original_file, filepath_out + config.sep + "ansi_h.ddl")
-    
+    shutil.copyfile(original_file, filepath_out + config.sep + "ansi_h.sql")
+
 
 def rewrite_h_basic(filepath_out, dataset_name, 
                     lower=False, prefix=False):

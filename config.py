@@ -14,12 +14,12 @@ cpu_count = os.cpu_count()
 # 2.0 GCP Service Account Credential File
 # >> Edit this with your credential file location
 #cred_file_name = "sada-colin-dietrich-bd003814fcb1.json"
-#cred_file_name = "tpc-benchmarking-9432-3fe6b68089ac.json"
-cred_file_name = "bq_snowflake_benchmark/tpc-benchmarking-9432-c85b7ded395c.json"
+cred_file_name = "tpc-benchmarking-9432-3fe6b68089ac.json"
+#cred_file_name = "bq_snowflake_benchmark/tpc-benchmarking-9432-c85b7ded395c.json"
 
 # full path used in method calls
-#gcp_cred_file = user_dir + sep + "code" + sep + cred_file_name
-gcp_cred_file = user_dir + sep + cred_file_name
+gcp_cred_file = user_dir + sep + "code" + sep + cred_file_name
+#gcp_cred_file = user_dir + sep + cred_file_name
 
 
 # 2.1 GCP Project and BigQuery Dataset

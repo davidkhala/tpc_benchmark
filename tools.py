@@ -22,7 +22,8 @@ def make_directories():
         config.fp_h_output,
         config.fp_results,
         config.fp_schema,
-        config.fp_query
+        config.fp_query,
+        config.fp_results
         ]
     
     fp_list += [config.fp_h_output +
