@@ -22,7 +22,7 @@ where
 	c_custkey = o_custkey
 	and l_orderkey = o_orderkey
 	and o_orderdate >= date ':1'
-	and o_orderdate < date ':1' + interval '3' month
+	and o_orderdate < dateadd(month, 3, to_date(':1'))
 	and l_returnflag = 'R'
 	and c_nationkey = n_nationkey
 group by
@@ -34,5 +34,5 @@ group by
 	c_address,
 	c_comment
 order by
-	revenue desc;
+	revenue desc
 :n 20

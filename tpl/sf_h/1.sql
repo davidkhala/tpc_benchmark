@@ -18,11 +18,10 @@ select
 from
 	lineitem
 where
-	l_shipdate <= date '1998-12-01' - interval ':1' day (3)
+	l_shipdate <= dateadd(day, ':1', to_date('1998-12-01'))
 group by
 	l_returnflag,
 	l_linestatus
 order by
 	l_returnflag,
 	l_linestatus;
-:n -1

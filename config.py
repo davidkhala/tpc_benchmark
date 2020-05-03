@@ -185,3 +185,4 @@ sf_username = "dauren"
 sf_password = "239nj8834uffe"
 sf_account = "wja13212"
 sf_warehouse = "TEST1"
+sf_warehouse_cost = 0.00056  # price per second for this warehouse size

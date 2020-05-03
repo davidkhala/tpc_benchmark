@@ -728,6 +728,7 @@ def query_seq(desc, test, seq, templates_dir, scale,
               t0, t1, bytes_processed, bytes_billed, query_plan]
         query_data.append(_d)
 
+
         if verbose_iter:
             dt = t1 - t0
             print("QUERY:", n)
