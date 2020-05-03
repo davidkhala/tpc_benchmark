@@ -2,6 +2,10 @@
 
 import os
 
+# set logger
+import logging
+logging.basicConfig(filename='./nb.log', level=logging.DEBUG)
+
 # 1.0 Project's current path locations
 # >> Do NOT edit this section
 cwd = os.path.dirname(os.path.realpath(__file__))
@@ -177,7 +181,6 @@ test_schema_sf = []
 for test in tests:
     for schema in sf_schema:
         test_schema_sf.append(test + "_" + schema)
-
 
 # snowflake auth info
 sf_username = "dauren"
