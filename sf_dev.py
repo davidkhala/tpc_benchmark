@@ -226,6 +226,7 @@ def query_seq(name, test, seq, templates_dir, scale,
 
     assert test in ["ds", "h"], "'{}' not a TPC test".format(test)
 
+    # TODO: debug
     TEST = sf.TEST_H  # we want to run TPC-H
     SIZE = '100GB'  # dataset size to use in test
     sf_helper = sf.SnowflakeHelper(TEST, SIZE, config)
@@ -274,7 +275,7 @@ def query_seq(name, test, seq, templates_dir, scale,
     return True
 
 
-def stream_p(p, test, templates_dir, scale,
+def stream_p(sf_helper, p, test, templates_dir, scale,
              project, dataset,
              qual=None,
              dry_run=False, use_cache=False,
@@ -310,7 +311,7 @@ def stream_p(p, test, templates_dir, scale,
         note: in the case of stream permutations, this will
         be the query results for the last query in the stream.
     """
-
+    # TODO: Duplicate code
     assert test in ["ds", "h"], "'{}' not a TPC test".format(test)
 
     if test == "ds":
@@ -332,20 +333,30 @@ def stream_p(p, test, templates_dir, scale,
     else:
         return None
 
-    # SF CHANGE
-    """
-    query_job = query(query_text=query_text,
-                      project=project,
-                      dataset=dataset,
-                      dry_run=dry_run,
-                      use_cache=use_cache)
+    # brute force fix:
+    query_text = query_text.replace('set rowcount', 'LIMIT').strip()
 
-    (t0, t1,
-     bytes_processed, bytes_billed, df
-     ) = parse_query_job(query_job=query_job, verbose=verbose)
-    """
+    # cleanup trailing go
+    if query_text.endswith('go'):
+        query_text = query_text[:len(query_text) - 2]
 
-    return p, t0, t1, bytes_processed, bytes_billed, query_text, df
+    # SF EDITS
+    logger.debug(f'query idx: {p}, q: "{query_text}"')
+
+    # check if we're running a single query or a batch
+    if query_text.count(";") > 1:
+        batch = query_text.split(';')
+        batch = [b.strip() for b in batch if len(b.strip()) != 0]
+        logger.debug(f'batch: {batch}')
+        query_result = sf_helper.run_queries(batch)
+    else:
+        query_result = sf_helper.run_query(query_text)
+
+    logger.debug(f'results: {query_result}')
+
+    (start, end, bytes, rows, cost, df) = parse_query_job(query_job_tuple=query_result, verbose=verbose)
+
+    return p, query_text, start, end, bytes, rows, cost, df
 
 
 def stream_seq(name, test, seq, templates_dir, scale,
@@ -386,11 +397,18 @@ def stream_seq(name, test, seq, templates_dir, scale,
         be the query results for the last query in the stream.
     """
 
+    # TODO: debug
+    TEST = sf.TEST_H  # we want to run TPC-H
+    SIZE = '100GB'  # dataset size to use in test
+    sf_helper = sf.SnowflakeHelper(TEST, SIZE, config)
+    # start Warehouse
+    sf_helper.warehouse_start()
+
+
     stream_data = []
     for p in seq:
-        (p, t0, t1,
-         bytes_processed, bytes_billed,
-         query_text, df) = stream_p(p=p,
+        (n, query_text, start_ts, end_ts, bytes, rows_count, cost, df) = stream_p(sf_helper=sf_helper,
+                                    p=p,
                                     test=test,
                                     templates_dir=templates_dir,
                                     scale=scale,
@@ -402,25 +420,23 @@ def stream_seq(name, test, seq, templates_dir, scale,
                                     verbose=verbose,
                                     verbose_out=False
                                     )
-        _s = ["bq", "ds", scale, dataset, p,
-              t0, t1, bytes_processed, bytes_billed]
+        _s = ["sf", test, scale, dataset, n, start_ts, end_ts, bytes, cost]
         stream_data.append(_s)
 
         if verbose_iter:
-            dt = t1 - t0
             print("STREAM:", p)
             print("============")
-            print("Total Time Elapsed: {}".format(dt))
-            print("Bytes Processed: {}".format(bytes_processed))
-            print("Bytes Billed: {}".format(bytes_billed))
+            print("Total Billed Time: {}".format(end_ts-start_ts))
+            print("Bytes Processed: {}".format(bytes))
+            print("Rows Processed: {}".format(rows_count))
             print("-" * 40)
             print()
 
-    columns = ["db", "test", "scale", "bq_dataset", "stream_p",
-               "t0", "t1", "bytes_processed", "bytes_billed"]
+    columns = ["db", "test", "scale", "bq_dataset", "query_n",
+               "t0", "t1", "bytes_processed", "cost"]
     df = pd.DataFrame(stream_data, columns=columns)
     csv_fp = (config.fp_results + config.sep +
-              "bq_ds_stream_times-" + str(scale) + "GB-" +
+              "sf_{}_stream_times-".format(test) + "_" + str(scale) + "GB-" +
               dataset + "-" + name + "-" +
               str(pd.Timestamp.now()) + ".csv"
               )
