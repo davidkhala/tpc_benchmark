@@ -3,7 +3,7 @@ import time
 import pandas as pd
 
 
-def write_to_csv(prefix, test, scale, dataset, name, columns, data):
+def write_to_csv(prefix, test, dataset, name, columns, data):
     """ write data to csv file"""
 
     # load data frame

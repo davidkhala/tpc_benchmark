@@ -159,7 +159,7 @@ class SnowflakeHelper:
 
         return start_ts, end_ts, -1, row_count, cost, rows
 
-    def warehouse_start(self):
+    def warehouse_start(self, create_db=False):
         """ starts warehouse """
         # check if connection is set
         if not self.conn:
@@ -178,9 +178,10 @@ class SnowflakeHelper:
         print(f'running query: {query}')
         result = self.run_query(query)
 
-        query = f'CREATE DATABASE IF NOT EXISTS {self.test_type}_{self.test_size}'
-        print(f'running query: {query}')
-        result = self.run_query(query)
+        if create_db:
+            query = f'CREATE DATABASE IF NOT EXISTS {self.test_type}_{self.test_size}'
+            print(f'running query: {query}')
+            result = self.run_query(query)
 
         query = f'USE DATABASE {self.test_type}_{self.test_size}'
         print(f'running query: {query}')

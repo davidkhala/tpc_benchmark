@@ -165,7 +165,7 @@ def query_seq(name, test, seq, templates_dir, scale, project, dataset,
     columns = ["db", "test", "scale", "bq_dataset", "query_n", "t0", "t1", "bytes_processed", "cost"]
 
     # write results to csv file
-    utils.write_to_csv("sf", test, scale, dataset, name, columns, query_data)
+    utils.write_to_csv("sf", test, dataset, name, columns, query_data)
 
     # suspend warehouse
     sf_helper.warehouse_suspend()
