@@ -903,3 +903,123 @@ def stream_seq(desc, test, seq, templates_dir, scale,
     df.to_csv(csv_fp, index=False)
 
     return True
+
+
+def get_table_names(dataset):
+    client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
+    tables = list(client.list_tables(dataset))
+    table_names = [t.table_id for t in tables]
+    return table_names
+
+
+def count_distinct(project, dataset, table, column):
+    query_text = """
+    SELECT COUNT(DISTINCT {}) as _result
+    FROM `{}`.{}.{}
+    """.format(column, project, dataset, table)
+    
+    query_job = query(query_text=query_text,
+                      project=project,
+                      dataset=dataset,
+                      dry_run=False,
+                      use_cache=False)
+    return list(query_job)
+
+
+def count_approx_distinct(project, dataset, table, column):
+    query_text = """
+    SELECT APPROX_COUNT_DISTINCT({}) as _result
+    FROM `{}`.{}.{}
+    """.format(column, project, dataset, table)
+    
+    query_job = query(query_text=query_text,
+                      project=project,
+                      dataset=dataset,
+                      dry_run=False,
+                      use_cache=False)
+    return list(query_job)
+
+def hll(project, dataset, table, column):
+    query_text = """
+    SELECT HLL_COUNT.MERGE(sketch) approx
+    FROM (
+      SELECT HLL_COUNT.INIT({}) sketch
+      FROM `{}`.{}.{}
+    )
+    """.format(column, project, dataset, table)
+    
+    query_job = query(query_text=query_text,
+                      project=project,
+                      dataset=dataset,
+                      dry_run=False,
+                      use_cache=False)
+    
+    return list(query_job)
+
+
+def count_rows(project, dataset, table):
+    query_text = """
+    SELECT count(*) FROM `{}`.{}.{}
+    """.format(project, dataset, table)
+    query_job = query(query_text=query_text,
+                      project=project,
+                      dataset=dataset,
+                      dry_run=False,
+                      use_cache=False)
+    
+    return list(query_job)
+
+
+def get_table_columns(project, dataset, table):
+    
+    query_text = """SELECT * 
+    FROM `{}.{}.{}`
+    LIMIT 1;
+    """.format(project, dataset, table)    
+    
+    query_job = query(query_text=query_text,
+                      project=project,
+                      dataset=dataset,
+                      dry_run=False,
+                      use_cache=False)
+    
+    cols = list(query_job.result())
+    if len(cols) < 1:
+        return []
+    else: 
+        cols = cols[0]
+        cols = list(cols.keys())
+        return cols
+
+
+def distinct_table(project, dataset, table):
+    
+    columns = get_table_columns(project, dataset, table)
+    
+    d = []
+    for col in columns:
+        x = count_approx_distinct(project=project, 
+                dataset=dataset, 
+                table=table,
+                column=col)
+        n = x[0][0]
+        
+        y = count_rows(project=project, 
+                       dataset=dataset, 
+                       table=table)
+        c = y[0][0]
+        d.append([table, col, n, c])
+    return d
+
+
+def collect_cardinality(project, dataset):
+    
+    table_names = get_table_names(dataset)
+
+    d = []
+    for table in table_names:
+        y = distinct_table(project=project,
+                                   dataset=dataset,
+                                   table=table)
+        d += y
+    return d

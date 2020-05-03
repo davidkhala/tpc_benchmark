@@ -161,9 +161,10 @@ fp_query = cwd + sep + "q"
 # >> Do NOT edit
 fp_ds_answers = fp_ds_src + sep + "answer_sets"
 
-# 5.5 Test Results
+# 5.5 Test Results and plots
 # >> Do NOT edit
 fp_results = cwd + sep + "results"
+fp_plots   = cwd + sep + "plots"
 
 # 5.4 Test Schema Combinations
 # TODO: perhaps remove?
