@@ -642,6 +642,7 @@ def query_n(n, test, templates_dir, scale,
 
         query_text = ds_setup.qgen_template(n=n,
                                             templates_dir=templates_dir,
+                                            dialect="sqlserver_bq",
                                             scale=scale,
                                             qual=qual,
                                             verbose=verbose,
@@ -655,6 +656,9 @@ def query_n(n, test, templates_dir, scale,
                                            verbose_out=verbose_out)
     else:
         return None
+
+    print("XXXXXXXXXXX")
+    print(query_text)
 
     query_job = query(query_text=query_text,
                       project=project,
@@ -795,6 +799,7 @@ def stream_p(p, test, templates_dir, scale,
 
         query_text = ds_setup.qgen_stream(p=p,
                                           templates_dir=templates_dir,
+                                          dialect='sqlserver_bq',
                                           scale=scale,
                                           qual=qual,
                                           verbose=verbose,

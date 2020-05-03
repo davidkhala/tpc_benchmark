@@ -41,6 +41,7 @@ def query_n(n, templates_dir, scale,
     """
     query_text = ds_setup.qgen_template(n=n,
                                         templates_dir=templates_dir,
+                                        dialect="sqlserver_bq",
                                         scale=scale,
                                         qual=qual,
                                         verbose=verbose,

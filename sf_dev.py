@@ -110,7 +110,7 @@ def query_n(sf_helper, n, test, templates_dir, scale,
             dry_run=False, use_cache=False,
             verbose=False, verbose_out=False):
 
-    logger.debug(f'n: {n}, test: {test}, templates_dir: {templates_dir}, project: {project}')
+    #logger.debug(f'n: {n}, test: {test}, templates_dir: {templates_dir}, project: {project}')
 
     """Query BigQuery with TPC-DS query template number n
 
@@ -144,9 +144,9 @@ def query_n(sf_helper, n, test, templates_dir, scale,
     assert test in ["ds", "h"], "'{}' not a TPC test".format(test)
 
     if test == "ds":
-
         query_text = ds_setup.qgen_template(n=n,
                                             templates_dir=templates_dir,
+                                            dialect="sqlserver",
                                             scale=scale,
                                             qual=qual,
                                             verbose=verbose,
@@ -163,8 +163,15 @@ def query_n(sf_helper, n, test, templates_dir, scale,
     else:
         return None
 
+    print("XXXXXXXXXXX")
+    print(query_text)
+
+
     # brute force fix:
     query_text = query_text.replace('set rowcount', 'LIMIT').strip()
+    query_text = query_text.replace('top 100;', 'LIMIT 100;').strip()
+    query_text = query_text.replace('\n top 100', '\n LIMIT 100').strip()
+
 
     # cleanup trailing go
     if query_text.endswith('go'):
@@ -227,7 +234,7 @@ def query_seq(name, test, seq, templates_dir, scale,
     assert test in ["ds", "h"], "'{}' not a TPC test".format(test)
 
     # TODO: debug
-    TEST = sf.TEST_H  # we want to run TPC-H
+    TEST = sf.TEST_DS  # we want to run TPC-H
     SIZE = '100GB'  # dataset size to use in test
     sf_helper = sf.SnowflakeHelper(TEST, SIZE, config)
     # start Warehouse
@@ -318,6 +325,7 @@ def stream_p(sf_helper, p, test, templates_dir, scale,
 
         query_text = ds_setup.qgen_stream(p=p,
                                           templates_dir=templates_dir,
+                                          dialect="sqlserver",
                                           scale=scale,
                                           qual=qual,
                                           verbose=verbose,
@@ -334,7 +342,10 @@ def stream_p(sf_helper, p, test, templates_dir, scale,
         return None
 
     # brute force fix:
+    # brute force fix:
     query_text = query_text.replace('set rowcount', 'LIMIT').strip()
+    query_text = query_text.replace('top 100;', 'LIMIT 100;').strip()
+    query_text = query_text.replace('\n top 100', '\n LIMIT 100').strip()
 
     # SF EDITS
     logger.debug(f'query idx: {p}, q: "{query_text}"')
@@ -345,16 +356,19 @@ def stream_p(sf_helper, p, test, templates_dir, scale,
 
     # then split on "go"
     final_query_list = []
-    for query in batch:
-        if 'go' in query:
-            split_on_go = query.split('go')
-            for item in split_on_go:
-                if item.strip() != '':
-                    final_query_list.append(item)
-        else:
-            final_query_list.append(query)
+    if test == "h":
+        for query in batch:
+            if 'go' in query:
+                split_on_go = query.split('go')
+                for item in split_on_go:
+                    if item.strip() != '':
+                        final_query_list.append(item)
+            else:
+                final_query_list.append(query)
+    else:
+        final_query_list = batch
 
-    logger.debug(f'batch_count: {len(final_query_list)}, batch: {final_query_list}')
+    logger.debug(f'batch_count: {len(final_query_list)}')
     query_result = sf_helper.run_queries(final_query_list)
     logger.debug(f'results: {query_result}')
 
@@ -402,7 +416,7 @@ def stream_seq(name, test, seq, templates_dir, scale,
     """
 
     # TODO: debug
-    TEST = sf.TEST_H  # we want to run TPC-H
+    TEST = sf.TEST_DS  # we want to run TPC-H
     SIZE = '100GB'  # dataset size to use in test
     sf_helper = sf.SnowflakeHelper(TEST, SIZE, config)
     # start Warehouse

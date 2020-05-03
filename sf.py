@@ -120,7 +120,7 @@ class SnowflakeHelper:
         # calculate batch end time running time by adding runtime duration to start time
         batch_end_ts = batch_start_ts + batch_running_time
 
-        return batch_start_ts, batch_end_ts, -1, batch_row_count, batch_cost, batch_data[1]  # return data just for second select query
+        return batch_start_ts, batch_end_ts, -1, batch_row_count, batch_cost, []  # return data just for second select query
 
     def run_query(self, query):
         """ opens cursor, runs query and returns a single (first) result or all if 'fetch-all' flag is specified """
@@ -142,7 +142,7 @@ class SnowflakeHelper:
             rows = cs.fetchall()
             cost = self._get_cost(end_ts-start_ts)
         except Exception as ex:
-            print(f'Error running query {ex}')
+            print(f'Error running query """{query}""", error: {ex}')
         finally:
             cs.close()
 
