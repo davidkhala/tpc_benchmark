@@ -348,7 +348,7 @@ def stream_p(sf_helper, p, test, templates_dir, scale,
     query_text = query_text.replace('\n top 100', '\n LIMIT 100').strip()
 
     # SF EDITS
-    logger.debug(f'query idx: {p}, q: "{query_text}"')
+    #logger.debug(f'query idx: {p}, q: "{query_text}"')
 
     # first split query stream on ";"
     batch = query_text.split(';')
