@@ -336,22 +336,26 @@ def stream_p(sf_helper, p, test, templates_dir, scale,
     # brute force fix:
     query_text = query_text.replace('set rowcount', 'LIMIT').strip()
 
-    # cleanup trailing go
-    if query_text.endswith('go'):
-        query_text = query_text[:len(query_text) - 2]
-
     # SF EDITS
     logger.debug(f'query idx: {p}, q: "{query_text}"')
 
-    # check if we're running a single query or a batch
-    if query_text.count(";") > 1:
-        batch = query_text.split(';')
-        batch = [b.strip() for b in batch if len(b.strip()) != 0]
-        logger.debug(f'batch: {batch}')
-        query_result = sf_helper.run_queries(batch)
-    else:
-        query_result = sf_helper.run_query(query_text)
+    # first split query stream on ";"
+    batch = query_text.split(';')
+    batch = [b.strip() for b in batch if len(b.strip()) != 0]
 
+    # then split on "go"
+    final_query_list = []
+    for query in batch:
+        if 'go' in query:
+            split_on_go = query.split('go')
+            for item in split_on_go:
+                if item.strip() != '':
+                    final_query_list.append(item)
+        else:
+            final_query_list.append(query)
+
+    logger.debug(f'batch_count: {len(final_query_list)}, batch: {final_query_list}')
+    query_result = sf_helper.run_queries(final_query_list)
     logger.debug(f'results: {query_result}')
 
     (start, end, bytes, rows, cost, df) = parse_query_job(query_job_tuple=query_result, verbose=verbose)

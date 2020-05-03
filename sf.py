@@ -124,6 +124,7 @@ class SnowflakeHelper:
 
     def run_query(self, query):
         """ opens cursor, runs query and returns a single (first) result or all if 'fetch-all' flag is specified """
+
         cs = self.conn.cursor()
         row_count = 0
         start_ts = None
