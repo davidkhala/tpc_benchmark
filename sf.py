@@ -90,12 +90,21 @@ class SnowflakeHelper:
         # TODO: review this
         return running_time * self.config.sf_warehouse_cost
 
+    def brute_force_clean_query(self, query_text):
+        query_text = query_text.replace('set rowcount', 'LIMIT').strip()
+        query_text = query_text.replace('top 100;', 'LIMIT 100;').strip()
+        query_text = query_text.replace('\n top 100', '\n LIMIT 100').strip()
+
+        if query_text.endswith('go'):
+            query_text = query_text[:len(query_text) - 2]
+
+        return query_text
+
     def run_queries(self, queries):
         """ opens cursor, runs query and returns a single (first) result or all if 'fetch-all' flag is specified """
 
         batch_start_ts = None
         batch_running_time = 0
-        batch_end_ts = None
         batch_row_count = 0
         batch_cost = 0.0
         batch_data = []
@@ -120,10 +129,11 @@ class SnowflakeHelper:
         # calculate batch end time running time by adding runtime duration to start time
         batch_end_ts = batch_start_ts + batch_running_time
 
-        return batch_start_ts, batch_end_ts, -1, batch_row_count, batch_cost, batch_data[1]  # return data just for second select query
+        return batch_start_ts, batch_end_ts, -1, batch_row_count, batch_cost, []  # return data just for second select query
 
     def run_query(self, query):
         """ opens cursor, runs query and returns a single (first) result or all if 'fetch-all' flag is specified """
+
         cs = self.conn.cursor()
         row_count = 0
         start_ts = None
@@ -141,7 +151,7 @@ class SnowflakeHelper:
             rows = cs.fetchall()
             cost = self._get_cost(end_ts-start_ts)
         except Exception as ex:
-            print(f'Error running query {ex}')
+            print(f'Error running query """{query}""", error: {ex}')
         finally:
             cs.close()
 
@@ -149,7 +159,7 @@ class SnowflakeHelper:
 
         return start_ts, end_ts, -1, row_count, cost, rows
 
-    def warehouse_start(self):
+    def warehouse_start(self, create_db=False):
         """ starts warehouse """
         # check if connection is set
         if not self.conn:
@@ -159,27 +169,23 @@ class SnowflakeHelper:
         query = f'USE ROLE {SF_ROLE}'
         print(f'running query: {query}')
         result = self.run_query(query)
-        print(f'result: {result}')
 
         query = f'ALTER WAREHOUSE {self.config.sf_warehouse} RESUME;'
         print(f'running query: {query}')
         result = self.run_query(query)
-        print(f'warehouse start: {result}')
 
         query = f'USE WAREHOUSE {self.config.sf_warehouse}'
         print(f'running query: {query}')
         result = self.run_query(query)
-        print(f'result: {result}')
 
-        query = f'CREATE DATABASE IF NOT EXISTS {self.test_type}_{self.test_size}'
-        print(f'running query: {query}')
-        result = self.run_query(query)
-        print(f'result: {result}')
+        if create_db:
+            query = f'CREATE DATABASE IF NOT EXISTS {self.test_type}_{self.test_size}'
+            print(f'running query: {query}')
+            result = self.run_query(query)
 
         query = f'USE DATABASE {self.test_type}_{self.test_size}'
         print(f'running query: {query}')
         result = self.run_query(query)
-        print(f'result: {result}')
 
     def warehouse_suspend(self):
         """ suspends warehouse and closes connection """

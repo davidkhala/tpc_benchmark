@@ -47,8 +47,8 @@ from
 where
 i_manufact_id = [IMID]
 and i_item_sk = ws_item_sk 
-and d_date between '[WSDATE]' and 
-        (cast('[WSDATE]' as date) + 90 days)
+and d_date between '[WSDATE]' and
+        (dateadd('day', 90, to_date('[WSDATE]')))
 and d_date_sk = ws_sold_date_sk 
 and ws_ext_discount_amt  
      > ( 
@@ -60,7 +60,7 @@ and ws_ext_discount_amt
          WHERE 
               ws_item_sk = i_item_sk 
           and d_date between '[WSDATE]' and
-                             (cast('[WSDATE]' as date) + 90 days)
+                             (dateadd('day', 90, to_date('[WSDATE]')))
           and d_date_sk = ws_sold_date_sk 
       ) 
 order by sum(ws_ext_discount_amt)

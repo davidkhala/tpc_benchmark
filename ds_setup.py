@@ -432,7 +432,7 @@ def std_err_print(std_out, err_out):
     print()
 
 
-def qgen_template(n, templates_dir, scale, qual=None,
+def qgen_template(n, templates_dir, dialect, scale, qual=None,
                   verbose=False, verbose_out=False):
     """Generate DS query text for query template number n
     
@@ -456,7 +456,7 @@ def qgen_template(n, templates_dir, scale, qual=None,
         r = None
 
     std_out, err_out = dsqgen(directory=templates_dir,
-                              dialect="sqlserver_bq",
+                              dialect=dialect,
                               scale=scale,
                               template="query{}.tpl".format(n),
                               filter="Y",  # write to std_out
@@ -477,7 +477,7 @@ def qgen_template(n, templates_dir, scale, qual=None,
     return query_text
 
 
-def qgen_stream(p, templates_dir, scale, qual=None,
+def qgen_stream(p, templates_dir, dialect, scale, qual=None,
                 verbose=False, verbose_out=False):
     """Generate DS query text for query template number n
 
@@ -506,7 +506,7 @@ def qgen_stream(p, templates_dir, scale, qual=None,
     tools.mkdir_safe(temp_dir)
 
     std_out, err_out = dsqgen(directory=templates_dir,
-                              dialect="sqlserver_tpc",
+                              dialect=dialect,
                               scale=scale,
                               # filter="Y",  # write to std_out
                               streams=p+1,

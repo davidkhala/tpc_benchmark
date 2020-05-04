@@ -45,9 +45,9 @@ from
 where
 i_manufact_id = [IMID]
 and i_item_sk = cs_item_sk 
-and d_date between '[CSDATE]' and 
-        (cast('[CSDATE]' as date) + 90 days)
-and d_date_sk = cs_sold_date_sk 
+and d_date between '[CSDATE]' and
+        dateadd('day', 90, to_date('[CSDATE]'))
+and d_date_sk = cs_sold_date_sk
 and cs_ext_discount_amt  
      > ( 
          select 
@@ -58,7 +58,8 @@ and cs_ext_discount_amt
          where 
               cs_item_sk = i_item_sk 
           and d_date between '[CSDATE]' and
-                             (cast('[CSDATE]' as date) + 90 days)
+                             dateadd('day', 90, to_date('[CSDATE]'))
+
           and d_date_sk = cs_sold_date_sk 
       ) 
 [_LIMITC]; 

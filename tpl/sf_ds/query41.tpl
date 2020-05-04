@@ -38,7 +38,7 @@
  define MANUFACT= random(667,1000,uniform); 
  define _LIMIT=100;
  
- [_LIMITA] select [_LIMITB] distinct(i_product_name)
+ [_LIMITA] select distinct(i_product_name)
  from item i1
  where i_manufact_id between [MANUFACT] and [MANUFACT]+40 
    and (select count(*) as item_cnt
@@ -86,5 +86,6 @@
         (i_size = '[SIZE.1]' or i_size = '[SIZE.2]')
         )))) > 0
  order by i_product_name
- [_LIMITC];
+ [_LIMITB];
+ -- [_LIMITC];
 
