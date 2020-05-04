@@ -79,6 +79,7 @@ class SnowflakeHelper:
             self.tables = TABLES_H
         else:
             self.tables = TABLES_DS
+        print(self.tables)
 
     def _close_connection(self):
         """ closes connection"""
@@ -234,8 +235,11 @@ class SnowflakeHelper:
         print(f'\n\n--pushing schema: "{self.config.h_schema_ddl_filepath}"')
 
         # open file and read all rows:
-        # with open(self.config.h_schema_ddl_filepath, 'r') as f:
-        with open('/home/vagrant/bq_snowflake_benchmark/ds/v2.11.0rc2/tools/tpcds.sql') as f:
+        if self.test_type == TEST_DS:
+            schema_file = '/home/vagrant/bq_snowflake_benchmark/ds/v2.11.0rc2/tools/tpcds.sql'
+        else:
+            schema_file = self.config.h_schema_ddl_filepath
+        with open(schema_file) as f:
             lines = f.readlines()
 
         # extract queries:
@@ -307,7 +311,7 @@ class SnowflakeHelper:
         print(f'\n\n--listing stage: "@{integration_name}_stage"')
 
         # run query on snowflake db
-        rows = self.run_query(f'list @{integration_name}_stage;', fetch_all=True)
+        rows = self.run_query(f'list @{integration_name}_stage;')
 
         if len(rows) == 0:
             print('Error listing integration')
