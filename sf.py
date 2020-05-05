@@ -311,8 +311,10 @@ class SnowflakeHelper:
         print(f'\n\n--listing stage: "@{integration_name}_stage"')
 
         # run query on snowflake db
-        rows = self.run_query(f'list @{integration_name}_stage;')
+        results = self.run_query(f'list @{integration_name}_stage;')
 
+        # unpack results
+        start_ts, end_ts, bytes_processed, row_count, cost, rows = results
         if len(rows) == 0:
             print('Error listing integration')
             raise
