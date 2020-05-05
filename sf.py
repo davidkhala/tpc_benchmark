@@ -75,6 +75,7 @@ class SnowflakeHelper:
         self.test_type = test_type  # save type of test to run: C or DS
         self.test_size = test_size  # size of dataset to use
         self.gcs_file_range = config.cpu_count  # auto detected in config.py
+        self.cached = False
 
         if verbose:
             print('Preparing to open connection to Snowflake...')
@@ -152,6 +153,12 @@ class SnowflakeHelper:
         end_ts = None
         rows = []
         cost = None
+
+        if self.cached:
+            cs.execute("ALTER SESSION SET USE_CACHED_RESULT=true")
+        else:
+            cs.execute("ALTER SESSION SET USE_CACHED_RESULT=false")
+
         try:
             # execute query and capture time
             start_ts = time.time()

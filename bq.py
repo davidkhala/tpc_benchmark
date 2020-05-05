@@ -55,7 +55,7 @@ import re
 import pandas as pd
 from google.cloud import bigquery
 
-import config, tools, ds_setup, h_setup
+import config, tools, ds_setup, h_setup, utils
 from gcp_storage import inventory_bucket_df
 
 
@@ -63,6 +63,7 @@ log_column_names = ["test", "scale", "dataset",
                     "table", "status", 
                     "t0", "t1", 
                     "size_bytes", "job_id"]
+
 
 def create_dataset(dataset_name, verbose=False):
     """Create a dataset on the project
@@ -548,7 +549,7 @@ def query(query_text, project, dataset, dry_run=False, use_cache=False):
     job_config.default_dataset = default_dataset
 
     job_config.dry_run = dry_run  # only approximate the time and cost
-    job_config.use_query_cache = use_cache  # API default is True
+    job_config.use_query_cache = use_cache  # API default is True, here False
 
     query_text = add_view(query_text, project, dataset)
 
@@ -677,9 +678,9 @@ def query_n(n, test, templates_dir, scale,
 
 def query_seq(desc, test, seq, templates_dir, scale,
               project, dataset,
-              qual=None,
+              qual=None, save=False,
               dry_run=False, use_cache=False,
-              verbose=False, verbose_iter=False):
+              verbose=False, verbose_iter=False, verbose_query=False):
     """Query BigQuery with TPC-DS query template number n
 
     Parameters
@@ -713,6 +714,7 @@ def query_seq(desc, test, seq, templates_dir, scale,
     assert test in ["ds", "h"], "'{}' not a TPC test".format(test)
 
     query_data = []
+    df_out = pd.DataFrame(None)
     for n in seq:
         if verbose_iter:
             print("===============")
@@ -737,6 +739,14 @@ def query_seq(desc, test, seq, templates_dir, scale,
               t0, t1, bytes_processed, bytes_billed, query_plan, ""]
         query_data.append(_d)
 
+        df_out = pd.concat([df_out, df])
+
+        if verbose_query:
+            print()
+            print("QUERY EXECUTED")
+            print("==============")
+            print(query_text)
+
         if verbose_iter:
             dt = t1 - t0
             print("-" * 40)
@@ -750,14 +760,12 @@ def query_seq(desc, test, seq, templates_dir, scale,
 
     columns = ["db", "test", "scale", "bq_dataset", "desc", "query_n",
                "t0", "t1", "bytes_processed", "bytes_billed", "query_plan", "cost"]
-    df = pd.DataFrame(query_data, columns=columns)
-    csv_fp = (config.fp_results + config.sep +
-              "bq_{}_query_times-".format(test) +
-              str(scale) + "GB-" +
-              dataset + "-" + desc + "-" +
-              str(pd.Timestamp.now()) + ".csv"
-              )
-    df.to_csv(csv_fp, index=False)
+
+    # write results to csv file
+    utils.write_to_csv("bq", test, dataset, desc, columns, query_data, kind="query")
+    if save:
+        df_fp = utils.result_namer("bq", test, dataset, desc, kind="query")
+        df_out.to_csv(df_fp, index=False)
 
     return True
 
@@ -889,7 +897,7 @@ def stream_seq(desc, test, seq, templates_dir, scale,
                                     verbose_out=False
                                     )
         _s = ["bq", test, scale, dataset, desc, p,
-              t0, t1, bytes_processed, bytes_billed, query_plan, ""]
+              t0, t1, bytes_processed, bytes_billed, query_plan, "NA"]
         stream_data.append(_s)
 
         if verbose_iter:
@@ -902,16 +910,11 @@ def stream_seq(desc, test, seq, templates_dir, scale,
             print("-" * 40)
             print()
 
-    columns = ["db", "test", "scale", "bq_dataset", "desc", "stream_p",
+    columns = ["db", "test", "scale", "dataset", "desc", "stream_p",
                "t0", "t1", "bytes_processed", "bytes_billed", "query_plan", "cost"]
-    df = pd.DataFrame(stream_data, columns=columns)
-    csv_fp = (config.fp_results + config.sep +
-              "bq_{}_stream_times-".format(test) + 
-              str(scale) + "GB-" +
-              dataset + "-" + desc + "-" +
-              str(pd.Timestamp.now()) + ".csv"
-              )
-    df.to_csv(csv_fp, index=False)
+
+    # write data to file
+    utils.write_to_csv("sf", test, dataset, desc, columns, stream_data, kind="stream")
 
     return True
 

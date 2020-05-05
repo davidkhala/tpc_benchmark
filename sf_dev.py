@@ -21,7 +21,6 @@ import config, ds_setup, h_setup
 #     return query_text.replace(config.p_d_id, pdt)
 
 
-# TODO: remove this function
 def parse_query_job(query_job_tuple, verbose=False):
     """
 
@@ -64,7 +63,7 @@ def parse_query_job(query_job_tuple, verbose=False):
 def query_n(sf_helper, n, test, templates_dir, scale,
             #project, dataset,
             qual=None,
-            dry_run=False, use_cache=False,
+            dry_run=False, # use_cache=False,
             verbose=False, verbose_out=False):
 
     """Query Snowflake with a specific Nth query
@@ -116,9 +115,9 @@ def query_n(sf_helper, n, test, templates_dir, scale,
 
 def query_seq(desc, test, seq, templates_dir, scale,
               project, dataset,
-              qual=None, 
+              qual=None, save=False,
               dry_run=False, use_cache=False,
-              verbose=False, verbose_iter=False):
+              verbose=False, verbose_iter=False, verbose_query=False):
     """Query Snowflake with TPC DS/H test sequence
 
     ...
@@ -128,11 +127,13 @@ def query_seq(desc, test, seq, templates_dir, scale,
 
     # connect to Snowflake
     sf_helper = sf.SnowflakeHelper(test, f'{scale}GB', config)
+    sf_helper.cache = use_cache  # API default is True, here False
     # enable warehouse and target database based on "test" and "size"
     sf_helper.warehouse_start()
 
     # run all queries in sequence
     query_data = []
+    df_out = pd.DataFrame(None)
     for n in seq:
         if verbose_iter:
             print("===============")
@@ -146,16 +147,24 @@ def query_seq(desc, test, seq, templates_dir, scale,
                              templates_dir=templates_dir,
                              scale=scale,
                              qual=qual,
-                             #project=project,
-                             #dataset=dataset,
+                             #project=project,  # NA
+                             #dataset=dataset,  # NA
                              dry_run=dry_run,
-                             use_cache=use_cache,
+                             #use_cache=use_cache, set above as sf_helper.cached
                              verbose=verbose,
                              verbose_out=False
                              )
         _d = ["sf", test, scale, dataset, desc, n,
-              t0, t1, bytes_processed, cost, "no_query_plan"]
+              t0, t1, bytes_processed, "NA", "NA", cost]
         query_data.append(_d)
+
+        df_out = pd.concat([df_out, df])
+
+        if verbose_query:
+            print()
+            print("QUERY EXECUTED")
+            print("==============")
+            print(query_text)
 
         if verbose_iter:
             print("-" * 40)
@@ -168,10 +177,14 @@ def query_seq(desc, test, seq, templates_dir, scale,
             print()
 
     # set of columns to write to csv file
-    columns = ["db", "test", "scale", "bq_dataset", "query_n", "t0", "t1", "bytes_processed", "cost"]
+    columns = ["db", "test", "scale", "bq_dataset", "desc", "query_n",
+               "t0", "t1", "bytes_processed", "bytes_billed", "query_plan", "cost"]
 
     # write results to csv file
-    utils.write_to_csv("sf", test, dataset, desc, columns, query_data)
+    utils.write_to_csv("sf", test, dataset, desc, columns, query_data, kind="query")
+    if save:
+        df_fp = utils.result_namer("sf", test, dataset, desc, kind="query")
+        df_out.to_csv(df_fp, index=False)
 
     # suspend warehouse
     sf_helper.warehouse_suspend()
@@ -274,9 +287,6 @@ def stream_seq(desc, test, seq, templates_dir, scale,
               t0, t1, "NA", "NA", "NA", cost]
         stream_data.append(_s)
 
-        #n, query_text, start_ts, end_ts, bytes_processed, rows_count, cost, df) = results
-        #stream_data.append(["sf", test, scale, dataset, n, start_ts, end_ts, bytes_processed, cost])
-
         if verbose_iter:
             print("STREAM:", p)
             print("============")
@@ -287,19 +297,11 @@ def stream_seq(desc, test, seq, templates_dir, scale,
             print()
 
     # set csv file columns
-    columns = ["db", "test", "scale", "dataset", "desc", "query_n",
+    columns = ["db", "test", "scale", "dataset", "desc", "stream_p",
                "t0", "t1", "bytes_processed", "bytes_billed", "query_plan", "cost"]
-    df = pd.DataFrame(stream_data, columns=columns)
-    csv_fp = (config.fp_results + config.sep +
-              "sf_{}_stream_times-".format(test) +
-              str(scale) + "GB-" +
-              dataset + "-" + desc + "-" +
-              str(pd.Timestamp.now()) + ".csv"
-              )
-    df.to_csv(csv_fp, index=False)
 
     # write data to file
-    #utils.write_to_csv("sf", test, dataset, desc, columns, stream_data)
+    utils.write_to_csv("sf", test, dataset, desc, columns, stream_data, kind="stream")
 
     # suspend warehouse
     sf_helper.warehouse_suspend()
