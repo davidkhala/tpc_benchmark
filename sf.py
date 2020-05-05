@@ -17,7 +17,7 @@ for Snowflake datatype specifications in standard SQL
 
 """
 import snowflake.connector
-import time
+import pandas as pd
 import logging
 
 import config
@@ -117,7 +117,7 @@ class SnowflakeHelper:
         """ opens cursor, runs query and returns a single (first) result or all if 'fetch-all' flag is specified """
 
         batch_start_ts = None
-        batch_running_time = 0
+        batch_running_time = 0.0
         batch_row_count = 0
         batch_cost = 0.0
         batch_data = []
@@ -131,7 +131,9 @@ class SnowflakeHelper:
                 batch_start_ts = start_ts
 
             # add this query time to batch total running time
-            batch_running_time += end_ts - start_ts
+            print(end_ts, start_ts)
+            dt = end_ts - start_ts
+            batch_running_time += dt.total_seconds()
 
             # add rest of data
             batch_row_count += row_count
@@ -140,7 +142,7 @@ class SnowflakeHelper:
                 batch_data.append(rows)
 
         # calculate batch end time running time by adding runtime duration to start time
-        batch_end_ts = batch_start_ts + batch_running_time
+        batch_end_ts = batch_start_ts + pd.Timedelta(batch_running_time, "s")
 
         return batch_start_ts, batch_end_ts, -1, batch_row_count, batch_cost, []  # return data just for second select query
 
@@ -161,15 +163,18 @@ class SnowflakeHelper:
 
         try:
             # execute query and capture time
-            start_ts = time.time()
+            start_ts = pd.Timestamp.now()
             cs.execute(query)
-            end_ts = time.time()
+            end_ts = pd.Timestamp.now()
 
             # extract row count and data
             row_count = cs.rowcount
             rows = cs.fetchall()
-            cost = self._get_cost(end_ts-start_ts)
+            dt = end_ts - start_ts
+
+            cost = self._get_cost(dt.total_seconds())
         except Exception as ex:
+            end_ts = pd.Timestamp.now()
             print(f'Error running query """{query}""", error: {ex}')
         finally:
             cs.close()
