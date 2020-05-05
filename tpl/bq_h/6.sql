@@ -12,4 +12,5 @@ where
 	l_shipdate >= cast(':1' as date)
 	and l_shipdate < date_add(cast(':1' as date), interval '1' year)
 	and l_discount between :2 - 0.01 and :2 + 0.01
-	and l_quantity < :3;
+	and l_quantity < :3
+;

@@ -35,4 +35,5 @@ where
 order by
 	s_suppkey;
 
-drop view `49586899439487868_revenue_view`;
+drop view `49586899439487868_revenue_view`
+;

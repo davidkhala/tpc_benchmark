@@ -36,3 +36,4 @@ group by
 order by
 	revenue desc
 :n 20
+;

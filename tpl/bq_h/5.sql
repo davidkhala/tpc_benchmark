@@ -27,4 +27,5 @@ where
 group by
 	n_name
 order by
-	revenue desc;
+	revenue desc
+;

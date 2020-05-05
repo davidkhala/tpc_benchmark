@@ -48,3 +48,4 @@ order by
 	s_name,
 	p_partkey
 :n 100
+;
