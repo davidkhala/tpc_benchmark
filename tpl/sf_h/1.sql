@@ -18,7 +18,7 @@ select
 from
 	lineitem
 where
-	l_shipdate <= dateadd(day, ':1', to_date('1998-12-01'))
+	l_shipdate <= dateadd(day, -':1', to_date('1998-12-01'))
 group by
 	l_returnflag,
 	l_linestatus
