@@ -60,9 +60,9 @@ def parse_query_job(query_job_tuple, verbose=False):
 
     return start_ts, end_ts, bytes_processed, row_count, cost, df
 
-# TODO: we should pass a structure, too many vars
+
 def query_n(sf_helper, n, test, templates_dir, scale,
-            project, dataset,
+            #project, dataset,
             qual=None,
             dry_run=False, use_cache=False,
             verbose=False, verbose_out=False):
@@ -108,13 +108,17 @@ def query_n(sf_helper, n, test, templates_dir, scale,
 
     #logging.debug(f'results: {query_result}')
 
-    (start, end, bytes_processed, rows, cost, df) = parse_query_job(query_job_tuple=query_result, verbose=verbose)
-    return n, query_text, start, end, bytes_processed, rows, cost, df
+    (start, end, bytes_processed,
+     rows_count, cost, df) = parse_query_job(query_job_tuple=query_result,
+                                             verbose=verbose)
+    return n, query_text, start, end, bytes_processed, rows_count, cost, df
 
 
-# TODO: we should pass a structure, too many vars
-def query_seq(name, test, seq, templates_dir, scale, project, dataset,
-              qual=None, dry_run=False, use_cache=False, verbose=False, verbose_iter=False):
+def query_seq(desc, test, seq, templates_dir, scale,
+              project, dataset,
+              qual=None, 
+              dry_run=False, use_cache=False,
+              verbose=False, verbose_iter=False):
     """Query Snowflake with TPC DS/H test sequence
 
     ...
@@ -130,42 +134,44 @@ def query_seq(name, test, seq, templates_dir, scale, project, dataset,
     # run all queries in sequence
     query_data = []
     for n in seq:
-        print("\n\n\n=========")
-        print("START QUERY:", n)
-        # run query
-        # TODO: we should pass a structure, too many vars
-        results = query_n(sf_helper=sf_helper,
-                          n=n,
-                          test=test,
-                          templates_dir=templates_dir,
-                          scale=scale,
-                          qual=qual,
-                          project=project,
-                          dataset=dataset,
-                          dry_run=dry_run,
-                          use_cache=use_cache,
-                          verbose=verbose,
-                          verbose_out=False)
-        # unpack results
-        (n, query_text, start_ts, end_ts, bytes_processed, rows_count, cost, df) = results
+        if verbose_iter:
+            print("===============")
+            print("START QUERY:", n)
 
-        # append results
-        query_data.append(["sf", test, scale, dataset, n, start_ts, end_ts, bytes_processed, cost])
+        (n, query_text, t0, t1,
+         bytes_processed, rows_count,
+         cost, df) = query_n(sf_helper=sf_helper,
+                             n=n,
+                             test=test,
+                             templates_dir=templates_dir,
+                             scale=scale,
+                             qual=qual,
+                             #project=project,
+                             #dataset=dataset,
+                             dry_run=dry_run,
+                             use_cache=use_cache,
+                             verbose=verbose,
+                             verbose_out=False
+                             )
+        _d = ["sf", test, scale, dataset, desc, n,
+              t0, t1, bytes_processed, cost, "no_query_plan"]
+        query_data.append(_d)
 
         if verbose_iter:
-            print("END QUERY:", n)
-            print("=========")
-            print("Total Billed Time: {}".format(end_ts-start_ts))
+            print("-" * 40)
+            print("Total Billed Time: {}".format(t1-t0))
             print("Bytes Processed: {}".format(bytes_processed))
             print("Rows Processed: {}".format(rows_count))
             print("-" * 40)
+            print("END QUERY:", n)
+            print("=========")
             print()
 
     # set of columns to write to csv file
     columns = ["db", "test", "scale", "bq_dataset", "query_n", "t0", "t1", "bytes_processed", "cost"]
 
     # write results to csv file
-    utils.write_to_csv("sf", test, dataset, name, columns, query_data)
+    utils.write_to_csv("sf", test, dataset, desc, columns, query_data)
 
     # suspend warehouse
     sf_helper.warehouse_suspend()
@@ -173,9 +179,9 @@ def query_seq(name, test, seq, templates_dir, scale, project, dataset,
 
 
 def stream_p(sf_helper, p, test, templates_dir, scale,
-             project, dataset,
+             #project, dataset,
              qual=None,
-             dry_run=False, use_cache=False,
+             #dry_run=False, use_cache=False,
              verbose=False, verbose_out=False):
     """...
     """
@@ -233,7 +239,7 @@ def stream_p(sf_helper, p, test, templates_dir, scale,
     return p, query_text, start, end, bytes_received, rows, cost, df
 
 
-def stream_seq(name, test, seq, templates_dir, scale,
+def stream_seq(desc, test, seq, templates_dir, scale,
                project, dataset,
                qual=None,
                dry_run=False, use_cache=False,
@@ -249,37 +255,53 @@ def stream_seq(name, test, seq, templates_dir, scale,
 
     stream_data = []
     for p in seq:
-        results = stream_p( sf_helper=sf_helper,
-                            p=p,
-                            test=test,
-                            templates_dir=templates_dir,
-                            scale=scale,
-                            project=project,
-                            dataset=dataset,
-                            qual=qual,
-                            dry_run=dry_run,
-                            use_cache=use_cache,
-                            verbose=verbose,
-                            verbose_out=False)
+        (p, query_text, t0, t1,
+         bytes_processed, rows_count,
+         cost, df) = stream_p(sf_helper=sf_helper,
+                              p=p,
+                              test=test,
+                              templates_dir=templates_dir,
+                              scale=scale,
+                              #project=project,
+                              #dataset=dataset,
+                              qual=qual,
+                              #dry_run=dry_run,
+                              #use_cache=use_cache,
+                              verbose=verbose,
+                              verbose_out=False)
         # unpack results
-        (n, query_text, start_ts, end_ts, bytes_processed, rows_count, cost, df) = results
-        stream_data.append(["sf", test, scale, dataset, n, start_ts, end_ts, bytes_processed, cost])
+        _s = ["sf", test, scale, dataset, desc, p,
+              t0, t1, "NA", "NA", "NA", cost]
+        stream_data.append(_s)
+
+        #n, query_text, start_ts, end_ts, bytes_processed, rows_count, cost, df) = results
+        #stream_data.append(["sf", test, scale, dataset, n, start_ts, end_ts, bytes_processed, cost])
 
         if verbose_iter:
             print("STREAM:", p)
             print("============")
-            print("Total Billed Time: {}".format(end_ts-start_ts))
+            print("Total Billed Time: {}".format(t1-t0))
             print("Bytes Processed: {}".format(bytes_processed))
             print("Rows Processed: {}".format(rows_count))
             print("-" * 40)
             print()
 
     # set csv file columns
-    columns = ["db", "test", "scale", "bq_dataset", "query_n", "t0", "t1", "bytes_processed", "cost"]
+    columns = ["db", "test", "scale", "dataset", "desc", "query_n",
+               "t0", "t1", "bytes_processed", "bytes_billed", "query_plan", "cost"]
+    df = pd.DataFrame(stream_data, columns=columns)
+    csv_fp = (config.fp_results + config.sep +
+              "sf_{}_stream_times-".format(test) +
+              str(scale) + "GB-" +
+              dataset + "-" + desc + "-" +
+              str(pd.Timestamp.now()) + ".csv"
+              )
+    df.to_csv(csv_fp, index=False)
 
     # write data to file
-    utils.write_to_csv("sf", test, dataset, name, columns, stream_data)
+    #utils.write_to_csv("sf", test, dataset, desc, columns, stream_data)
 
     # suspend warehouse
     sf_helper.warehouse_suspend()
+
     return True

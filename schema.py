@@ -20,7 +20,7 @@ def copy_ds_ansi(filepath_out):
     shutil.copyfile(original_file, filepath_out + config.sep + "ansi_ds.sql")
 
 
-def rewrite_ds_basic(filepath_out, dataset_name, prefix=False):
+def rewrite_ds_bq_basic(filepath_out, dataset_name, prefix=False):
     """Convert the sample implementation of the logical schema as described in TPC-DS Specification V1.0.0L ,
     specifications.pdf, pg 99, Appendix A and contained in  tpc_root/tools/tpcds.sql.
 

@@ -48,6 +48,11 @@ fp_output_mnt    = "/data"
 fp_ds_output_mnt = fp_output_mnt + sep + "ds"
 fp_h_output_mnt  = fp_output_mnt + sep + "h"
 
+# 2.4 Snowflake Configuration
+sf_role = "ACCOUNTADMIN"
+sf_storage_integration = "gcs_storage_integration"
+sf_named_file_format = "csv_file_format"
+
 # 3.0 TPC installer zip file names stored in gcs_zip_bucket
 # >> Edit this if you download a different version from tpc.org
 

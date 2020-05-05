@@ -20,15 +20,30 @@ import snowflake.connector
 import time
 import logging
 
-def _open_connection(config):
-    """ starts warehouse, opens connection """
-    print(f'using config: user:{config.sf_username}, pass: {config.sf_password}, account: {config.sf_account}')
-    # connect to snowflake
-    conn = snowflake.connector.connect(
-        user=config.sf_username,
-        password=config.sf_password,
-        account=config.sf_account
-    )
+import config
+
+
+def _open_connection(conf, verbose=False):
+    """Starts Snowflake warehouse and open a connection
+
+    Parameters
+    ----------
+    conf : dict, configuration object
+
+    Returns
+    -------
+    conn : Snowflake connector object
+    """
+
+    if verbose:
+        print(f'using configuration: user:{conf.sf_username}')
+        print(f'pass: {conf.sf_password}')
+        print(f'account: {conf.sf_account}')
+
+    conn = snowflake.connector.connect(user=conf.sf_username,
+                                       password=conf.sf_password,
+                                       account=conf.sf_account
+                                       )
     return conn
 
 
@@ -50,28 +65,25 @@ storage_integration_name = 'gcs_storage_integration' #TODO: needs to go to confi
 named_file_format_name = 'csv_file_format'  # TODO: move to config
 is_integrated = False
 
+
 class SnowflakeHelper:
     """ manages snowflake db  """
-    def __init__(self, test_type, test_size, config):
+    def __init__(self, test_type, test_size, sf_config, verbose=False):
         """" initializes helper class """
-        # open connection
-        print('preparing to open connection to Snowflake')
-        self.conn = _open_connection(config)
-        print('connection opened')
-        # save config
-        self.config = config
-        # validate test type requested
-        if test_type not in [TEST_DS, TEST_H]:
-            err = f'Unsupported test: {self.test_type}'
-            print(err)
-            raise err
-        # save type of test to run: C or DS
-        self.test_type = test_type
-        # size of dataset to use
-        self.test_size = test_size
 
-        # TODO: this should be based on number of CPUs
-        self.gcs_file_range = 96
+        self.sf_config = sf_config  # save config
+        self.test_type = test_type  # save type of test to run: C or DS
+        self.test_size = test_size  # size of dataset to use
+        self.gcs_file_range = config.cpu_count  # auto detected in config.py
+
+        if verbose:
+            print('Preparing to open connection to Snowflake...')
+        self.conn = _open_connection(config)
+        if verbose:
+            print('Connection opened.')
+
+        if test_type not in [TEST_DS, TEST_H]:  # validate test type requested
+            raise Exception(f"Unsupported test: {self.test_type}")
 
         # set tables to be imported to snowflake based on test
         if self.test_type == TEST_H:
@@ -88,7 +100,7 @@ class SnowflakeHelper:
     def _get_cost(self, running_time):
         """ estimates cost for query runtime based on warehouse size """
         # TODO: review this
-        return running_time * self.config.sf_warehouse_cost
+        return running_time * self.sf_config.sf_warehouse_cost
 
     def brute_force_clean_query(self, query_text):
         query_text = query_text.replace('set rowcount', 'LIMIT').strip()
@@ -159,39 +171,44 @@ class SnowflakeHelper:
 
         return start_ts, end_ts, -1, row_count, cost, rows
 
-    def warehouse_start(self, create_db=False):
+    def warehouse_start(self, create_db=False, verbose=False):
         """ starts warehouse """
         # check if connection is set
         if not self.conn:
-            self.conn = _open_connection(self.config)
+            self.conn = _open_connection(self.sf_config)
 
         # resume warehouse
         query = f'USE ROLE {SF_ROLE}'
-        print(f'running query: {query}')
+        if verbose:
+            print(f'running query: {query}')
         result = self.run_query(query)
 
-        query = f'ALTER WAREHOUSE {self.config.sf_warehouse} RESUME;'
-        print(f'running query: {query}')
+        query = f'ALTER WAREHOUSE {self.sf_config.sf_warehouse} RESUME;'
+        if verbose:
+            print(f'running query: {query}')
         result = self.run_query(query)
 
-        query = f'USE WAREHOUSE {self.config.sf_warehouse}'
+        query = f'USE WAREHOUSE {self.sf_config.sf_warehouse}'
         print(f'running query: {query}')
         result = self.run_query(query)
 
         if create_db:
             query = f'CREATE DATABASE IF NOT EXISTS {self.test_type}_{self.test_size}'
-            print(f'running query: {query}')
+            if verbose:
+                print(f'running query: {query}')
             result = self.run_query(query)
 
         query = f'USE DATABASE {self.test_type}_{self.test_size}'
-        print(f'running query: {query}')
+        if verbose:
+            print(f'running query: {query}')
         result = self.run_query(query)
 
-    def warehouse_suspend(self):
+    def warehouse_suspend(self, verbose=False):
         """ suspends warehouse and closes connection """
         # suspend warehouse
-        result = self.run_query(f'ALTER WAREHOUSE {self.config.sf_warehouse} SUSPEND;')
-        print(f'warehouse suspend: {result}')
+        result = self.run_query(f'ALTER WAREHOUSE {self.sf_config.sf_warehouse} SUSPEND;')
+        if verbose:
+            print(f'warehouse suspend: {result}')
         # close connection
         self.conn.close()
         # reset connection object
@@ -230,11 +247,14 @@ class SnowflakeHelper:
         return st_int_name
 
     def create_schema(self, is_dry_run=False):
-        """ list items in "stage" """
-        print(f'\n\n--pushing schema: "{self.config.h_schema_ddl_filepath}"')
+        """ list items in "stage"
+
+         Send a schema to SF Warehouse
+         """
+        print(f'\n\n--pushing schema: "{self.sf_config.h_schema_ddl_filepath}"')
 
         # open file and read all rows:
-        # with open(self.config.h_schema_ddl_filepath, 'r') as f:
+        # with open(self.sf_config.h_schema_ddl_filepath, 'r') as f:
         with open('/home/vagrant/bq_snowflake_benchmark/ds/v2.11.0rc2/tools/tpcds.sql') as f:
             lines = f.readlines()
 
