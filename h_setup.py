@@ -23,6 +23,7 @@ log_column_names = ["test", "scale", "status",
                     "child", "parallel", 
                     "t0", "t1", "stdout", "stderr"]
 
+
 def download_zip():
     """Download the copy of tpcds source.  See README for versioning."""
 
@@ -78,7 +79,8 @@ def modify_dbgen_source(verbose=False):
     new_define = '#define  PR_END(fp) {fseek(fp, -1, SEEK_CUR);fprintf(fp, "\\n");}'
     new_text = text.replace(old_define, new_define)
     open(fp, 'w').write(new_text)
-        
+
+
 def create_makefile(verbose=False):
     """Edit dbgen/makefile.suite and save to makefile
     setting the c compiler, database, machine and workload
@@ -139,6 +141,7 @@ def make_tpch(verbose=False):
 
     return stdout, stderr
 
+
 def edit_tpcd_h():
     """Edit the SET_ROWCOUNT value under the SQLSERVER section
     of the C header file.  
@@ -164,6 +167,7 @@ def edit_tpcd_h():
     with open(fp, "w") as f:
         for line in d:
             f.write(line)
+
 
 def run_dbgen(scale=1, total_cpu=None, verbose=False):
     """Create data for TPC-H using the binary dbgen with

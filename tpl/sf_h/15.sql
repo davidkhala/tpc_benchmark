@@ -36,4 +36,5 @@ where
 order by
 	s_suppkey;
 
-drop view revenue:s;
+drop view revenue:s
+;

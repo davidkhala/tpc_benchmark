@@ -30,4 +30,5 @@ group by
 				and n_name = ':1'
 		)
 order by
-	value desc;
+	value desc
+;

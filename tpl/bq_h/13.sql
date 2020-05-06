@@ -23,4 +23,5 @@ group by
 	c_count
 order by
 	custdist desc,
-	c_count desc;
+	c_count desc
+;

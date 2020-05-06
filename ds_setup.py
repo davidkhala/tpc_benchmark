@@ -124,7 +124,7 @@ def run_dsdgen(scale=1, seed=None, total_cpu=None, verbose=False):
     if scale not in config.scale_factors:
         raise ValueError("Scale must be one of:", config.scale_factors)
 
-    _data_out = config.fp_ds_data_out + config.sep + str(scale) + "GB"
+    _data_out = config.fp_ds_output + config.sep + str(scale) + "GB"
 
     cmd = ["./dsdgen", "-DIR", _data_out, "-SCALE", str(scale),
            "-DELIMITER", "|", "-TERMINATE", "N"]
@@ -144,8 +144,7 @@ def run_dsdgen(scale=1, seed=None, total_cpu=None, verbose=False):
         total_cpu = str(total_cpu)
         n_cmd = cmd + ["-PARALLEL", total_cpu,
                        "-CHILD", child_cpu]
-        
-        
+
         pipe = subprocess.run(n_cmd,
                               stdout=subprocess.PIPE, 
                               stderr=subprocess.PIPE, 
@@ -163,6 +162,7 @@ def run_dsdgen(scale=1, seed=None, total_cpu=None, verbose=False):
             print(stderr)
 
     return stdout, stderr
+
 
 def copy_tpl(verbose=False):
     """Move query templates and make copies for modification """
@@ -432,7 +432,7 @@ def std_err_print(std_out, err_out):
     print()
 
 
-def qgen_template(n, templates_dir, scale, qual=None,
+def qgen_template(n, templates_dir, dialect, scale, qual=None,
                   verbose=False, verbose_out=False):
     """Generate DS query text for query template number n
     
@@ -440,6 +440,8 @@ def qgen_template(n, templates_dir, scale, qual=None,
     ----------
     n : int, query number to generate BigQuery SQL
     templates_dir : str, absolute path to templates to use for query generation
+    dialect : str, sql dialect to use, this will target a .sql file for dialect
+        specific formatting
     scale : int, database scale factor (i.e. 1, 100, 1000 etc)
     qual : None, or True to use qualifying values (to test 1GB qualification db)
     verbose : bool, print debug statements
@@ -456,7 +458,7 @@ def qgen_template(n, templates_dir, scale, qual=None,
         r = None
 
     std_out, err_out = dsqgen(directory=templates_dir,
-                              dialect="sqlserver_bq",
+                              dialect=dialect,
                               scale=scale,
                               template="query{}.tpl".format(n),
                               filter="Y",  # write to std_out
@@ -477,7 +479,7 @@ def qgen_template(n, templates_dir, scale, qual=None,
     return query_text
 
 
-def qgen_stream(p, templates_dir, scale, qual=None,
+def qgen_stream(p, templates_dir, dialect, scale, qual=None,
                 verbose=False, verbose_out=False):
     """Generate DS query text for query template number n
 
@@ -506,7 +508,7 @@ def qgen_stream(p, templates_dir, scale, qual=None,
     tools.mkdir_safe(temp_dir)
 
     std_out, err_out = dsqgen(directory=templates_dir,
-                              dialect="sqlserver_tpc",
+                              dialect=dialect,
                               scale=scale,
                               # filter="Y",  # write to std_out
                               streams=p+1,

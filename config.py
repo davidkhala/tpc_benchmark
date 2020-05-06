@@ -2,6 +2,10 @@
 
 import os
 
+# set logger
+import logging
+logging.basicConfig(filename='./nb.log', level=logging.DEBUG)
+
 # 1.0 Project's current path locations
 # >> Do NOT edit this section
 cwd = os.path.dirname(os.path.realpath(__file__))
@@ -43,6 +47,11 @@ gcs_data_bucket  = "tpc-benchmark-5947"
 fp_output_mnt    = "/data"
 fp_ds_output_mnt = fp_output_mnt + sep + "ds"
 fp_h_output_mnt  = fp_output_mnt + sep + "h"
+
+# 2.4 Snowflake Configuration
+sf_role = "ACCOUNTADMIN"
+sf_storage_integration = "gcs_storage_integration"
+sf_named_file_format = "csv_file_format"
 
 # 3.0 TPC installer zip file names stored in gcs_zip_bucket
 # >> Edit this if you download a different version from tpc.org
@@ -178,7 +187,6 @@ test_schema_sf = []
 for test in tests:
     for schema in sf_schema:
         test_schema_sf.append(test + "_" + schema)
-
 
 # snowflake auth info
 sf_username = "dauren"
