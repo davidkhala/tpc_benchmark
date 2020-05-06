@@ -1,0 +1,75 @@
+Stages		Wait	Read	Compute	Write			Rows
+S00: Input
+	Avg:	8 ms	184 ms	331 ms	42 ms	Input:	15,000,000
+	Max:	15 ms	211 ms	368 ms	47 ms	Output:	2,997,783
+	READ	$1:c_custkey, $2:c_mktsegment
+		FROM h_100GB_01_PART_1.customer
+		WHERE equal($2, 'MACHINERY')
+	WRITE	$1
+		TO __stage00_output
+		BY HASH($1)
+
+S01: Input
+	Avg:	682 ms	33 ms	253 ms	73 ms	Input:	320,003,011
+	Max:	785 ms	173 ms	355 ms	243 ms	Output:	320,003,011
+	READ	$20:L_ORDERKEY, $21:L_EXTENDEDPRICE, $22:L_DISCOUNT, $23:L_SHIPDATE
+		FROM h_100GB_01_PART_1.lineitem
+		WHERE greater($23, 9218)
+	WRITE	$20, $21, $22
+		TO __stage01_output
+		BY HASH($20)
+
+S02: Input
+	Avg:	712 ms	14 ms	68 ms	50 ms	Input:	73,746,889
+	Max:	796 ms	60 ms	105 ms	272 ms	Output:	73,746,889
+	READ	$10:O_ORDERKEY, $11:O_CUSTKEY, $12:O_ORDERDATE, $13:O_SHIPPRIORITY
+		FROM h_100GB_01_PART_1.orders
+		WHERE less($12, 9218)
+	WRITE	$10, $11, $12, $13
+		TO __stage02_output
+		BY HASH($10)
+
+S03: Coalesce
+	Avg:	2 ms	0 ms	17 ms	13 ms	Input:	2,997,783
+	Max:	3 ms	0 ms	27 ms	23 ms	Output:	2,997,783
+	READ	FROM __stage00_output
+
+S04: Join+
+	Avg:	2 ms	0 ms	6575 ms	7 ms	Input:	693,528,200
+	Max:	7 ms	0 ms	9038 ms	70 ms	Output:	1,132,649
+	READ	$10, $11, $12, $13
+		FROM __stage02_output
+	READ	$20, $21, $22
+		FROM __stage01_output
+	READ	$1
+		FROM __stage03_output
+	AGGREGATE	GROUP BY $80 := $72, $81 := $70, $82 := $71
+			$40 := SUM($50)
+	COMPUTE	$50 := multiply($73, subtract(1, $74))
+	JOIN	INNER HASH JOIN EACH WITH ALL ON $60 = $1
+	JOIN	INNER HASH JOIN EACH WITH EACH ON $10 = $20
+	WRITE	$81, $82, $80, $40
+		TO __stage04_output
+		BY HASH($80, $81, $82)
+
+S05: Sort+
+	Avg:	3 ms	0 ms	7 ms	2 ms	Input:	1,132,649
+	Max:	7 ms	0 ms	11 ms	9 ms	Output:	2,530
+	READ	$81, $82, $80, $40
+		FROM __stage04_output
+	SORT	$30 DESC, $91 ASC
+		LIMIT 10
+	AGGREGATE	GROUP BY $90 := $80, $91 := $81, $92 := $82
+			$30 := SUM($40)
+	WRITE	$100, $101, $102, $103
+		TO __stage05_output
+
+S06: Output
+	Avg:	1 ms	0 ms	11 ms	7 ms	Input:	2,530
+	Max:	1 ms	0 ms	11 ms	7 ms	Output:	10
+	READ	$100, $101, $102, $103
+		FROM __stage05_output
+	SORT	$103 DESC, $100 ASC
+		LIMIT 10
+	WRITE	$110, $111, $112, $113
+		TO __stage06_output

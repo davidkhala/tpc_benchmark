@@ -1,0 +1,509 @@
+{
+  "configuration": {
+    "jobType": "QUERY", 
+    "query": {
+      "allowLargeResults": false, 
+      "createDisposition": "CREATE_IF_NEEDED", 
+      "destinationTable": {
+        "datasetId": "_8b2ecd18b35bb027a7eca3ddde23e2155a669b53", 
+        "projectId": "tpc-benchmarking-9432", 
+        "tableId": "anonde1063b1_db2c_482b_86b7_aa4fda2e4e66"
+      }, 
+      "priority": "INTERACTIVE", 
+      "query": "SELECT\n  l_orderkey,\n  SUM(l_extendedprice * (1 - l_discount)) AS revenue,\n  o_orderdate,\n  o_shippriority\nFROM\n  h_100GB_01.customer,\n  h_100GB_01.orders,\n  h_100GB_01.lineitem\nWHERE\n  c_mktsegment = 'MACHINERY'\n  AND c_custkey = o_custkey\n  AND l_orderkey = o_orderkey\n  AND o_orderdate < date '1995-03-29'\n  AND l_shipdate > date '1995-03-29'\nGROUP BY\n  l_orderkey,\n  o_orderdate,\n  o_shippriority\nORDER BY\n  revenue DESC,\n  o_orderdate\nLIMIT 10 ;\n\n-- SELECT count(distinct(o_custkey)), count(1), max(o_custkey), min(o_custkey) FROM `h_100GB_01_PART.orders` WHERE o_orderdate < date '1995-03-29' ;\n\n-- select count(1) from `h_100GB_01.orders` where o_orderdate < date '1995-03-29';", 
+      "useLegacySql": false, 
+      "useQueryCache": false, 
+      "writeDisposition": "WRITE_TRUNCATE"
+    }
+  }, 
+  "etag": "R8HSY8zPO+bK2yhO2O9rtw==", 
+  "id": "tpc-benchmarking-9432:US.bquxjob_7f098ef1_171d682af3e", 
+  "jobReference": {
+    "jobId": "bquxjob_7f098ef1_171d682af3e", 
+    "location": "US", 
+    "projectId": "tpc-benchmarking-9432"
+  }, 
+  "kind": "bigquery#job", 
+  "selfLink": "https://bigquery.googleapis.com/bigquery/v2/projects/tpc-benchmarking-9432/jobs/bquxjob_7f098ef1_171d682af3e?location=US", 
+  "statistics": {
+    "creationTime": "1588441834497", 
+    "endTime": "1588441840475", 
+    "query": {
+      "billingTier": 1, 
+      "cacheHit": false, 
+      "estimatedBytesProcessed": "24286215534", 
+      "queryPlan": [
+        {
+          "completedParallelInputs": "384", 
+          "computeMsAvg": "906", 
+          "computeMsMax": "1250", 
+          "computeRatioAvg": 0.1857318573185732, 
+          "computeRatioMax": 0.2562525625256253, 
+          "endMs": "1588441836328", 
+          "id": "0", 
+          "name": "S00: Input", 
+          "parallelInputs": "384", 
+          "readMsAvg": "45", 
+          "readMsMax": "388", 
+          "readRatioAvg": 0.00922509225092251, 
+          "readRatioMax": 0.07954079540795408, 
+          "recordsRead": "600037902", 
+          "recordsWritten": "320003011", 
+          "shuffleOutputBytes": "8640081297", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "492652", 
+          "startMs": "1588441834798", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$1:l_orderkey, $2:l_extendedprice, $3:l_discount, $4:l_shipdate", 
+                "FROM h_100GB_01.lineitem", 
+                "WHERE greater($4, 9218)"
+              ]
+            }, 
+            {
+              "kind": "WRITE", 
+              "substeps": [
+                "$1, $2, $3", 
+                "TO __stage00_output", 
+                "BY HASH($1)"
+              ]
+            }
+          ], 
+          "waitMsAvg": "419", 
+          "waitMsMax": "461", 
+          "waitRatioAvg": 0.08589585895858959, 
+          "waitRatioMax": 0.09450594505945059, 
+          "writeMsAvg": "83", 
+          "writeMsMax": "370", 
+          "writeRatioAvg": 0.017015170151701516, 
+          "writeRatioMax": 0.07585075850758508
+        }, 
+        {
+          "completedParallelInputs": "6", 
+          "computeMsAvg": "313", 
+          "computeMsMax": "345", 
+          "computeRatioAvg": 0.06416564165641657, 
+          "computeRatioMax": 0.07072570725707257, 
+          "endMs": "1588441835165", 
+          "id": "2", 
+          "name": "S02: Input", 
+          "parallelInputs": "6", 
+          "readMsAvg": "27", 
+          "readMsMax": "33", 
+          "readRatioAvg": 0.005535055350553505, 
+          "readRatioMax": 0.006765067650676507, 
+          "recordsRead": "15000000", 
+          "recordsWritten": "2997783", 
+          "shuffleOutputBytes": "26980047", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "2587", 
+          "startMs": "1588441834837", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$10:c_custkey, $11:c_mktsegment", 
+                "FROM h_100GB_01.customer", 
+                "WHERE equal($11, 'MACHINERY')"
+              ]
+            }, 
+            {
+              "kind": "WRITE", 
+              "substeps": [
+                "$10", 
+                "TO __stage02_output", 
+                "BY HASH($10)"
+              ]
+            }
+          ], 
+          "waitMsAvg": "73", 
+          "waitMsMax": "127", 
+          "waitRatioAvg": 0.014965149651496515, 
+          "waitRatioMax": 0.026035260352603527, 
+          "writeMsAvg": "43", 
+          "writeMsMax": "50", 
+          "writeRatioAvg": 0.008815088150881509, 
+          "writeRatioMax": 0.01025010250102501
+        }, 
+        {
+          "completedParallelInputs": "100", 
+          "computeMsAvg": "17", 
+          "computeMsMax": "24", 
+          "computeRatioAvg": 0.0034850348503485036, 
+          "computeRatioMax": 0.004920049200492005, 
+          "endMs": "1588441835414", 
+          "id": "3", 
+          "inputStages": [
+            "2"
+          ], 
+          "name": "S03: Coalesce", 
+          "parallelInputs": "100", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "2997783", 
+          "recordsWritten": "2997783", 
+          "shuffleOutputBytes": "26980047", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "13724", 
+          "startMs": "1588441835189", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "FROM __stage02_output"
+              ]
+            }
+          ], 
+          "waitMsAvg": "13", 
+          "waitMsMax": "21", 
+          "waitRatioAvg": 0.0026650266502665026, 
+          "waitRatioMax": 0.004305043050430504, 
+          "writeMsAvg": "12", 
+          "writeMsMax": "30", 
+          "writeRatioAvg": 0.0024600246002460025, 
+          "writeRatioMax": 0.006150061500615006
+        }, 
+        {
+          "completedParallelInputs": "96", 
+          "computeMsAvg": "2453", 
+          "computeMsMax": "3767", 
+          "computeRatioAvg": 0.502870028700287, 
+          "computeRatioMax": 0.7722427224272242, 
+          "endMs": "1588441837240", 
+          "id": "4", 
+          "inputStages": [
+            "3"
+          ], 
+          "name": "S04: Join", 
+          "parallelInputs": "96", 
+          "readMsAvg": "43", 
+          "readMsMax": "190", 
+          "readRatioAvg": 0.008815088150881509, 
+          "readRatioMax": 0.03895038950389504, 
+          "recordsRead": "437787168", 
+          "recordsWritten": "14749430", 
+          "shuffleOutputBytes": "339236890", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "304231", 
+          "startMs": "1588441835205", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$20:o_orderkey, $21:o_custkey, $22:o_orderdate, $23:o_shippriority", 
+                "FROM h_100GB_01.orders", 
+                "WHERE less($22, 9218)"
+              ]
+            }, 
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$10", 
+                "FROM __stage03_output"
+              ]
+            }, 
+            {
+              "kind": "JOIN", 
+              "substeps": [
+                "INNER HASH JOIN EACH  WITH ALL  ON $21 = $10"
+              ]
+            }, 
+            {
+              "kind": "WRITE", 
+              "substeps": [
+                "$60, $61, $62", 
+                "TO __stage04_output", 
+                "BY HASH($60)"
+              ]
+            }
+          ], 
+          "waitMsAvg": "15", 
+          "waitMsMax": "27", 
+          "waitRatioAvg": 0.003075030750307503, 
+          "waitRatioMax": 0.005535055350553505, 
+          "writeMsAvg": "25", 
+          "writeMsMax": "134", 
+          "writeRatioAvg": 0.005125051250512505, 
+          "writeRatioMax": 0.027470274702747027
+        }, 
+        {
+          "completedParallelInputs": "100", 
+          "computeMsAvg": "2765", 
+          "computeMsMax": "4878", 
+          "computeRatioAvg": 0.566830668306683, 
+          "computeRatioMax": 1, 
+          "endMs": "1588441840278", 
+          "id": "5", 
+          "inputStages": [
+            "0", 
+            "4"
+          ], 
+          "name": "S05: Join+", 
+          "parallelInputs": "100", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "334752441", 
+          "recordsWritten": "1132649", 
+          "shuffleOutputBytes": "36244768", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "370199", 
+          "startMs": "1588441837254", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$60, $61, $62", 
+                "FROM __stage04_output"
+              ]
+            }, 
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$1, $2, $3", 
+                "FROM __stage00_output"
+              ]
+            }, 
+            {
+              "kind": "AGGREGATE", 
+              "substeps": [
+                "GROUP BY $80 := $72, $81 := $70, $82 := $71", 
+                "$40 := SUM($50)"
+              ]
+            }, 
+            {
+              "kind": "COMPUTE", 
+              "substeps": [
+                "$50 := multiply($73, subtract(1, $74))"
+              ]
+            }, 
+            {
+              "kind": "JOIN", 
+              "substeps": [
+                "INNER HASH JOIN EACH  WITH EACH  ON $60 = $1"
+              ]
+            }, 
+            {
+              "kind": "WRITE", 
+              "substeps": [
+                "$80, $81, $82, $40", 
+                "TO __stage05_output", 
+                "BY HASH($80, $81, $82)"
+              ]
+            }
+          ], 
+          "waitMsAvg": "1", 
+          "waitMsMax": "5", 
+          "waitRatioAvg": 0.0002050020500205002, 
+          "waitRatioMax": 0.001025010250102501, 
+          "writeMsAvg": "5", 
+          "writeMsMax": "70", 
+          "writeRatioAvg": 0.001025010250102501, 
+          "writeRatioMax": 0.014350143501435014
+        }, 
+        {
+          "completedParallelInputs": "48", 
+          "computeMsAvg": "21", 
+          "computeMsMax": "27", 
+          "computeRatioAvg": 0.004305043050430504, 
+          "computeRatioMax": 0.005535055350553505, 
+          "endMs": "1588441840355", 
+          "id": "6", 
+          "inputStages": [
+            "5"
+          ], 
+          "name": "S06: Sort+", 
+          "parallelInputs": "48", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "1132649", 
+          "recordsWritten": "480", 
+          "shuffleOutputBytes": "15360", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "2362", 
+          "startMs": "1588441840283", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$80, $81, $82, $40", 
+                "FROM __stage05_output"
+              ]
+            }, 
+            {
+              "kind": "SORT", 
+              "substeps": [
+                "$30 DESC, $91 ASC", 
+                "LIMIT 10"
+              ]
+            }, 
+            {
+              "kind": "AGGREGATE", 
+              "substeps": [
+                "GROUP BY $90 := $80, $91 := $81, $92 := $82", 
+                "$30 := SUM($40)"
+              ]
+            }, 
+            {
+              "kind": "WRITE", 
+              "substeps": [
+                "$100, $101, $102, $103", 
+                "TO __stage06_output"
+              ]
+            }
+          ], 
+          "waitMsAvg": "2", 
+          "waitMsMax": "4", 
+          "waitRatioAvg": 0.0004100041000410004, 
+          "waitRatioMax": 0.0008200082000820008, 
+          "writeMsAvg": "2", 
+          "writeMsMax": "5", 
+          "writeRatioAvg": 0.0004100041000410004, 
+          "writeRatioMax": 0.001025010250102501
+        }, 
+        {
+          "completedParallelInputs": "1", 
+          "computeMsAvg": "3", 
+          "computeMsMax": "3", 
+          "computeRatioAvg": 0.0006150061500615006, 
+          "computeRatioMax": 0.0006150061500615006, 
+          "endMs": "1588441840377", 
+          "id": "7", 
+          "inputStages": [
+            "6"
+          ], 
+          "name": "S07: Output", 
+          "parallelInputs": "1", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "480", 
+          "recordsWritten": "10", 
+          "shuffleOutputBytes": "320", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "41", 
+          "startMs": "1588441840295", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$100, $101, $102, $103", 
+                "FROM __stage06_output"
+              ]
+            }, 
+            {
+              "kind": "SORT", 
+              "substeps": [
+                "$103 DESC, $101 ASC", 
+                "LIMIT 10"
+              ]
+            }, 
+            {
+              "kind": "WRITE", 
+              "substeps": [
+                "$110, $111, $112, $113", 
+                "TO __stage07_output"
+              ]
+            }
+          ], 
+          "waitMsAvg": "4", 
+          "waitMsMax": "4", 
+          "waitRatioAvg": 0.0008200082000820008, 
+          "waitRatioMax": 0.0008200082000820008, 
+          "writeMsAvg": "2", 
+          "writeMsMax": "2", 
+          "writeRatioAvg": 0.0004100041000410004, 
+          "writeRatioMax": 0.0004100041000410004
+        }
+      ], 
+      "referencedTables": [
+        {
+          "datasetId": "h_100GB_01", 
+          "projectId": "tpc-benchmarking-9432", 
+          "tableId": "orders"
+        }, 
+        {
+          "datasetId": "h_100GB_01", 
+          "projectId": "tpc-benchmarking-9432", 
+          "tableId": "lineitem"
+        }, 
+        {
+          "datasetId": "h_100GB_01", 
+          "projectId": "tpc-benchmarking-9432", 
+          "tableId": "customer"
+        }
+      ], 
+      "statementType": "SELECT", 
+      "timeline": [
+        {
+          "activeUnits": "501", 
+          "completedUnits": "85", 
+          "elapsedMs": "616", 
+          "pendingUnits": "501", 
+          "totalSlotMs": "23764"
+        }, 
+        {
+          "activeUnits": "440", 
+          "completedUnits": "491", 
+          "elapsedMs": "1620", 
+          "pendingUnits": "95", 
+          "totalSlotMs": "677751"
+        }, 
+        {
+          "activeUnits": "100", 
+          "completedUnits": "586", 
+          "elapsedMs": "2626", 
+          "pendingUnits": "100", 
+          "totalSlotMs": "815202"
+        }, 
+        {
+          "activeUnits": "103", 
+          "completedUnits": "608", 
+          "elapsedMs": "3990", 
+          "pendingUnits": "78", 
+          "totalSlotMs": "1070130"
+        }, 
+        {
+          "activeUnits": "20", 
+          "completedUnits": "683", 
+          "elapsedMs": "5041", 
+          "pendingUnits": "3", 
+          "totalSlotMs": "1179297"
+        }, 
+        {
+          "activeUnits": "2", 
+          "completedUnits": "735", 
+          "elapsedMs": "5769", 
+          "pendingUnits": "0", 
+          "totalSlotMs": "1187583"
+        }
+      ], 
+      "totalBytesBilled": "24287117312", 
+      "totalBytesProcessed": "24286215534", 
+      "totalPartitionsProcessed": "0", 
+      "totalSlotMs": "1187583"
+    }, 
+    "startTime": "1588441834676", 
+    "totalBytesProcessed": "24286215534", 
+    "totalSlotMs": "1187583"
+  }, 
+  "status": {
+    "state": "DONE"
+  }, 
+  "user_email": "yan.zhou@sada.com"
+}

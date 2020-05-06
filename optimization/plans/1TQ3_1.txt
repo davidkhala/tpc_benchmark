@@ -1,0 +1,129 @@
+Stages		Wait	Read	Compute		Write	Rows
+S00: Input
+	Avg:	648 ms	290 ms	1267 ms		100 ms	Input:	5,999,989,709
+	Max:	751 ms	772 ms	1964 ms		317 ms	Output:	3,199,481,366
+	READ	$1:l_orderkey, $2:l_extendedprice, $3:l_discount, $4:l_shipdate
+		FROM h_1000GB_01.lineitem
+		WHERE greater($4, 9218)
+	WRITE	$1, $2, $3
+		TO __stage00_output
+		BY HASH($1)
+
+S01: Input
+	Avg:	537 ms	267 ms	1193 ms		35 ms	Input:	1,500,000,000
+	Max:	638 ms	632 ms	1961 ms		227 ms	Output:	737,540,720
+	READ	$20:o_orderkey, $21:o_custkey, $22:o_orderdate, $23:o_shippriority
+		FROM h_1000GB_01.orders
+		WHERE less($22, 9218)
+	WRITE	$20, $21, $22, $23
+		TO __stage01_output
+		BY HASH($21)
+
+S02: Input
+	Avg:	394 ms	125 ms	187 ms		40 ms	Input:	150,000,000
+	Max:	454 ms	333 ms	256 ms		123 ms	Output:	30,003,137
+	READ	$10:c_custkey, $11:c_mktsegment
+		FROM h_1000GB_01.customer
+		WHERE equal($11, 'MACHINERY')
+	WRITE	$10
+		TO __stage02_output
+		BY HASH($10)
+
+S03: Repartition
+	Avg:	1 ms	0 ms	190 ms		32 ms	Input:	9,303,929
+	Max:	4 ms	0 ms	273 ms		46 ms	Output:	9,303,929
+	READ	FROM __stage02_output
+
+S04: Repartition
+	Avg:	2 ms	0 ms	6707 ms		192 ms	Input:	207,799,132
+	Max:	3 ms	0 ms	8809 ms		1512 ms	Output:	207,799,132
+	READ	FROM __stage01_output
+
+S05: Repartition
+	Avg:	0 ms	0 ms	184 ms		34 ms	Input:	7,799,203
+	Max:	1 ms	0 ms	252 ms		52 ms	Output:	7,799,203
+	READ	FROM __stage03_output
+
+S06: Repartition
+	Avg:	0 ms	0 ms	5955 ms		360 ms	Input:	177,178,297
+	Max:	1 ms	0 ms	7096 ms		2246 ms	Output:	177,178,297
+	READ	FROM __stage04_output
+
+S07: Repartition
+	Avg:	0 ms	0 ms	188 ms		50 ms	Input:	10,500,531
+	Max:	3 ms	0 ms	247 ms		88 ms	Output:	10,500,531
+	READ	FROM __stage05_output
+
+S08: Repartition
+	Avg:	1 ms	0 ms	6716 ms		371 ms	Input:	243,809,336
+	Max:	14 ms	0 ms	8108 ms		1902 ms	Output:	243,809,336
+	READ	FROM __stage06_output
+
+S09: Repartition
+	Avg:	0 ms	0 ms	192 ms		30 ms	Input:	2,399,474
+	Max:	1 ms	0 ms	216 ms		34 ms	Output:	2,399,474
+	READ	FROM __stage07_output
+
+S0A: Repartition
+	Avg:	1 ms	0 ms	7504 ms		94 ms	Input:	58,389,858
+	Max:	11 ms	0 ms	8388 ms		255 ms	Output:	58,389,858
+	READ	FROM __stage08_output
+
+S0B: Join
+	Avg:	21 ms	0 ms	1061 ms		59 ms	Input:	767,543,857
+	Max:	47 ms	0 ms	1838 ms		1106 ms	Output:	147,545,389
+	READ	$10
+		FROM __stage02_output
+	READ	$20, $21, $22, $23
+		FROM __stage01_output
+	JOIN	INNER HASH JOIN EACH WITH EACH ON $10 = $21
+	WRITE	$60, $61, $62
+		TO __stage0B_output
+		BY HASH($60)
+
+S0C: Repartition
+	Avg:	1 ms	0 ms	12373 ms	175 ms	Input:	1,321,570,619
+	Max:	6 ms	0 ms	16101 ms	1218 ms	Output:	1,321,570,619
+	READ	FROM __stage00_output
+
+S0D: Repartition
+	Avg:	10 ms	0 ms	58 ms		17 ms	Input:	5,661,616
+	Max:	45 ms	0 ms	85 ms		563 ms	Output:	5,661,616
+	READ	FROM __stage0B_output
+
+S0E: Join+
+	Avg:	125 ms	0 ms	2931 ms		12 ms	Input:	3,347,026,755
+	Max:	268 ms	0 ms	4901 ms		181 ms	Output:	11,329,040
+	READ	$60, $61, $62
+		FROM __stage0B_output
+	READ	$1, $2, $3
+		FROM __stage00_output
+	AGGREGATE	GROUP BY $80 := $72, $81 := $70, $82 := $71
+			$40 := SUM($50)
+	COMPUTE	$50 := multiply($73, subtract(1, $74))
+	JOIN	INNER HASH JOIN EACH WITH EACH ON $60 = $1
+	WRITE	$80, $81, $82, $40
+		TO __stage0E_output
+		BY HASH($80, $81, $82)
+
+S0F: Sort+
+	Avg:	21 ms	0 ms	32 ms		2 ms	Input:	11,329,040
+	Max:	30 ms	0 ms	64 ms		16 ms	Output:	3,830
+	READ	$80, $81, $82, $40
+		FROM __stage0E_output
+	SORT	$30 DESC, $91 ASC
+		LIMIT 10
+	AGGREGATE	GROUP BY $90 := $80, $91 := $81, $92 := $82
+			$30 := SUM($40)
+	WRITE	$100, $101, $102, $103
+		TO __stage0F_output
+
+S10: Output
+	Avg:	30 ms	0 ms	5 ms		3 ms	Input:	3,830
+	Max:	30 ms	0 ms	5 ms		3 ms	Output:	10
+	READ	$100, $101, $102, $103
+		FROM __stage0F_output
+	SORT	$103 DESC, $101 ASC
+		LIMIT 10
+	WRITE	$110, $111, $112, $113
+		TO __stage10_output

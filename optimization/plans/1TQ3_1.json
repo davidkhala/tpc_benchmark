@@ -1,0 +1,1041 @@
+{
+  "configuration": {
+    "jobType": "QUERY", 
+    "query": {
+      "allowLargeResults": false, 
+      "createDisposition": "CREATE_IF_NEEDED", 
+      "destinationTable": {
+        "datasetId": "_8b2ecd18b35bb027a7eca3ddde23e2155a669b53", 
+        "projectId": "tpc-benchmarking-9432", 
+        "tableId": "anon2f613000d7ccc2bdc3c9e5b0e91c68c79c1b3313"
+      }, 
+      "priority": "INTERACTIVE", 
+      "query": "SELECT\n  l_orderkey,\n  SUM(l_extendedprice * (1 - l_discount)) AS revenue,\n  o_orderdate,\n  o_shippriority\nFROM\n  h_1000GB_01.customer,\n  h_1000GB_01.orders,\n  h_1000GB_01.lineitem\nWHERE\n  c_mktsegment = 'MACHINERY'\n  AND c_custkey = o_custkey\n  AND l_orderkey = o_orderkey\n  AND o_orderdate < date '1995-03-29'\n  AND l_shipdate > date '1995-03-29'\nGROUP BY\n  l_orderkey,\n  o_orderdate,\n  o_shippriority\nORDER BY\n  revenue DESC,\n  o_orderdate\nLIMIT\n  10 ;", 
+      "useLegacySql": false, 
+      "useQueryCache": true, 
+      "writeDisposition": "WRITE_TRUNCATE"
+    }
+  }, 
+  "etag": "Pw3ZrpSkusdzcufZsO7h/A==", 
+  "id": "tpc-benchmarking-9432:US.bquxjob_1ca07f3a_171d6d27806", 
+  "jobReference": {
+    "jobId": "bquxjob_1ca07f3a_171d6d27806", 
+    "location": "US", 
+    "projectId": "tpc-benchmarking-9432"
+  }, 
+  "kind": "bigquery#job", 
+  "selfLink": "https://bigquery.googleapis.com/bigquery/v2/projects/tpc-benchmarking-9432/jobs/bquxjob_1ca07f3a_171d6d27806?location=US", 
+  "statistics": {
+    "creationTime": "1588467399115", 
+    "endTime": "1588467422765", 
+    "query": {
+      "billingTier": 1, 
+      "cacheHit": false, 
+      "estimatedBytesProcessed": "242849667908", 
+      "queryPlan": [
+        {
+          "completedParallelInputs": "3071", 
+          "computeMsAvg": "1267", 
+          "computeMsMax": "1964", 
+          "computeRatioAvg": 0.07869076454878579, 
+          "computeRatioMax": 0.12198000124215887, 
+          "endMs": "1588467403155", 
+          "id": "0", 
+          "name": "S00: Input", 
+          "parallelInputs": "3071", 
+          "readMsAvg": "290", 
+          "readMsMax": "772", 
+          "readRatioAvg": 0.01801130364573629, 
+          "readRatioMax": 0.04794733246382212, 
+          "recordsRead": "5999989709", 
+          "recordsWritten": "3199481366", 
+          "shuffleOutputBytes": "86385996882", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "5843091", 
+          "startMs": "1588467400132", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$1:l_orderkey, $2:l_extendedprice, $3:l_discount, $4:l_shipdate", 
+                "FROM h_1000GB_01.lineitem", 
+                "WHERE greater($4, 9218)"
+              ]
+            }, 
+            {
+              "kind": "WRITE", 
+              "substeps": [
+                "$1, $2, $3", 
+                "TO __stage00_output", 
+                "BY HASH($1)"
+              ]
+            }
+          ], 
+          "waitMsAvg": "648", 
+          "waitMsMax": "751", 
+          "waitRatioAvg": 0.04024594745667971, 
+          "waitRatioMax": 0.04664306564809639, 
+          "writeMsAvg": "100", 
+          "writeMsMax": "317", 
+          "writeRatioAvg": 0.0062107943605987205, 
+          "writeRatioMax": 0.019688218123097945
+        }, 
+        {
+          "completedParallelInputs": "672", 
+          "computeMsAvg": "1193", 
+          "computeMsMax": "1961", 
+          "computeRatioAvg": 0.07409477672194274, 
+          "computeRatioMax": 0.12179367741134091, 
+          "endMs": "1588467402226", 
+          "id": "1", 
+          "name": "S01: Input", 
+          "parallelInputs": "672", 
+          "readMsAvg": "267", 
+          "readMsMax": "632", 
+          "readRatioAvg": 0.016582820942798584, 
+          "readRatioMax": 0.039252220358983916, 
+          "recordsRead": "1500000000", 
+          "recordsWritten": "737540720", 
+          "shuffleOutputBytes": "23601303040", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "1136535", 
+          "startMs": "1588467400129", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$20:o_orderkey, $21:o_custkey, $22:o_orderdate, $23:o_shippriority", 
+                "FROM h_1000GB_01.orders", 
+                "WHERE less($22, 9218)"
+              ]
+            }, 
+            {
+              "kind": "WRITE", 
+              "substeps": [
+                "$20, $21, $22, $23", 
+                "TO __stage01_output", 
+                "BY HASH($21)"
+              ]
+            }
+          ], 
+          "waitMsAvg": "537", 
+          "waitMsMax": "638", 
+          "waitRatioAvg": 0.03335196571641513, 
+          "waitRatioMax": 0.03962486802061984, 
+          "writeMsAvg": "35", 
+          "writeMsMax": "227", 
+          "writeRatioAvg": 0.0021737780262095522, 
+          "writeRatioMax": 0.014098503198559096
+        }, 
+        {
+          "completedParallelInputs": "96", 
+          "computeMsAvg": "187", 
+          "computeMsMax": "256", 
+          "computeRatioAvg": 0.011614185454319607, 
+          "computeRatioMax": 0.015899633563132724, 
+          "endMs": "1588467401027", 
+          "id": "2", 
+          "name": "S02: Input", 
+          "parallelInputs": "96", 
+          "readMsAvg": "125", 
+          "readMsMax": "333", 
+          "readRatioAvg": 0.0077634929507484005, 
+          "readRatioMax": 0.02068194522079374, 
+          "recordsRead": "150000000", 
+          "recordsWritten": "30003137", 
+          "shuffleOutputBytes": "270028233", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "42017", 
+          "startMs": "1588467400144", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$10:c_custkey, $11:c_mktsegment", 
+                "FROM h_1000GB_01.customer", 
+                "WHERE equal($11, 'MACHINERY')"
+              ]
+            }, 
+            {
+              "kind": "WRITE", 
+              "substeps": [
+                "$10", 
+                "TO __stage02_output", 
+                "BY HASH($10)"
+              ]
+            }
+          ], 
+          "waitMsAvg": "394", 
+          "waitMsMax": "454", 
+          "waitRatioAvg": 0.02447052978075896, 
+          "waitRatioMax": 0.028197006397118193, 
+          "writeMsAvg": "40", 
+          "writeMsMax": "123", 
+          "writeRatioAvg": 0.0024843177442394884, 
+          "writeRatioMax": 0.007639277063536426
+        }, 
+        {
+          "completedParallelInputs": "31", 
+          "computeMsAvg": "190", 
+          "computeMsMax": "273", 
+          "computeRatioAvg": 0.011800509285137569, 
+          "computeRatioMax": 0.016955468604434507, 
+          "endMs": "1588467401592", 
+          "id": "3", 
+          "inputStages": [
+            "2"
+          ], 
+          "name": "S03: Repartition", 
+          "parallelInputs": "31", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "9303929", 
+          "recordsWritten": "9303929", 
+          "shuffleOutputBytes": "83735361", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "8232", 
+          "startMs": "1588467401385", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "FROM __stage02_output"
+              ]
+            }
+          ], 
+          "waitMsAvg": "1", 
+          "waitMsMax": "4", 
+          "waitRatioAvg": 6.21079436059872e-05, 
+          "waitRatioMax": 0.0002484317744239488, 
+          "writeMsAvg": "32", 
+          "writeMsMax": "46", 
+          "writeRatioAvg": 0.0019874541953915905, 
+          "writeRatioMax": 0.0028569654058754113
+        }, 
+        {
+          "completedParallelInputs": "31", 
+          "computeMsAvg": "6707", 
+          "computeMsMax": "8809", 
+          "computeRatioAvg": 0.4165579777653562, 
+          "computeRatioMax": 0.5471088752251413, 
+          "endMs": "1588467406008", 
+          "id": "4", 
+          "inputStages": [
+            "1"
+          ], 
+          "name": "S04: Repartition", 
+          "parallelInputs": "31", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "207799132", 
+          "recordsWritten": "207799132", 
+          "shuffleOutputBytes": "6649572224", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "239360", 
+          "startMs": "1588467401386", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "FROM __stage01_output"
+              ]
+            }
+          ], 
+          "waitMsAvg": "2", 
+          "waitMsMax": "3", 
+          "waitRatioAvg": 0.0001242158872119744, 
+          "waitRatioMax": 0.0001863238308179616, 
+          "writeMsAvg": "192", 
+          "writeMsMax": "1512", 
+          "writeRatioAvg": 0.011924725172349543, 
+          "writeRatioMax": 0.09390721073225265
+        }, 
+        {
+          "completedParallelInputs": "26", 
+          "computeMsAvg": "184", 
+          "computeMsMax": "252", 
+          "computeRatioAvg": 0.011427861623501645, 
+          "computeRatioMax": 0.015651201788708775, 
+          "endMs": "1588467401752", 
+          "id": "5", 
+          "inputStages": [
+            "3", 
+            "2"
+          ], 
+          "name": "S05: Repartition", 
+          "parallelInputs": "26", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "7799203", 
+          "recordsWritten": "7799203", 
+          "shuffleOutputBytes": "70192827", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "10201", 
+          "startMs": "1588467401403", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "FROM __stage03_output"
+              ]
+            }
+          ], 
+          "waitMsAvg": "0", 
+          "waitMsMax": "1", 
+          "waitRatioAvg": 0, 
+          "waitRatioMax": 6.21079436059872e-05, 
+          "writeMsAvg": "34", 
+          "writeMsMax": "52", 
+          "writeRatioAvg": 0.002111670082603565, 
+          "writeRatioMax": 0.0032296130675113347
+        }, 
+        {
+          "completedParallelInputs": "26", 
+          "computeMsAvg": "5955", 
+          "computeMsMax": "7096", 
+          "computeRatioAvg": 0.3698528041736538, 
+          "computeRatioMax": 0.4407179678280852, 
+          "endMs": "1588467406127", 
+          "id": "6", 
+          "inputStages": [
+            "4", 
+            "1"
+          ], 
+          "name": "S06: Repartition", 
+          "parallelInputs": "26", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "177178297", 
+          "recordsWritten": "177178297", 
+          "shuffleOutputBytes": "5669705504", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "181844", 
+          "startMs": "1588467401404", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "FROM __stage04_output"
+              ]
+            }
+          ], 
+          "waitMsAvg": "0", 
+          "waitMsMax": "1", 
+          "waitRatioAvg": 0, 
+          "waitRatioMax": 6.21079436059872e-05, 
+          "writeMsAvg": "360", 
+          "writeMsMax": "2246", 
+          "writeRatioAvg": 0.022358859698155393, 
+          "writeRatioMax": 0.13949444133904726
+        }, 
+        {
+          "completedParallelInputs": "35", 
+          "computeMsAvg": "188", 
+          "computeMsMax": "247", 
+          "computeRatioAvg": 0.011676293397925594, 
+          "computeRatioMax": 0.01534066207067884, 
+          "endMs": "1588467401886", 
+          "id": "7", 
+          "inputStages": [
+            "5", 
+            "2"
+          ], 
+          "name": "S07: Repartition", 
+          "parallelInputs": "35", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "10500531", 
+          "recordsWritten": "10500531", 
+          "shuffleOutputBytes": "94504779", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "18347", 
+          "startMs": "1588467401494", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "FROM __stage05_output"
+              ]
+            }
+          ], 
+          "waitMsAvg": "0", 
+          "waitMsMax": "3", 
+          "waitRatioAvg": 0, 
+          "waitRatioMax": 0.0001863238308179616, 
+          "writeMsAvg": "50", 
+          "writeMsMax": "88", 
+          "writeRatioAvg": 0.0031053971802993603, 
+          "writeRatioMax": 0.005465499037326874
+        }, 
+        {
+          "completedParallelInputs": "35", 
+          "computeMsAvg": "6716", 
+          "computeMsMax": "8108", 
+          "computeRatioAvg": 0.41711694925781007, 
+          "computeRatioMax": 0.5035712067573442, 
+          "endMs": "1588467406578", 
+          "id": "8", 
+          "inputStages": [
+            "6", 
+            "1"
+          ], 
+          "name": "S08: Repartition", 
+          "parallelInputs": "35", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "243809336", 
+          "recordsWritten": "243809336", 
+          "shuffleOutputBytes": "7801898752", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "290662", 
+          "startMs": "1588467401496", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "FROM __stage06_output"
+              ]
+            }
+          ], 
+          "waitMsAvg": "1", 
+          "waitMsMax": "14", 
+          "waitRatioAvg": 6.21079436059872e-05, 
+          "waitRatioMax": 0.0008695112104838209, 
+          "writeMsAvg": "371", 
+          "writeMsMax": "1902", 
+          "writeRatioAvg": 0.023042047077821252, 
+          "writeRatioMax": 0.11812930873858767
+        }, 
+        {
+          "completedParallelInputs": "8", 
+          "computeMsAvg": "192", 
+          "computeMsMax": "216", 
+          "computeRatioAvg": 0.011924725172349543, 
+          "computeRatioMax": 0.013415315818893237, 
+          "endMs": "1588467402105", 
+          "id": "9", 
+          "inputStages": [
+            "7", 
+            "2"
+          ], 
+          "name": "S09: Repartition", 
+          "parallelInputs": "8", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "2399474", 
+          "recordsWritten": "2399474", 
+          "shuffleOutputBytes": "21595266", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "2048", 
+          "startMs": "1588467401954", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "FROM __stage07_output"
+              ]
+            }
+          ], 
+          "waitMsAvg": "0", 
+          "waitMsMax": "1", 
+          "waitRatioAvg": 0, 
+          "waitRatioMax": 6.21079436059872e-05, 
+          "writeMsAvg": "30", 
+          "writeMsMax": "34", 
+          "writeRatioAvg": 0.001863238308179616, 
+          "writeRatioMax": 0.002111670082603565
+        }, 
+        {
+          "completedParallelInputs": "8", 
+          "computeMsAvg": "7504", 
+          "computeMsMax": "8388", 
+          "computeRatioAvg": 0.466058008819328, 
+          "computeRatioMax": 0.5209614309670206, 
+          "endMs": "1588467409713", 
+          "id": "10", 
+          "inputStages": [
+            "8", 
+            "1"
+          ], 
+          "name": "S0A: Repartition", 
+          "parallelInputs": "8", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "58389858", 
+          "recordsWritten": "58389858", 
+          "shuffleOutputBytes": "1868475456", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "72308", 
+          "startMs": "1588467401955", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "FROM __stage08_output"
+              ]
+            }
+          ], 
+          "waitMsAvg": "1", 
+          "waitMsMax": "11", 
+          "waitRatioAvg": 6.21079436059872e-05, 
+          "waitRatioMax": 0.0006831873796658592, 
+          "writeMsAvg": "94", 
+          "writeMsMax": "255", 
+          "writeRatioAvg": 0.005838146698962797, 
+          "writeRatioMax": 0.015837525619526737
+        }, 
+        {
+          "completedParallelInputs": "1000", 
+          "computeMsAvg": "1061", 
+          "computeMsMax": "1838", 
+          "computeRatioAvg": 0.06589652816595243, 
+          "computeRatioMax": 0.11415440034780448, 
+          "endMs": "1588467411524", 
+          "id": "11", 
+          "inputStages": [
+            "9", 
+            "10", 
+            "1", 
+            "2"
+          ], 
+          "name": "S0B: Join", 
+          "parallelInputs": "1000", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "767543857", 
+          "recordsWritten": "147545389", 
+          "shuffleOutputBytes": "3393543947", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "1588546", 
+          "startMs": "1588467409756", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$10", 
+                "FROM __stage02_output"
+              ]
+            }, 
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$20, $21, $22, $23", 
+                "FROM __stage01_output"
+              ]
+            }, 
+            {
+              "kind": "JOIN", 
+              "substeps": [
+                "INNER HASH JOIN EACH  WITH EACH  ON $10 = $21"
+              ]
+            }, 
+            {
+              "kind": "WRITE", 
+              "substeps": [
+                "$60, $61, $62", 
+                "TO __stage0B_output", 
+                "BY HASH($60)"
+              ]
+            }
+          ], 
+          "waitMsAvg": "21", 
+          "waitMsMax": "47", 
+          "waitRatioAvg": 0.0013042668157257314, 
+          "waitRatioMax": 0.0029190733494813986, 
+          "writeMsAvg": "59", 
+          "writeMsMax": "1106", 
+          "writeRatioAvg": 0.0036643686727532454, 
+          "writeRatioMax": 0.06869138562822184
+        }, 
+        {
+          "completedParallelInputs": "100", 
+          "computeMsAvg": "12373", 
+          "computeMsMax": "16101", 
+          "computeRatioAvg": 0.7684615862368797, 
+          "computeRatioMax": 1, 
+          "endMs": "1588467418731", 
+          "id": "12", 
+          "inputStages": [
+            "0"
+          ], 
+          "name": "S0C: Repartition", 
+          "parallelInputs": "100", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "1321570619", 
+          "recordsWritten": "1321570619", 
+          "shuffleOutputBytes": "35682406713", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "1518053", 
+          "startMs": "1588467410223", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "FROM __stage00_output"
+              ]
+            }
+          ], 
+          "waitMsAvg": "1", 
+          "waitMsMax": "6", 
+          "waitRatioAvg": 6.21079436059872e-05, 
+          "waitRatioMax": 0.0003726476616359232, 
+          "writeMsAvg": "175", 
+          "writeMsMax": "1218", 
+          "writeRatioAvg": 0.01086889013104776, 
+          "writeRatioMax": 0.07564747531209241
+        }, 
+        {
+          "completedParallelInputs": "100", 
+          "computeMsAvg": "58", 
+          "computeMsMax": "85", 
+          "computeRatioAvg": 0.003602260729147258, 
+          "computeRatioMax": 0.005279175206508912, 
+          "endMs": "1588467412296", 
+          "id": "13", 
+          "inputStages": [
+            "11"
+          ], 
+          "name": "S0D: Repartition", 
+          "parallelInputs": "100", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "5661616", 
+          "recordsWritten": "5661616", 
+          "shuffleOutputBytes": "130217168", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "241582", 
+          "startMs": "1588467410232", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "FROM __stage0B_output"
+              ]
+            }
+          ], 
+          "waitMsAvg": "10", 
+          "waitMsMax": "45", 
+          "waitRatioAvg": 0.0006210794360598721, 
+          "waitRatioMax": 0.002794857462269424, 
+          "writeMsAvg": "17", 
+          "writeMsMax": "563", 
+          "writeRatioAvg": 0.0010558350413017825, 
+          "writeRatioMax": 0.034966772250170794
+        }, 
+        {
+          "completedParallelInputs": "1000", 
+          "computeMsAvg": "2931", 
+          "computeMsMax": "4901", 
+          "computeRatioAvg": 0.1820383827091485, 
+          "computeRatioMax": 0.3043910316129433, 
+          "endMs": "1588467422313", 
+          "id": "14", 
+          "inputStages": [
+            "13", 
+            "12", 
+            "0", 
+            "11"
+          ], 
+          "name": "S0E: Join+", 
+          "parallelInputs": "1000", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "3347026755", 
+          "recordsWritten": "11329040", 
+          "shuffleOutputBytes": "362529280", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "3973274", 
+          "startMs": "1588467418764", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$60, $61, $62", 
+                "FROM __stage0B_output"
+              ]
+            }, 
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$1, $2, $3", 
+                "FROM __stage00_output"
+              ]
+            }, 
+            {
+              "kind": "AGGREGATE", 
+              "substeps": [
+                "GROUP BY $80 := $72, $81 := $70, $82 := $71", 
+                "$40 := SUM($50)"
+              ]
+            }, 
+            {
+              "kind": "COMPUTE", 
+              "substeps": [
+                "$50 := multiply($73, subtract(1, $74))"
+              ]
+            }, 
+            {
+              "kind": "JOIN", 
+              "substeps": [
+                "INNER HASH JOIN EACH  WITH EACH  ON $60 = $1"
+              ]
+            }, 
+            {
+              "kind": "WRITE", 
+              "substeps": [
+                "$80, $81, $82, $40", 
+                "TO __stage0E_output", 
+                "BY HASH($80, $81, $82)"
+              ]
+            }
+          ], 
+          "waitMsAvg": "125", 
+          "waitMsMax": "268", 
+          "waitRatioAvg": 0.0077634929507484005, 
+          "waitRatioMax": 0.01664492888640457, 
+          "writeMsAvg": "12", 
+          "writeMsMax": "181", 
+          "writeRatioAvg": 0.0007452953232718465, 
+          "writeRatioMax": 0.011241537792683684
+        }, 
+        {
+          "completedParallelInputs": "383", 
+          "computeMsAvg": "32", 
+          "computeMsMax": "64", 
+          "computeRatioAvg": 0.0019874541953915905, 
+          "computeRatioMax": 0.003974908390783181, 
+          "endMs": "1588467422594", 
+          "id": "15", 
+          "inputStages": [
+            "14"
+          ], 
+          "name": "S0F: Sort+", 
+          "parallelInputs": "383", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "11329040", 
+          "recordsWritten": "3830", 
+          "shuffleOutputBytes": "122560", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "96757", 
+          "startMs": "1588467422318", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$80, $81, $82, $40", 
+                "FROM __stage0E_output"
+              ]
+            }, 
+            {
+              "kind": "SORT", 
+              "substeps": [
+                "$30 DESC, $91 ASC", 
+                "LIMIT 10"
+              ]
+            }, 
+            {
+              "kind": "AGGREGATE", 
+              "substeps": [
+                "GROUP BY $90 := $80, $91 := $81, $92 := $82", 
+                "$30 := SUM($40)"
+              ]
+            }, 
+            {
+              "kind": "WRITE", 
+              "substeps": [
+                "$100, $101, $102, $103", 
+                "TO __stage0F_output"
+              ]
+            }
+          ], 
+          "waitMsAvg": "21", 
+          "waitMsMax": "30", 
+          "waitRatioAvg": 0.0013042668157257314, 
+          "waitRatioMax": 0.001863238308179616, 
+          "writeMsAvg": "2", 
+          "writeMsMax": "16", 
+          "writeRatioAvg": 0.0001242158872119744, 
+          "writeRatioMax": 0.0009937270976957953
+        }, 
+        {
+          "completedParallelInputs": "1", 
+          "computeMsAvg": "5", 
+          "computeMsMax": "5", 
+          "computeRatioAvg": 0.00031053971802993605, 
+          "computeRatioMax": 0.00031053971802993605, 
+          "endMs": "1588467422617", 
+          "id": "16", 
+          "inputStages": [
+            "15"
+          ], 
+          "name": "S10: Output", 
+          "parallelInputs": "1", 
+          "readMsAvg": "0", 
+          "readMsMax": "0", 
+          "readRatioAvg": 0, 
+          "readRatioMax": 0, 
+          "recordsRead": "3830", 
+          "recordsWritten": "10", 
+          "shuffleOutputBytes": "320", 
+          "shuffleOutputBytesSpilled": "0", 
+          "slotMs": "132", 
+          "startMs": "1588467422351", 
+          "status": "COMPLETE", 
+          "steps": [
+            {
+              "kind": "READ", 
+              "substeps": [
+                "$100, $101, $102, $103", 
+                "FROM __stage0F_output"
+              ]
+            }, 
+            {
+              "kind": "SORT", 
+              "substeps": [
+                "$103 DESC, $101 ASC", 
+                "LIMIT 10"
+              ]
+            }, 
+            {
+              "kind": "WRITE", 
+              "substeps": [
+                "$110, $111, $112, $113", 
+                "TO __stage10_output"
+              ]
+            }
+          ], 
+          "waitMsAvg": "30", 
+          "waitMsMax": "30", 
+          "waitRatioAvg": 0.001863238308179616, 
+          "waitRatioMax": 0.001863238308179616, 
+          "writeMsAvg": "3", 
+          "writeMsMax": "3", 
+          "writeRatioAvg": 0.0001863238308179616, 
+          "writeRatioMax": 0.0001863238308179616
+        }
+      ], 
+      "referencedTables": [
+        {
+          "datasetId": "h_1000GB_01", 
+          "projectId": "tpc-benchmarking-9432", 
+          "tableId": "lineitem"
+        }, 
+        {
+          "datasetId": "h_1000GB_01", 
+          "projectId": "tpc-benchmarking-9432", 
+          "tableId": "orders"
+        }, 
+        {
+          "datasetId": "h_1000GB_01", 
+          "projectId": "tpc-benchmarking-9432", 
+          "tableId": "customer"
+        }
+      ], 
+      "statementType": "SELECT", 
+      "timeline": [
+        {
+          "activeUnits": "414", 
+          "completedUnits": "11", 
+          "elapsedMs": "882", 
+          "pendingUnits": "3828", 
+          "totalSlotMs": "13990"
+        }, 
+        {
+          "activeUnits": "3736", 
+          "completedUnits": "107", 
+          "elapsedMs": "1382", 
+          "pendingUnits": "3732", 
+          "totalSlotMs": "824890"
+        }, 
+        {
+          "activeUnits": "3160", 
+          "completedUnits": "3742", 
+          "elapsedMs": "2394", 
+          "pendingUnits": "297", 
+          "totalSlotMs": "7016165"
+        }, 
+        {
+          "activeUnits": "116", 
+          "completedUnits": "3938", 
+          "elapsedMs": "3413", 
+          "pendingUnits": "101", 
+          "totalSlotMs": "7363042"
+        }, 
+        {
+          "activeUnits": "98", 
+          "completedUnits": "3950", 
+          "elapsedMs": "4473", 
+          "pendingUnits": "89", 
+          "totalSlotMs": "7587927"
+        }, 
+        {
+          "activeUnits": "62", 
+          "completedUnits": "3998", 
+          "elapsedMs": "5514", 
+          "pendingUnits": "41", 
+          "totalSlotMs": "7751470"
+        }, 
+        {
+          "activeUnits": "29", 
+          "completedUnits": "4036", 
+          "elapsedMs": "6591", 
+          "pendingUnits": "3", 
+          "totalSlotMs": "7826956"
+        }, 
+        {
+          "activeUnits": "1", 
+          "completedUnits": "4038", 
+          "elapsedMs": "7866", 
+          "pendingUnits": "1", 
+          "totalSlotMs": "7833836"
+        }, 
+        {
+          "activeUnits": "1", 
+          "completedUnits": "4038", 
+          "elapsedMs": "8866", 
+          "pendingUnits": "1", 
+          "totalSlotMs": "7836138"
+        }, 
+        {
+          "activeUnits": "1000", 
+          "completedUnits": "4040", 
+          "elapsedMs": "10498", 
+          "pendingUnits": "999", 
+          "totalSlotMs": "8180256"
+        }, 
+        {
+          "activeUnits": "415", 
+          "completedUnits": "5021", 
+          "elapsedMs": "11508", 
+          "pendingUnits": "218", 
+          "totalSlotMs": "9699313"
+        }, 
+        {
+          "activeUnits": "168", 
+          "completedUnits": "5138", 
+          "elapsedMs": "12513", 
+          "pendingUnits": "101", 
+          "totalSlotMs": "10076049"
+        }, 
+        {
+          "activeUnits": "103", 
+          "completedUnits": "5139", 
+          "elapsedMs": "13867", 
+          "pendingUnits": "100", 
+          "totalSlotMs": "10391974"
+        }, 
+        {
+          "activeUnits": "101", 
+          "completedUnits": "5151", 
+          "elapsedMs": "15650", 
+          "pendingUnits": "88", 
+          "totalSlotMs": "10806641"
+        }, 
+        {
+          "activeUnits": "71", 
+          "completedUnits": "5180", 
+          "elapsedMs": "16671", 
+          "pendingUnits": "59", 
+          "totalSlotMs": "10997203"
+        }, 
+        {
+          "activeUnits": "46", 
+          "completedUnits": "5210", 
+          "elapsedMs": "17775", 
+          "pendingUnits": "29", 
+          "totalSlotMs": "11135195"
+        }, 
+        {
+          "activeUnits": "16", 
+          "completedUnits": "5238", 
+          "elapsedMs": "18867", 
+          "pendingUnits": "1", 
+          "totalSlotMs": "11184975"
+        }, 
+        {
+          "activeUnits": "1014", 
+          "completedUnits": "5239", 
+          "elapsedMs": "20077", 
+          "pendingUnits": "1000", 
+          "totalSlotMs": "12628080"
+        }, 
+        {
+          "activeUnits": "803", 
+          "completedUnits": "6088", 
+          "elapsedMs": "21219", 
+          "pendingUnits": "151", 
+          "totalSlotMs": "14999218"
+        }, 
+        {
+          "activeUnits": "12", 
+          "completedUnits": "6238", 
+          "elapsedMs": "22237", 
+          "pendingUnits": "1", 
+          "totalSlotMs": "15159576"
+        }, 
+        {
+          "activeUnits": "7", 
+          "completedUnits": "6623", 
+          "elapsedMs": "23018", 
+          "pendingUnits": "0", 
+          "totalSlotMs": "15257372"
+        }
+      ], 
+      "totalBytesBilled": "242850201600", 
+      "totalBytesProcessed": "242849667908", 
+      "totalPartitionsProcessed": "0", 
+      "totalSlotMs": "15257372"
+    }, 
+    "startTime": "1588467399717", 
+    "totalBytesProcessed": "242849667908", 
+    "totalSlotMs": "15257372"
+  }, 
+  "status": {
+    "state": "DONE"
+  }, 
+  "user_email": "yan.zhou@sada.com"
+}
