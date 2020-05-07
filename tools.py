@@ -9,6 +9,8 @@ import zipfile
 import shutil
 import glob
 
+import pandas as pd
+
 import config
 
 
@@ -319,3 +321,48 @@ def regex_dir(filepath_dir, file_signature, replace_mapper, verbose=False):
         file_name = os.path.basename(fp)
         if verbose:
             print(file_name)
+
+
+def parse_h_stream_seq():
+    """Parse the TPC-H query stream ordering data, as listed in 
+    Appendix A of the specification
+    
+    Returns
+    -------
+    Pandas DataFrame, where:
+        rows = query stream number
+        columns = query number to execute
+    """
+    fp = config.fp_h_stream_order
+    c = 0
+    d_str = []
+    skip = [0, 1, 3]
+    with open(fp, "r") as f:
+        for line in f:
+            if c not in skip:
+                d_str.append(line)
+            c += 1
+    d = []
+    for line in d_str:
+        d.append(line.strip().split("\t"))
+    _df = pd.DataFrame(d, columns=["stream"]+list(range(1,23)))
+    _df.drop("stream", axis=1, inplace=True)
+    return _df
+
+
+def parse_ds_seq_stream():
+    """Parse the TPC-DS query ordering data, as listed in 
+    Appendix D of the specification
+    
+    Returns
+    -------
+    Pandas DataFrame, where:
+        rows = query stream number
+        columns = query number to execute
+    """
+    fp = config.fp_ds_stream_order
+    _df = pd.read_csv(fp, skiprows=2, names=["seq"]+list(range(0,21)))
+    _df.drop("seq", axis=1, inplace=True)
+    _df = _df.transpose()
+    return _df
+
