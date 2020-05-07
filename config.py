@@ -106,6 +106,10 @@ database   = "SQLSERVER"
 machine    = "LINUX"
 workload   = "TPCH"
 
+# 3.6 TPC query order data files
+fp_ds_stream_order = cwd + sep + "ds_stream_seq.csv"
+fp_h_stream_order  = cwd + sep + "h_stream_seq.csv"
+
 # 4.1 ANSI/DDL SQL Schema Files
 
 ds_schema_ansi_sql_filepath = fp_ds_src + sep + "tools" + sep + "tpcds.sql"
