@@ -133,7 +133,7 @@ def run_dsdgen(scale=1, seed=None, total_cpu=None, validate=False, verbose=False
     if seed is not None:
         cmd = cmd + ["-RNGSEED", str(seed)]
 
-    if validation is not None:
+    if validate is not None:
         cmd = cmd + ["-VALIDATE"]
         
     if total_cpu is None:
@@ -560,7 +560,7 @@ def parse_log(fp):
 
 
 class DGenPool:
-    def __init__(self, scale=1, seed=None, n=None, verbose=False):
+    def __init__(self, scale=1, seed=None, n=None, validate=False, verbose=False):
         
         self.scale = scale
         self.seed = seed
@@ -573,6 +573,8 @@ class DGenPool:
         
         self.child = list(range(1, self.n+1))
         self.parallel = [self.n] * self.n
+        
+        self.validate = validate
         
         self.verbose = verbose
         
@@ -601,6 +603,9 @@ class DGenPool:
         if self.seed is not None:
             cmd = cmd + ["-RNGSEED", str(self.seed)]
 
+        if self.validate is not None:
+            cmd = cmd + ["-VALIDATE"]
+            
         binary_folder = config.fp_ds_src + config.sep + "tools"
 
         stdout = ""
