@@ -3,7 +3,7 @@
 -- Functional Query Definition
 -- Approved February 1998
 :x
-create view if not exists revenue:s (supplier_no, total_revenue) as
+create view revenue:s (supplier_no, total_revenue) as
 	select
 		l_suppkey,
 		sum(l_extendedprice * (1 - l_discount))
