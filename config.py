@@ -48,7 +48,16 @@ fp_output_mnt    = "/data"
 fp_ds_output_mnt = fp_output_mnt + sep + "ds"
 fp_h_output_mnt  = fp_output_mnt + sep + "h"
 
-# 2.4 Snowflake Configuration
+# 2.4 Snowflake Connector Auth Basics
+# Note: credentials in 'poor_security.py' formatted as:
+# sf_username = 
+# sf_password = 
+
+sf_account = "wja13212"
+sf_warehouse = "TEST9000"
+sf_warehouse_cost = 0.00056  # price per second for this warehouse size
+
+# 2.5 Snowflake connector configuration
 sf_role = "ACCOUNTADMIN"
 sf_storage_integration = "gcs_storage_integration"
 sf_named_file_format = "csv_file_format"
@@ -96,6 +105,7 @@ fp_h_src               = fp_h  + sep + fp_h_src_version
 # Note: this could be set to random with `int(random.random()*100)`
 
 random_seed = 13
+#random_seed = None
 
 # 3.5 TPC-H makefile parameters
 # >> Edit this if not using Linux and targeting SQL
@@ -120,6 +130,8 @@ h_schema_ddl_filepath = fp_h_src + sep + "dbgen" + sep + "dss.ddl"
 fp_schema = cwd + sep + "schema"
 fp_ds_schema = fp_schema + sep + "ds"
 fp_h_schema  = fp_schema + sep + "h"
+
+
 
 # 4.3 Files output by data generators from either test to ignore
 # >> Do NOT edit
@@ -191,10 +203,3 @@ test_schema_sf = []
 for test in tests:
     for schema in sf_schema:
         test_schema_sf.append(test + "_" + schema)
-
-# snowflake auth info
-sf_username = "dauren"
-sf_password = "239nj8834uffe"
-sf_account = "wja13212"
-sf_warehouse = "TEST1"
-sf_warehouse_cost = 0.00056  # price per second for this warehouse size

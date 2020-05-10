@@ -350,7 +350,7 @@ def qgen(path_dir=None, config_dir=None, templates_dir=None,
         kwargs.append("-c")
         # kwargs.append(file)
         
-    if d is not None:
+    if d == True:
         kwargs.append("-d")
         
     # if h is not None:

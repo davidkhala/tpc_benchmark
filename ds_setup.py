@@ -351,7 +351,7 @@ def dsqgen(file=None,
         kwargs.append("-LOG")
         kwargs.append(log)
         
-    if qualify is not None:
+    if qualify == True:
         kwargs.append("-QUALIFY")
         # kwargs.append(qualify)
         
