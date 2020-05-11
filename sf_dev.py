@@ -77,7 +77,7 @@ def query_n(sf_helper, n, test, templates_dir, scale,
     if test == "ds":
         query_text = ds_setup.qgen_template(n=n,
                                             templates_dir=templates_dir,
-                                            dialect="sqlserver",
+                                            dialect="sqlserver_tpc",
                                             scale=scale,
                                             qual=qual,
                                             verbose=verbose,

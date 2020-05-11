@@ -19,16 +19,14 @@ for Snowflake datatype specifications in standard SQL
 import snowflake.connector
 import pandas as pd
 import logging
+import atexit
 
-import config
+import config, poor_security
 
 
-def _open_connection(conf, verbose=False):
-    """Starts Snowflake warehouse and open a connection
-
-    Parameters
-    ----------
-    conf : dict, configuration object
+def open_connection(verbose=False):
+    """Starts Snowflake warehouse and opens a connection.
+    Reads values saved in config.py and poor_security.py
 
     Returns
     -------
@@ -36,20 +34,18 @@ def _open_connection(conf, verbose=False):
     """
 
     if verbose:
-        print(f'using configuration: user:{conf.sf_username}')
-        print(f'pass: {conf.sf_password}')
-        print(f'account: {conf.sf_account}')
+        print(f'using configuration: user:{poor_security.sf_username}')
+        print(f'pass: {poor_security.sf_password}')
+        print(f'account: {config.sf_account}')
 
-    conn = snowflake.connector.connect(user=conf.sf_username,
-                                       password=conf.sf_password,
-                                       account=conf.sf_account
+    conn = snowflake.connector.connect(user=poor_security.sf_username,
+                                       password=poor_security.sf_password,
+                                       account=config.sf_account
                                        )
     return conn
 
 
 # Variables
-TEST_DS = 'ds'
-TEST_H = 'h'
 TABLES_DS = [
     'customer_address', 'customer_demographics', 'ship_mode', 'time_dim', 'reason', 'income_band', 'item',
     'store', 'call_center', 'customer', 'web_site', 'store_returns', 'household_demographics', 'web_page', 'promotion', 'catalog_page',
@@ -57,42 +53,57 @@ TABLES_DS = [
 ]
 TABLE_DS_SKIP = ['date_dim']
 TABLES_H = ['nation', 'lineitem', 'customer', 'orders', 'part', 'partsupp', 'region', 'supplier']
-DATASET_SIZES = ['1GB', '2GB', '100GB', '1000GB', '10000GB']
+
+#DATASET_SIZES = ['1GB', '2GB', '100GB', '1000GB', '10000GB']
+
 GCS_LOCATION = 'gcs://tpc-benchmark-5947' #TODO: needs to go to config
-SF_ROLE = 'ACCOUNTADMIN' # TODO: needs to go to config
-#SF_ROLE = 'SYSADMIN'
-storage_integration_name = 'gcs_storage_integration' #TODO: needs to go to config
-named_file_format_name = 'csv_file_format'  # TODO: move to config
-is_integrated = False
+
+#config.sf_role = 'ACCOUNTADMIN' # TODO: needs to go to config
+#config.sf_role = 'SYSADMIN'
+
+#storage_integration_name = 'gcs_storage_integration' #TODO: needs to go to config
+#config.sf_named_file_format = 'csv_file_format'  # TODO: move to config
 
 
 class SnowflakeHelper:
     """ manages snowflake db  """
-    def __init__(self, test_type, test_size, sf_config, verbose=False):
-        """" initializes helper class """
+    def __init__(self, test, scale, verbose=False):
+        """"Snowflake connection Class
 
-        self.sf_config = sf_config  # save config
-        self.test_type = test_type  # save type of test to run: C or DS
-        self.test_size = test_size  # size of dataset to use
-        self.gcs_file_range = config.cpu_count  # auto detected in config.py
+        Parameters
+        ----------
+        test : TPC test type, either 'h' or 'ds'
+        scale : TPC scale factor in Gigabytes, 100, 1000 or 10000 expected
+        """
+
+        self.test = test            # TPC-DS or TPC-h as 'ds' or 'h'
+        self.scale = scale          # TPC Scale factor in GB
+        #self.gcs_file_range = config.cpu_count  # auto detected in config.py
+
+        # user cache control for queries
         self.cached = False
+
+        self.conn = None
+        self.is_integrated = False
 
         if verbose:
             print('Preparing to open connection to Snowflake...')
-        self.conn = _open_connection(config)
+        self.conn = open_connection()
         if verbose:
             print('Connection opened.')
 
-        if test_type not in [TEST_DS, TEST_H]:  # validate test type requested
-            raise Exception(f"Unsupported test: {self.test_type}")
+        if self.test not in ["ds", "h"]:  # validate test type requested
+            raise Exception(f"Unsupported test: {self.test}")
 
         # set tables to be imported to snowflake based on test
-        if self.test_type == TEST_H:
+        if self.test == "h":
             # create named file formats for TPC
             self.tables = TABLES_H
         else:
             self.tables = TABLES_DS
         print(self.tables)
+
+        atexit.register(self._close_connection)
 
     def _close_connection(self):
         """ closes connection"""
@@ -102,7 +113,7 @@ class SnowflakeHelper:
     def _get_cost(self, running_time):
         """ estimates cost for query runtime based on warehouse size """
         # TODO: review this
-        return running_time * self.sf_config.sf_warehouse_cost
+        return running_time * config.sf_warehouse_cost
 
     def brute_force_clean_query(self, query_text):
         query_text = query_text.replace('set rowcount', 'LIMIT').strip()
@@ -115,25 +126,29 @@ class SnowflakeHelper:
         return query_text
 
     def run_queries(self, queries):
-        """ opens cursor, runs query and returns a single (first) result or all if 'fetch-all' flag is specified """
+        """Run one or more queries
 
-        batch_start_ts = None
+
+        opens cursor, runs query and returns a single (first) result or
+        all if 'fetch-all' flag is specified """
+
+        batch_t0 = None
         batch_running_time = 0.0
         batch_row_count = 0
         batch_cost = 0.0
         batch_data = []
 
         for query in queries:
-            (start_ts, end_ts, bytes, row_count, cost, rows) = self.run_query(query)
+            (t0, t1, bytes_processed, row_count, cost, rows) = self.run_query(query)
             # properly count times (only count execution time):
 
             # first query sets start time
-            if not batch_start_ts:
-                batch_start_ts = start_ts
+            if not batch_t0:
+                batch_t0 = t0
 
             # add this query time to batch total running time
-            print(end_ts, start_ts)
-            dt = end_ts - start_ts
+            #print(t1, t0)
+            dt = t1 - t0
             batch_running_time += dt.total_seconds()
 
             # add rest of data
@@ -143,17 +158,27 @@ class SnowflakeHelper:
                 batch_data.append(rows)
 
         # calculate batch end time running time by adding runtime duration to start time
-        batch_end_ts = batch_start_ts + pd.Timedelta(batch_running_time, "s")
+        batch_t1 = batch_t0 + pd.Timedelta(batch_running_time, "s")
 
-        return batch_start_ts, batch_end_ts, -1, batch_row_count, batch_cost, []  # return data just for second select query
+        # return data just for second select query
+        return batch_t0, batch_t1, -1, batch_row_count, batch_cost, []
 
-    def run_query(self, query):
-        """ opens cursor, runs query and returns a single (first) result or all if 'fetch-all' flag is specified """
+    def run_query(self, query_text, dry_run=False, verbose=False):
+        """Run a query on Snowflake
+        Opens cursor, runs query and returns a single (first) result or
+        all if 'fetch-all' flag is specified
+
+        Parameters
+        ----------
+        query_text : str, query to execute
+        dry_run : bool, execute on Snowflake as a dry run, i.e. no computation
+        verbose : bool, print debug statements
+        """
 
         cs = self.conn.cursor()
         row_count = 0
-        start_ts = None
-        end_ts = None
+        t0 = None
+        t1 = None
         rows = []
         cost = None
 
@@ -164,62 +189,74 @@ class SnowflakeHelper:
 
         try:
             # execute query and capture time
-            start_ts = pd.Timestamp.now()
-            cs.execute(query)
-            end_ts = pd.Timestamp.now()
+            t0 = pd.Timestamp.now()
+            cs.execute(query_text)
+            t1 = pd.Timestamp.now()
 
             # extract row count and data
             row_count = cs.rowcount
             rows = cs.fetchall()
-            dt = end_ts - start_ts
+            dt = t1 - t0
 
             cost = self._get_cost(dt.total_seconds())
         except Exception as ex:
-            end_ts = pd.Timestamp.now()
-            print(f'Error running query """{query}""", error: {ex}')
+            t1 = pd.Timestamp.now()
+            print(f'Error running query """{query_text}""", error: {ex}')
         finally:
             cs.close()
 
-        logging.debug(f'query results: {start_ts}, {end_ts}, {row_count}, {len(rows)}, {cost}')
+        logging.debug(f'query results: {t0}, {t1}, {row_count}, {len(rows)}, {cost}')
 
-        return start_ts, end_ts, -1, row_count, cost, rows
+        return t0, t1, -1, row_count, cost, rows
 
-    def warehouse_start(self, create_db=False, verbose=False):
+    def warehouse_start(self, verbose=False):  #create_db=False, verbose=False):
         """ starts warehouse """
         # check if connection is set
         if not self.conn:
-            self.conn = _open_connection(self.sf_config)
+            self.conn = open_connection()
 
         # resume warehouse
-        query = f'USE ROLE {SF_ROLE}'
+        query_text = f'USE ROLE {config.sf_role}'
         if verbose:
-            print(f'running query: {query}')
-        result = self.run_query(query)
+            print(f'running query: {query_text}')
+        self.run_query(query_text)
 
-        query = f'ALTER WAREHOUSE {self.sf_config.sf_warehouse} RESUME;'
+        query_text = f'ALTER WAREHOUSE {config.sf_warehouse} RESUME;'
         if verbose:
-            print(f'running query: {query}')
-        result = self.run_query(query)
+            print(f'running query: {query_text}')
+        self.run_query(query_text)
 
-        query = f'USE WAREHOUSE {self.sf_config.sf_warehouse}'
-        print(f'running query: {query}')
-        result = self.run_query(query)
+        query_text = f'USE WAREHOUSE {config.sf_warehouse}'
+        print(f'running query: {query_text}')
+        self.run_query(query_text)
 
-        if create_db:
-            query = f'CREATE DATABASE IF NOT EXISTS {self.test_type}_{self.test_size}'
-            if verbose:
-                print(f'running query: {query}')
-            result = self.run_query(query)
+        #if create_db:
+        #    query_text = f'CREATE DATABASE IF NOT EXISTS {self.test}_{self.scale}'
+        #    if verbose:
+        #        print(f'running query: {query_text}')
+        #    self.run_query(query_text)
 
-        query = f'USE DATABASE {self.test_type}_{self.test_size}'
+        #query_text = f'USE DATABASE {self.test}_{self.scale}'
+        #if verbose:
+        #    print(f'running query: {query_text}')
+        #self.run_query(query_text)
+
+    def select_database(self, verbose=False):
+        query_text = f'USE DATABASE {self.test}_{self.scale}'
         if verbose:
-            print(f'running query: {query}')
-        result = self.run_query(query)
+            print(f'running query: {query_text}')
+        self.run_query(query_text)
+
+    def create_database(self, verbose=False):
+        query_text = f'CREATE DATABASE IF NOT EXISTS {self.test}_{self.scale}'
+        if verbose:
+            print(f'running query: {query_text}')
+        self.run_query(query_text)
 
     def warehouse_suspend(self, verbose=False):
         """ suspends warehouse and closes connection """
         # suspend warehouse
-        result = self.run_query(f'ALTER WAREHOUSE {self.sf_config.sf_warehouse} SUSPEND;')
+        result = self.run_query(f'ALTER WAREHOUSE {config.sf_warehouse} SUSPEND;')
         if verbose:
             print(f'warehouse suspend: {result}')
         # close connection
@@ -227,36 +264,42 @@ class SnowflakeHelper:
         # reset connection object
         self.conn = None
 
-    def is_integrated(self):
-        """ checks to see if we need to run GCS integration again """
-
-        # TODO: for now set it manually
-        return is_integrated
-
-    def create_integration(self, is_dry_run=False):
+    def create_integration(self, is_dry_run=False, verbose=False):
         """ integrates snowflake account with GCS location """
-        # Integrating Snowflake and GCS is a multi-step process requiring actions on both Snowflake and GCP IAM side
+        # Integrating Snowflake and GCS is a multi-step process requiring
+        # actions on both Snowflake and GCP IAM side
 
-        # STEP 1: tell snowflake about CSV file structures we're expecting to import from GCS
+        # STEP 1: tell snowflake about CSV file structures we're
+        # # expecting to import from GCS
         self._create_named_file_format(is_dry_run)
 
-        # STEP 2: we need to "stage" all GCS .dat files for Snowflake to import via "COPY INTO" statement
+        # STEP 2: we need to "stage" all GCS .dat files for
+        # # Snowflake to import via "COPY INTO" statement
         # generate "stage" name
-        st_int_name = f'gcs_{self.test_type}_{self.test_size}_integration'
-        print(f'\n\n--integrating "{st_int_name}" ... ')
-        # link to GCS URI (and creates a service account which needs storage permissions in GCS IAM)
+        st_int_name = f'gcs_{self.test}_{self.scale}_integration'
+
+        if verbose:
+            print(f'Integrating "{st_int_name}" ... ')
+
+        # link to GCS URI (and creates a service account which needs
+        # storage permissions in GCS IAM)
         self._create_storage_integration(st_int_name, is_dry_run)
 
-        # grant snowflake user permissions to access "storage integration" in order to great a STAGE
+        # grant snowflake user permissions to access "storage integration"
+        # in order to great a STAGE
         self._grant_storage_integration_access(st_int_name, is_dry_run)
 
-        # create STAGE: which knows what GCS URI to pull from, what file in bucket, how to read CSV file
+        # create STAGE: which knows what GCS URI to pull from,
+        # what file in bucket, how to read CSV file
         self._create_stage(st_int_name, is_dry_run)
 
         # test stage
         self._list_stage(st_int_name, is_dry_run)
+        if verbose:
+            print(f'--finished staging "{st_int_name}"\n\n')
 
-        print(f'--finished staging "{st_int_name}"\n\n')
+        self.is_integrated = True
+
         return st_int_name
 
     def create_schema(self, is_dry_run=False):
@@ -264,10 +307,10 @@ class SnowflakeHelper:
 
          Send a schema to SF Warehouse
          """
-        print(f'\n\n--pushing schema: "{self.sf_config.h_schema_ddl_filepath}"')
+        print(f'\n\n--pushing schema: "{config.h_schema_ddl_filepath}"')
 
         # open file and read all rows:
-        if self.test_type == TEST_DS:
+        if self.test == "ds":
             schema_file = '/home/vagrant/bq_snowflake_benchmark/ds/v2.11.0rc2/tools/tpcds.sql'
         else:
             schema_file = self.config.h_schema_ddl_filepath
@@ -308,9 +351,9 @@ class SnowflakeHelper:
             return False, None
 
         # different tests have different naming conventions
-        if self.test_type == TEST_DS:
+        if self.test == "ds":
             # validate filename prefix (make sure it belongs to this test and size)
-            gcs_prefix = f'{GCS_LOCATION}/{self.test_type}_{self.test_size}_'
+            gcs_prefix = f'{GCS_LOCATION}/{self.test}_{self.scale}_'
 
             # before proceeding, check if ignore everything not matching our TEST TYPE and TEST SIZE
             if not gcs_filepath.startswith(gcs_prefix):
@@ -326,7 +369,7 @@ class SnowflakeHelper:
                 gcs_filepath_table += '_' + gcs_filepath_table_tokens[1]
         else:
             # validate filename prefix (make sure it belongs to this test and size)
-            gcs_prefix = f'{GCS_LOCATION}/{self.test_type}_{self.test_size}_'
+            gcs_prefix = f'{GCS_LOCATION}/{self.test}_{self.scale}_'
 
             # before proceeding, check if ignore everything not matching our TEST TYPE and TEST SIZE
             if not gcs_filepath.startswith(gcs_prefix):
@@ -338,15 +381,16 @@ class SnowflakeHelper:
 
         return True, gcs_filepath_table
 
-    def list_integration(self, integration_name):
+    def list_integration(self, integration_name, verbose=False):
         """ lists all files in GCS bucket """
-        print(f'\n\n--listing stage: "@{integration_name}_stage"')
+        if verbose:
+            print(f'Listing stage: "@{integration_name}_stage"')
 
         # run query on snowflake db
         results = self.run_query(f'list @{integration_name}_stage;')
 
         # unpack results
-        start_ts, end_ts, bytes_processed, row_count, cost, rows = results
+        t0, t1, bytes_processed, row_count, cost, rows = results
         if len(rows) == 0:
             print('Error listing integration')
             raise
@@ -356,15 +400,15 @@ class SnowflakeHelper:
 
         # for TPC-H test we do not need to scan the list due to the way snowflake treats filenames (as regex),
         # so file ending with `tbl.1` will match all files following the pattern (ie: `tbl.11`, `tbl.12`, etc.)
-        if self.test_type == TEST_H:
+        if self.test == "h":
             for table in self.tables:
                 if table not in table_files_db.keys():
                     table_files_db[table] = []
                 if table in ('nation', 'region'):
-                    table_files_db[table].append(f'{GCS_LOCATION}/{self.test_type}_{self.test_size}_{table}.tbl')
+                    table_files_db[table].append(f'{GCS_LOCATION}/{self.test}_{self.scale}_{table}.tbl')
                     continue
                 for i in range(1, 10):
-                    table_files_db[table].append(f'{GCS_LOCATION}/{self.test_type}_{self.test_size}_{table}.tbl.{i}')
+                    table_files_db[table].append(f'{GCS_LOCATION}/{self.test}_{self.scale}_{table}.tbl.{i}')
             return table_files_db
 
         # cleanup results and sort files into buckets based on table name
@@ -397,26 +441,29 @@ class SnowflakeHelper:
         print(f'\n\n--done listing stage')
         return table_files_db
 
-    def _create_named_file_format(self, is_dry_run=False):
-        print(f'\n\n--creating named file format: "@{named_file_format_name}"')
+    def _create_named_file_format(self, dry_run=False, verbose=False):
 
         """ creates NAMED FILE FORMATs in snowflake db """
-        # named_file_format_name = f'{self.test_type}_{self.test_size}_{table}_csv_format'
-        # TODO: not sure if we need to create a named file format for each table
-        query = f'''create or replace file format {named_file_format_name}
-            type = csv
-            field_delimiter = '|'
-            skip_header = 0
-            null_if = ('NULL', 'null')
-            empty_field_as_null = true
-            encoding = 'iso-8859-1' 
-            compression = none;'''
 
-        if is_dry_run:
-            print(query)
+        if verbose:
+            print("Creating named file format:", config.sf_named_file_format)
+
+        # config.sf_named_file_format = f'{self.test}_{self.scale}_{table}_csv_format'
+        # TODO: not sure if we need to create a named file format for each table
+        query_text = f"""create or replace file format {config.sf_named_file_format}
+                     type = csv
+                     field_delimiter = '|'
+                     skip_header = 0
+                     null_if = ('NULL', 'null')
+                     empty_field_as_null = true
+                     encoding = 'iso-8859-1' 
+                     compression = none;"""
+
+        if dry_run:
+            print(query_text)
         else:
-            print(f'running query: {query}')
-            result = self.run_query(query)
+            print(f'running query: {query_text}')
+            result = self.run_query(query_text)
             print(f'result {result}')
 
         print(f'\n\n--done creating named file format')
@@ -426,13 +473,17 @@ class SnowflakeHelper:
         """ creates STORAGE INTEGRATION """
         print(f'\n\n--creating storage integration: "{st_int_name}"')
 
-        query = f'''CREATE STORAGE INTEGRATION {st_int_name} TYPE=EXTERNAL_STAGE STORAGE_PROVIDER=GCS ENABLED=TRUE STORAGE_ALLOWED_LOCATIONS=('{GCS_LOCATION}/');'''
+        query_text = (f"CREATE STORAGE INTEGRATION {st_int_name} " +
+                      "TYPE=EXTERNAL_STAGE " +
+                      "STORAGE_PROVIDER=GCS " +
+                      "ENABLED=TRUE " +
+                      f"STORAGE_ALLOWED_LOCATIONS=('{GCS_LOCATION}/');")
 
         if is_dry_run:
-            print(query)
+            print(query_text)
         else:
-            print(f'running query: {query}')
-            result = self.run_query(query)
+            print(f'running query: {query_text}')
+            result = self.run_query(query_text)
             print(f'result {result}')
 
         print(f'\n\n--finished creating storage integration')
@@ -440,7 +491,7 @@ class SnowflakeHelper:
 
     def _grant_storage_integration_access(self, st_int_name, is_dry_run=False):
         """ grant access to STORAGE INTEGRATION and STAGE creation"""
-        query = f'GRANT CREATE STAGE on schema public to ROLE {SF_ROLE};'
+        query = f'GRANT CREATE STAGE on schema public to ROLE {config.sf_role};'
 
         if is_dry_run:
             print(query)
@@ -449,7 +500,7 @@ class SnowflakeHelper:
             result = self.run_query(query)
             print(f'result {result}')
 
-        query = f'GRANT USAGE on INTEGRATION {st_int_name} to ROLE {SF_ROLE};'
+        query = f'GRANT USAGE on INTEGRATION {st_int_name} to ROLE {config.sf_role};'
 
         if is_dry_run:
             print(query)
@@ -462,7 +513,7 @@ class SnowflakeHelper:
     def _create_stage(self, st_int_name, is_dry_run=False):
         """ creates STAGE for each file needed during import """
 
-        query = f'''CREATE STAGE {st_int_name}_stage URL='{GCS_LOCATION}' STORAGE_INTEGRATION={st_int_name} FILE_FORMAT={named_file_format_name};'''
+        query = f'''CREATE STAGE {st_int_name}_stage URL='{GCS_LOCATION}' STORAGE_INTEGRATION={st_int_name} FILE_FORMAT={config.sf_named_file_format};'''
 
         if is_dry_run:
             print(query)
@@ -487,7 +538,9 @@ class SnowflakeHelper:
 
     def import_data(self, table, gcs_file_path, storage_integration, is_dry_run=False):
         """ run import """
-        query = f'''copy into {table} from '{gcs_file_path}' storage_integration={storage_integration} file_format=(format_name=csv_file_format);'''
+        query = (f"copy into {table} from '{gcs_file_path}' " +
+                 f"storage_integration={storage_integration} " +
+                 "file_format=(format_name=csv_file_format);")
 
         if is_dry_run:
             print(query)
