@@ -789,3 +789,11 @@ Note: distinct takes more compute as it has to find all duplicateds
 https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#union
 https://dwgeek.com/snowflake-set-operators-union-except-minus-and-intersect.html/
 https://docs.snowflake.com/en/sql-reference/operators-query.html#union-all
+
+### refresh queries:
+TPC-H: 
+
+generate refresh dataset with `dbgen -s 1 -U 1 -S 1 -i 1 -d 1 -f` 
+
+generate sql statements with `python refresh.py`
+
