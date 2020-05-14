@@ -21,7 +21,7 @@ import atexit
 
 import pandas as pd
 
-import config, poor_security, gcp_storage, utils
+import config, poor_security, gcp_storage, tools
 import h_setup, ds_setup
 
 
@@ -95,10 +95,10 @@ class Warehouse:
 
 
 class Connector:
-    def __init__(self, verbose_query=False, verbose=False):
+    def __init__(self, verbose=False, verbose_query=False):
         """"Snowflake Connector wrapper class"""
-        self.verbose_query = verbose_query  # print query text
         self.verbose = verbose              # debug output for whole class
+        self.verbose_query = verbose_query  # print query text
         self.cached = False                 # user cache control for queries
         self.conn = None                    # Connector class connection
         self.cursor = None                  # Connector cursor
@@ -251,7 +251,7 @@ class Connector:
 
 
 class SFTPC:
-    def __init__(self, test, scale, cid, warehouse, desc="", verbose_query=False, verbose=False):
+    def __init__(self, test, scale, cid, warehouse, desc="", verbose=False, verbose_query=False):
         """Snowflake Connector query class
 
         Parameters
@@ -261,8 +261,8 @@ class SFTPC:
         cid : str, config identifier, i.e. "01" or "03A"
         desc : str, description of current tdata collection effort
         warehouse : str, what Snowflake warehouse to run the queries on
-        verbose_query : bool, print query text
         verbose : bool, print debug statements
+        verbose_query : bool, print query text
         """
 
         self.test = test
@@ -293,6 +293,10 @@ class SFTPC:
         self.q_label_base = self.q_label_base.lower()
 
         self.cache = False
+
+        self.results_dir = tools.make_name(db="sf", test=self.test, cid=self.cid,
+                                           kind="results", datasource=self.database,
+                                           desc=self.desc, ext="")
 
     def connect(self):
         """Initializes a network connection to Snowflake using
@@ -483,9 +487,7 @@ class SFTPC:
         qid = query_result.sfqid
         return df_result, qid
 
-    def query_n(self, n,
-                qual=None,
-                verbose=False, verbose_out=False):
+    def query_n(self, n, qual=None, std_out=False):
 
         """Query Snowflake with a specific nth query
 
@@ -493,8 +495,7 @@ class SFTPC:
         ----------
         n : int, query number to execute
         qual : None, or True to use qualifying values (to test 1GB qualification db)
-        verbose : bool, print debug statements
-        verbose_out : bool, print std_out and std_err output
+        std_out : bool, print std_out and std_err output
 
         Returns
         -------
@@ -511,15 +512,15 @@ class SFTPC:
                                                 dialect="sqlserver_tpc",
                                                 scale=self.scale,
                                                 qual=qual,
-                                                verbose=verbose,
-                                                verbose_out=verbose_out)
+                                                verbose=self.verbose,
+                                                verbose_std_out=std_out)
         elif self.test == "h":
             query_text = h_setup.qgen_template(n=n,
                                                templates_dir=tpl_dir,
                                                scale=self.scale,
                                                qual=qual,
-                                               verbose=verbose,
-                                               verbose_out=verbose_out)
+                                               verbose=self.verbose,
+                                               verbose_std_out=std_out)
         else:
             return None
 
@@ -552,36 +553,27 @@ class SFTPC:
         df_result, qid = self.parse_query_result(query_result)
         return df_result, qid
 
-    def query_seq(self, seq,
-                  qual=None, save=False,
-                  verbose=False, verbose_iter=False, verbose_query=False):
-        """Query BigQuery with TPC-DS or TPC-H query template number n
+    def query_seq(self, seq, qual=None, save=False, verbose_iter=False):
+        """Query Snowflake with TPC-DS or TPC-H query template number n
 
         Parameters
         ----------
         seq : iterable sequence int, query numbers to execute between 1 and 99
         qual : None, or True to use qualifying values (to test 1GB qualification db)
         save : bool, save data about this query sequence to disk
-        verbose : bool, print query result
         verbose_iter : bool, print per iteration status statements
-        verbose_query : bool, print the query text
 
         Returns
         -------
-        n : int, query number executed
-        t0 : datetime object, time query started
-        t1 : datetime object, time query ended
-        bytes_processed : int, bytes processed with query
-        bytes_billed : int, bytes billed for query
-        query_text : str, query text generated for query
-        df : Pandas DataFrame containing results of query
+        if length of seqence is 1, Snowflake cursor reply object
+        else None
         """
 
-        n_results = []
+        query_result = "NA"
+        n_time_data = []
         columns = ["db", "test", "scale", "source", "cid", "desc",
                    "query_n", "driver_t0", "driver_t1", "qid"]
 
-        df_seq = pd.DataFrame(None)
         t0_seq = pd.Timestamp.now("UTC")
 
         for n in seq:
@@ -598,21 +590,21 @@ class SFTPC:
             (t0, t1,
              query_result, query_text) = self.query_n(n=n,
                                                       qual=qual,
-                                                      verbose=verbose,
-                                                      verbose_out=False
+                                                      std_out=False
                                                       )
 
             df_result = query_result.fetch_pandas_all()
-            df_result["query_n"] = n
             qid = query_result.sfqid
 
             _d = ["sf", self.test, self.scale, self.database, self.cid, self.desc,
                   n, t0, t1, qid]
-            n_results.append(_d)
+            n_time_data.append(_d)
 
-            df_seq = pd.concat([df_seq, df_result])
+            if save:
+                # write results as collected by each query
+                self.write_results_csv(df=df_result, query_n=n)
 
-            if verbose_query:
+            if self.verbose_query:
                 print()
                 print("QUERY EXECUTED")
                 print("==============")
@@ -627,7 +619,7 @@ class SFTPC:
                 print("-"*40)
                 print()
 
-            if verbose:
+            if self.verbose:
                 if len(df_result) < 25:
                     print("Result:")
                     print("=======")
@@ -641,29 +633,34 @@ class SFTPC:
 
         t1_seq = pd.Timestamp.now("UTC")
 
-        if verbose:
+        if self.verbose:
             dt_seq = t1_seq - t0_seq
             print("Query Sequence Statistics")
             print("=========================")
             print("Total Time Elapsed: {}".format(dt_seq))
             print()
 
-        if save:
-            # write results as collected by each query
-            self.write_results_csv(df=df_seq)
-
             # write local timing results to file
-            self.write_times_csv(results_list=n_results, columns=columns)
+            self.write_times_csv(results_list=n_time_data, columns=columns)
 
-    def write_results_csv(self, df):
-        """Write a list of results from queries to a CSV file
+        if len(seq) == 1:
+            return query_result
+        else:
+            return
+
+    def write_results_csv(self, df, query_n):
+        """Write the results of a TPC query to a CSV file in a specific
+        folder
 
         Parameters
         ----------
         df : Pandas DataFrame
+        query_n : int, query number in TPC test
         """
-        fp = utils.make_name(db="sf", test=self.test, cid=self.cid, kind="results",
-                             datasource=self.database, desc=self.desc)
+
+        fd = self.results_dir + config.sep
+        tools.mkdir_safe(fd)
+        fp = fd + "{0:02d}.csv".format(query_n)
         df.to_csv(fp, index=False)
 
     def write_times_csv(self, results_list, columns):
@@ -674,8 +671,8 @@ class SFTPC:
         results_list : list, data as recorded on the local machine
         columns : list, column names for output CSV
         """
-        fp = utils.make_name(db="sf", test=self.test, cid=self.cid, kind="times",
-                             datasource=self.database, desc=self.desc)
+        fp = tools.make_name(db="sf", test=self.test, cid=self.cid, kind="times",
+                             datasource=self.database, desc=self.desc, ext=".csv")
 
         df = pd.DataFrame(results_list, columns=columns)
         df.to_csv(fp, index=False)

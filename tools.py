@@ -366,3 +366,23 @@ def parse_ds_seq_stream():
     _df = _df.transpose()
     return _df
 
+
+def make_name(db, test, cid, kind, datasource, desc, ext):
+    """Make a name for query results to be saved.  If parameters
+    'ext' is set to blank, '', can be used to name folders.
+
+    Parameters
+    ----------
+    db : str, data base name, either 'bq' or 'sf'
+    test : str, test being done, either 'h' or 'ds'
+    cid : str, config id, i.e. '02A' for the experiment config number
+    kind : str, kind of record, either 'results' or 'times'
+    datasource : str, dataset if bq or database if snowflake
+    desc : str, description of experiment
+    ext : str, extension including '.' i.e. '.csv'
+    """
+
+    f = (f'{config.fp_results}{config.sep}{db}_{test}_{cid}_{kind}-' +
+         f'{datasource}-{desc}-{str(pd.Timestamp.now())}{ext}')
+
+    return f

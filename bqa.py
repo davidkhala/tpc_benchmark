@@ -515,7 +515,7 @@ https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.cl
 
 
 class BQTPC:
-    def __init__(self, test, scale, cid, desc="", verbose_query=False, verbose=False):
+    def __init__(self, test, scale, cid, desc="", verbose=False, verbose_query=False):
         """Snowflake Connector query class
 
         Parameters
@@ -524,8 +524,8 @@ class BQTPC:
         scale : int, database scale factor (i.e. 1, 100, 1000 etc)
         cid : str, config identifier, i.e. "01" or "03A"
         desc : str, description of current tdata collection effort
-        verbose_query : bool, print query text
         verbose : bool, print debug statements
+        verbose_query : bool, print query text
         """
 
         self.test = test
@@ -555,6 +555,10 @@ class BQTPC:
 
         self.dry_run = False
         self.cache_set("off")
+
+        self.results_dir = tools.make_name(db="bq", test=self.test, cid=self.cid,
+                                           kind="results", datasource=self.dataset,
+                                           desc=self.desc, ext="")
 
         if verbose:
             service_account = self.client.get_service_account_email()
@@ -589,12 +593,8 @@ class BQTPC:
         pdt = self.project + "." + self.dataset + "."
         return query_text.replace(config.p_d_id, pdt)
 
-    def dataset_create(self, verbose=False):
+    def dataset_create(self):
         """ Create a dataset on a project
-
-        Parameters
-        ----------
-        verbose : bool, print debug statements
 
         Returns
         -------
@@ -604,7 +604,7 @@ class BQTPC:
         dataset_class = bigquery.Dataset(self.dataset)
         dataset_class.location = config.gcp_location
         copy_job = self.client.create_dataset(dataset_class)
-        if verbose:
+        if self.verbose:
             print("Created dataset {}.{}".format(self.client.project, self.dataset))
         return copy_job
 
@@ -690,17 +690,14 @@ class BQTPC:
 
         return df_result, qid, t0, t1, bytes_processed, bytes_billed, query_plan
 
-    def query_n(self, n,
-                qual=None,
-                verbose=False, verbose_out=False):
+    def query_n(self, n, qual=None, std_out=False):
         """Query BigQuery with a specific nth query
 
         Parameters
         ----------
         n : int, query number to execute
         qual : None, or True to use qualifying values (to test 1GB qualification db)
-        verbose : bool, print debug statements
-        verbose_out : bool, print std_out and std_err output
+        std_out : bool, print std_out and std_err output
 
         Returns
         -------
@@ -717,15 +714,15 @@ class BQTPC:
                                                 dialect="sqlserver_tpc",
                                                 scale=self.scale,
                                                 qual=qual,
-                                                verbose=verbose,
-                                                verbose_out=verbose_out)
+                                                verbose=self.verbose,
+                                                verbose_std_out=std_out)
         elif self.test == "h":
             query_text = h_setup.qgen_template(n=n,
                                                templates_dir=tpl_dir,
                                                scale=self.scale,
                                                qual=qual,
-                                               verbose=verbose,
-                                               verbose_out=verbose_out)
+                                               verbose=self.verbose,
+                                               verbose_std_out=std_out)
         else:
             return None
 
@@ -758,9 +755,7 @@ class BQTPC:
         df_result, qid, _, _, _, _, _ = self.parse_query_result(query_result)
         return df_result, qid
 
-    def query_seq(self, seq,
-                  qual=None, save=False,
-                  verbose=False, verbose_iter=False, verbose_query=False):
+    def query_seq(self, seq, qual=None, save=False, verbose_iter=False):
         """Query BigQuery with TPC-DS or TPC-H query template number n
 
         Parameters
@@ -768,26 +763,19 @@ class BQTPC:
         seq : iterable sequence int, query numbers to execute between 1 and 99
         qual : None, or True to use qualifying values (to test 1GB qualification db)
         save : bool, save data about this query sequence to disk
-        verbose : bool, print query result
         verbose_iter : bool, print per iteration status statements
-        verbose_query : bool, print the query text
 
         Returns
         -------
-        n : int, query number executed
-        t0 : datetime object, time query started
-        t1 : datetime object, time query ended
-        bytes_processed : int, bytes processed with query
-        bytes_billed : int, bytes billed for query
-        query_text : str, query text generated for query
-        df : Pandas DataFrame containing results of query
+        if length of seqence is 1, Snowflake cursor reply object
+        else None
         """
 
-        n_results = []
+        query_result = "NA"
+        n_time_data = []
         columns = ["db", "test", "scale", "source", "cid", "desc",
                    "query_n", "driver_t0", "driver_t1", "qid"]
 
-        df_seq = pd.DataFrame(None)
         t0_seq = pd.Timestamp.now("UTC")
 
         for n in seq:
@@ -804,21 +792,21 @@ class BQTPC:
             (t0, t1,
              query_result, query_text) = self.query_n(n=n,
                                                       qual=qual,
-                                                      verbose=verbose,
-                                                      verbose_out=False
+                                                      std_out=False
                                                       )
 
             df_result = query_result.result().to_dataframe()
-            df_result["query_n"] = n
             qid = query_result.job_id
 
             _d = ["bq", self.test, self.scale, self.dataset, self.cid, self.desc,
                   n, t0, t1, qid]
-            n_results.append(_d)
+            n_time_data.append(_d)
 
-            df_seq = pd.concat([df_seq, df_result])
+            if save:
+                # write results as collected by each query
+                self.write_results_csv(df=df_result, query_n=n)
 
-            if verbose_query:
+            if self.verbose_query:
                 print()
                 print("QUERY EXECUTED")
                 print("==============")
@@ -833,7 +821,7 @@ class BQTPC:
                 print("-"*40)
                 print()
 
-            if verbose:
+            if self.verbose:
                 if len(df_result) < 25:
                     print("Result:")
                     print("=======")
@@ -847,29 +835,34 @@ class BQTPC:
 
         t1_seq = pd.Timestamp.now("UTC")
 
-        if verbose:
+        if self.verbose:
             dt_seq = t1_seq - t0_seq
             print("Query Sequence Statistics")
             print("=========================")
             print("Total Time Elapsed: {}".format(dt_seq))
             print()
 
-        if save:
-            # write results as collected by each query
-            self.write_results_csv(df=df_seq)
-
             # write local timing results to file
-            self.write_times_csv(results_list=n_results, columns=columns)
+            self.write_times_csv(results_list=n_time_data, columns=columns)
 
-    def write_results_csv(self, df):
-        """Write a list of results from queries to a CSV file
+        if len(seq) == 1:
+            return query_result
+        else:
+            return
+
+    def write_results_csv(self, df, query_n):
+        """Write the results of a TPC query to a CSV file in a specific
+        folder
 
         Parameters
         ----------
         df : Pandas DataFrame
+        query_n : int, query number in TPC test
         """
-        fp = utils.make_name(db="bq", test=self.test, cid=self.cid, kind="results",
-                             datasource=self.dataset, desc=self.desc)
+
+        fd = self.results_dir + config.sep
+        tools.mkdir_safe(fd)
+        fp = fd + "{0:02d}.csv".format(query_n)
         df.to_csv(fp, index=False)
 
     def write_times_csv(self, results_list, columns):
@@ -880,8 +873,8 @@ class BQTPC:
         results_list : list, data as recorded on the local machine
         columns : list, column names for output CSV
         """
-        fp = utils.make_name(db="bq", test=self.test, cid=self.cid, kind="times",
-                             datasource=self.dataset, desc=self.desc)
+        fp = tools.make_name(db="bq", test=self.test, cid=self.cid, kind="times",
+                             datasource=self.dataset, desc=self.desc, ext=".csv")
 
         df = pd.DataFrame(results_list, columns=columns)
         df.to_csv(fp, index=False)

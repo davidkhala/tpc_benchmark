@@ -437,7 +437,7 @@ def std_err_print(std_out, err_out):
 
 
 def qgen_template(n, templates_dir, dialect, scale, qual=None,
-                  verbose=False, verbose_out=False):
+                  verbose=False, verbose_std_out=False):
     """Generate DS query text for query template number n
     
     Parameters
@@ -449,7 +449,7 @@ def qgen_template(n, templates_dir, dialect, scale, qual=None,
     scale : int, database scale factor (i.e. 1, 100, 1000 etc)
     qual : None, or True to use qualifying values (to test 1GB qualification db)
     verbose : bool, print debug statements
-    verbose_out : bool, print std_out and std_err output
+    verbose_std_out : bool, print std_out and std_err output
 
     Returns
     -------
@@ -471,7 +471,7 @@ def qgen_template(n, templates_dir, dialect, scale, qual=None,
                               verbose=verbose
                               )
 
-    if verbose_out:
+    if verbose_std_out:
         print("QUERY:", n)
         print("=========")
         print()
