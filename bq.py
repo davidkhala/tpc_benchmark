@@ -576,13 +576,14 @@ def parse_query_job(query_job, verbose=False):
     """
 
     result = query_job.result()
-    df = result.to_dataframe()
+    df_n = result.to_dataframe()
 
     t0 = query_job.started
     t1 = query_job.ended
     dt = t1 - t0
     bytes_processed = query_job.total_bytes_processed
     bytes_billed = query_job.total_bytes_billed
+    job_id = query_job.job_id
     query_plan = {k: v.__dict__ for k, v in enumerate(query_job.query_plan)}
 
     if verbose:
@@ -592,16 +593,16 @@ def parse_query_job(query_job, verbose=False):
         print("Bytes Processed: {}".format(bytes_processed))
         print("Bytes Billed: {}".format(bytes_billed))
         print()
-        if len(df) < 25:
+        if len(df_n) < 25:
             print("Result:")
             print("=======")
-            print(df)
+            print(df_n)
         else:
             print("Head of Result:")
             print("===============")
-            print(df.head())
+            print(df_n.head())
 
-    return t0, t1, bytes_processed, bytes_billed, query_plan, df
+    return t0, t1, bytes_processed, bytes_billed, query_plan, df_n, job_id
 
 
 def query_n(n, test, templates_dir, scale,
@@ -659,21 +660,13 @@ def query_n(n, test, templates_dir, scale,
     else:
         return None
 
-
-    #print("XXXXXXXXXXX")
-    #print(query_text)
-
     query_job = query(query_text=query_text,
                       project=project,
                       dataset=dataset,
                       dry_run=dry_run,
                       use_cache=use_cache)
 
-    (t0, t1,
-     bytes_processed, bytes_billed,
-     query_plan, df) = parse_query_job(query_job=query_job, verbose=verbose)
-
-    return n, t0, t1, bytes_processed, bytes_billed, query_text, query_plan, df
+    return parse_query_job(query_job=query_job, verbose=verbose)
 
 
 def query_seq(desc, test, seq, templates_dir, scale,
@@ -681,7 +674,7 @@ def query_seq(desc, test, seq, templates_dir, scale,
               qual=None, save=False,
               dry_run=False, use_cache=False,
               verbose=False, verbose_iter=False, verbose_query=False):
-    """Query BigQuery with TPC-DS query template number n
+    """Query BigQuery with TPC-DS or TPC-H query template number n
 
     Parameters
     ----------
@@ -693,6 +686,7 @@ def query_seq(desc, test, seq, templates_dir, scale,
     project : str, GCP project running this query
     dataset : str, GCP BigQuery dataset running this query
     qual : None, or True to use qualifying values (to test 1GB qualification db)
+    save : bool, save data about this query sequence to disk
     dry_run : bool, have BigQuery perform a dry run on the query
         Default: False
     use_cache : bool, False to disable BigQuery cached results
@@ -713,7 +707,7 @@ def query_seq(desc, test, seq, templates_dir, scale,
 
     assert test in ["ds", "h"], "'{}' not a TPC test".format(test)
 
-    query_data = []
+    query_measured_results = []
     df_out = pd.DataFrame(None)
     for n in seq:
         if verbose_iter:
@@ -737,7 +731,7 @@ def query_seq(desc, test, seq, templates_dir, scale,
                                    )
         _d = ["bq", test, scale, dataset, desc, n,
               t0, t1, bytes_processed, bytes_billed, query_plan, ""]
-        query_data.append(_d)
+        query_measured_results.append(_d)
 
         df_out = pd.concat([df_out, df])
 
@@ -762,7 +756,7 @@ def query_seq(desc, test, seq, templates_dir, scale,
                "t0", "t1", "bytes_processed", "bytes_billed", "query_plan", "cost"]
 
     # write results to csv file
-    utils.write_to_csv("bq", test, dataset, desc, columns, query_data, kind="query")
+    utils.write_to_csv("bq", test, dataset, desc, columns, query_measured_results, kind="query")
     if save:
         df_fp = utils.result_namer("bq", test, dataset, desc, kind="query")
         df_out.to_csv(df_fp, index=False)
