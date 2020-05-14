@@ -755,31 +755,35 @@ class BQTPC:
         df_result, qid, _, _, _, _, _ = self.parse_query_result(query_result)
         return df_result, qid
 
-    def query_seq(self, seq, qual=None, save=False, verbose_iter=False):
+    def query_seq(self, seq, seq_id=None, qual=None, save=False, verbose_iter=False):
         """Query BigQuery with TPC-DS or TPC-H query template number n
 
         Parameters
         ----------
-        seq : iterable sequence int, query numbers to execute between 1 and 99
+        seq : iterable sequence int, query numbers to execute between
+            1 and 99 for ds and 1 and 22 for h
+        seq_id : str, optional id for stream sequence - i.e. 0 or 4 etc,
+            this id is the stream id from ds or h
         qual : None, or True to use qualifying values (to test 1GB qualification db)
         save : bool, save data about this query sequence to disk
         verbose_iter : bool, print per iteration status statements
 
         Returns
         -------
-        if length of seqence is 1, Snowflake cursor reply object
+        if length of sequence is 1, Snowflake cursor reply object
         else None
         """
-
+        if seq_id is None:
+            seq_id = "sNA"
         query_result = "NA"
         n_time_data = []
         columns = ["db", "test", "scale", "source", "cid", "desc",
-                   "query_n", "driver_t0", "driver_t1", "qid"]
+                   "query_n", "seq_id", "driver_t0", "driver_t1", "qid"]
 
         t0_seq = pd.Timestamp.now("UTC")
 
         for n in seq:
-            qn_label = self.dataset + "-" + str(n) + "-" + self.desc
+            qn_label = self.dataset + "-q" + str(n) + "-" + seq_id + "-" + self.desc
             qn_label = qn_label.lower()
 
             if verbose_iter:
@@ -799,7 +803,7 @@ class BQTPC:
             qid = query_result.job_id
 
             _d = ["bq", self.test, self.scale, self.dataset, self.cid, self.desc,
-                  n, t0, t1, qid]
+                  n, seq_id, t0, t1, qid]
             n_time_data.append(_d)
 
             if save:
@@ -862,7 +866,7 @@ class BQTPC:
 
         fd = self.results_dir + config.sep
         tools.mkdir_safe(fd)
-        fp = fd + "{0:02d}.csv".format(query_n)
+        fp = fd + "bq_{0:02d}.csv".format(query_n)
         df.to_csv(fp, index=False)
 
     def write_times_csv(self, results_list, columns):
