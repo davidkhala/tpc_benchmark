@@ -1,6 +1,5 @@
 import logging
 import threading
-import time
 import datetime
 import snowflake.connector
 
@@ -49,12 +48,12 @@ def list_integration(conn):
     """ lists all files in GCS bucket """
     # select role
     query_text = f'USE ROLE ACCOUNTADMIN'
-    print(query_text)
+    logging.info(query_text)
     run_query(conn, query_text)
 
     # select proper database
     query_text = f'USE DATABASE {SF_DATABASE}'
-    print(query_text)
+    logging.info(query_text)
     run_query(conn, query_text)
 
     # run query on snowflake db
@@ -88,9 +87,9 @@ def list_integration(conn):
                 break
         # if file matches no tables, raise and exception!
         if not is_found_table:
-            print(f'unknown table!!!! {gcs_filepath}')
+            logging.error(f'unknown table!!!! {gcs_filepath}')
 
-    print(f'\n\n--done listing stage')
+    logging.info(f'\n\n--done listing stage')
     return table_files_db
 
 def run_query(conn, query):
@@ -102,7 +101,7 @@ def run_query(conn, query):
         row_count = cs.rowcount
         rows = cs.fetchall()
     except Exception as ex:
-        print(f'Error running query """{query}""", error: {ex}')
+        logging.error(f'Error running query """{query}""", error: {ex}')
     finally:
         cs.close()
 
@@ -116,32 +115,36 @@ def upload(idx, table, files):
 
     # select role
     query_text = f'USE ROLE ACCOUNTADMIN'
-    print(f'thread {idx}: {query_text}')
+    logging.info(f'thread {idx}: {query_text}')
     run_query(conn, query_text)
 
     # select proper warehouse
     query_text = f'CREATE OR REPLACE WAREHOUSE WH_{idx} WITH WAREHOUSE_SIZE="X-SMALL";'
-    print(f'thread {idx}: {query_text}')
+    logging.info(f'thread {idx}: {query_text}')
     run_query(conn, query_text)
     query_text = f'ALTER WAREHOUSE WH_{idx} RESUME'
-    print(f'thread {idx}: {query_text}')
+    logging.info(f'thread {idx}: {query_text}')
     run_query(conn, query_text)
     query_text = f'USE WAREHOUSE WH_{idx}'
-    print(f'thread {idx}: {query_text}')
+    logging.info(f'thread {idx}: {query_text}')
     run_query(conn, query_text)
 
     # select proper database
     query_text = f'USE DATABASE {SF_DATABASE}'
-    print(f'thread {idx}: {query_text}')
+    logging.info(f'thread {idx}: {query_text}')
     run_query(conn, query_text)
 
     # loop through gcs filepaths
     for gcs_filepath in sorted(files):
-        print(f'\tthread {idx}: [{datetime.datetime.now()}] importing file: {gcs_filepath}')
+        logging.info(f'\tthread {idx}: [{datetime.datetime.now()}] importing file: {gcs_filepath}')
         query_text = (f"copy into {table} from '{gcs_filepath}'  storage_integration={STORAGE_INTEGRATION} file_format=(format_name=csv_file_format);")
-        print(query_text)
+        logging.info(query_text)
         run_query(conn, query_text)
-        print(f'\tthread {idx}: finished import file @ {datetime.datetime.now().time()}')
+        logging.info(f'\tthread {idx}: finished import file @ {datetime.datetime.now().time()}')
+
+    query_text = f'ALTER WAREHOUSE WH_{idx} SUSPEND'
+    logging.info(f'thread {idx}: {query_text}')
+    run_query(conn, query_text)
 
     logging.info("END thread %s: (%s)", idx, table)
     return conn
@@ -160,7 +163,7 @@ if __name__ == "__main__":
     thread_idx = 0
     for table, files in db.items():
         thread_idx += 1
-        print(f'starting thread {thread_idx} to process table: {table}')
+        logging.info(f'starting thread {thread_idx} to process table: {table}')
         t = threading.Thread(target=upload, args=(thread_idx, table, files), name=f'worker_{thread_idx}')
         t.start()
         threads.append(t)
@@ -168,10 +171,10 @@ if __name__ == "__main__":
     # wait for all threads to finish:
     for t in threads:
         if t.is_alive():
-            print(f'joining threads {t.getName()}')
+            logging.info(f'joining threads {t.getName()}')
             t.join()
         else:
-            print(f'thread is not alive {t.getName()}')
+            logging.info(f'thread is not alive {t.getName()}')
 
     listConn.close()
     logging.info("Main: all done")
