@@ -251,7 +251,8 @@ class Connector:
 
 
 class SFTPC:
-    def __init__(self, test, scale, cid, warehouse, desc="", verbose=False, verbose_query=False):
+    def __init__(self, test, scale, cid, warehouse, desc="",
+                 timestamp=None, verbose=False, verbose_query=False):
         """Snowflake Connector query class
 
         Parameters
@@ -261,6 +262,7 @@ class SFTPC:
         cid : str, config identifier, i.e. "01" or "03A"
         desc : str, description of current tdata collection effort
         warehouse : str, what Snowflake warehouse to run the queries on
+        timestamp : Pandas Timestamp object, optional
         verbose : bool, print debug statements
         verbose_query : bool, print query text
         """
@@ -294,9 +296,10 @@ class SFTPC:
 
         self.cache = False
 
+        self.timestamp = timestamp
         self.results_dir = tools.make_name(db="sf", test=self.test, cid=self.cid,
                                            kind="results", datasource=self.database,
-                                           desc=self.desc, ext="")
+                                           desc=self.desc, ext="", timestamp=self.timestamp)
 
     def connect(self):
         """Initializes a network connection to Snowflake using
@@ -525,8 +528,15 @@ class SFTPC:
             return None
 
         t0 = pd.Timestamp.now("UTC")
-        query_result = self.sfc.query(query_text)
+
+        # Snowflake doesn't handle multiple queries in one query statement
+        # this also means that only the LAST query_result is returned
+        query_list = [q + ";" for q in query_text.split(";") if len(q.strip()) > 0]
+        for query_text in query_list:
+            query_result = self.sfc.query(query_text)
+
         t1 = pd.Timestamp.now("UTC")
+
         return t0, t1, query_result, query_text
 
     def query_history(self, t0, t1):
@@ -645,8 +655,8 @@ class SFTPC:
             print("Total Time Elapsed: {}".format(dt_seq))
             print()
 
-            # write local timing results to file
-            self.write_times_csv(results_list=n_time_data, columns=columns)
+        # write local timing results to file
+        self.write_times_csv(results_list=n_time_data, columns=columns)
 
         if len(seq) == 1:
             return query_result
@@ -677,7 +687,7 @@ class SFTPC:
         columns : list, column names for output CSV
         """
         fp = tools.make_name(db="sf", test=self.test, cid=self.cid, kind="times",
-                             datasource=self.database, desc=self.desc, ext=".csv")
-
+                             datasource=self.database, desc=self.desc, ext=".csv",
+                             timestamp=self.timestamp)
         df = pd.DataFrame(results_list, columns=columns)
         df.to_csv(fp, index=False)

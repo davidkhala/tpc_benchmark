@@ -515,7 +515,8 @@ https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.cl
 
 
 class BQTPC:
-    def __init__(self, test, scale, cid, desc="", verbose=False, verbose_query=False):
+    def __init__(self, test, scale, cid, desc="",
+                 timestamp=None, verbose=False, verbose_query=False):
         """Snowflake Connector query class
 
         Parameters
@@ -523,7 +524,8 @@ class BQTPC:
         test : str, TPC test being executed, either "ds" or "h"
         scale : int, database scale factor (i.e. 1, 100, 1000 etc)
         cid : str, config identifier, i.e. "01" or "03A"
-        desc : str, description of current tdata collection effort
+        desc : str, description of current data collection effort
+        timestamp : Pandas Timestamp object, optional
         verbose : bool, print debug statements
         verbose_query : bool, print query text
         """
@@ -556,9 +558,10 @@ class BQTPC:
         self.dry_run = False
         self.cache_set("off")
 
+        self.timestamp = timestamp
         self.results_dir = tools.make_name(db="bq", test=self.test, cid=self.cid,
                                            kind="results", datasource=self.dataset,
-                                           desc=self.desc, ext="")
+                                           desc=self.desc, ext="", timestamp=self.timestamp)
 
         if verbose:
             service_account = self.client.get_service_account_email()
@@ -727,8 +730,11 @@ class BQTPC:
             return None
 
         t0 = pd.Timestamp.now("UTC")
+
         query_result = self.query(query_text=query_text)
+
         t1 = pd.Timestamp.now("UTC")
+
         return t0, t1, query_result, query_text
 
     def query_history(self, t0, t1):
@@ -846,8 +852,8 @@ class BQTPC:
             print("Total Time Elapsed: {}".format(dt_seq))
             print()
 
-            # write local timing results to file
-            self.write_times_csv(results_list=n_time_data, columns=columns)
+        # write local timing results to file
+        self.write_times_csv(results_list=n_time_data, columns=columns)
 
         if len(seq) == 1:
             return query_result
@@ -878,8 +884,8 @@ class BQTPC:
         columns : list, column names for output CSV
         """
         fp = tools.make_name(db="bq", test=self.test, cid=self.cid, kind="times",
-                             datasource=self.dataset, desc=self.desc, ext=".csv")
-
+                             datasource=self.dataset, desc=self.desc, ext=".csv",
+                             timestamp=self.timestamp)
         df = pd.DataFrame(results_list, columns=columns)
         df.to_csv(fp, index=False)
 

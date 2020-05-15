@@ -367,7 +367,30 @@ def parse_ds_seq_stream():
     return _df
 
 
-def make_name(db, test, cid, kind, datasource, desc, ext):
+def tpc_stream(test, n):
+    """Generate the correct TPC query stream sequence
+
+    Parameters
+    ----------
+    test : str, TPC test name, either 'ds' or 'h'
+    n : int, query stream number for the test, 1-99 for ds, 1-22 for h
+    
+    Returns
+    -------
+    list of str, query numbers to execute in order index 0 to index -1
+    """
+    
+    assert test in ["ds", "h"], "Must be valid TPC test name"
+    
+    if test == "h":
+        _df = parse_h_stream_seq()
+    if test == "ds":
+        _df = parse_ds_seq_stream()
+    query_sequence = _df.loc[n].values
+    return list(query_sequence)
+
+
+def make_name(db, test, cid, kind, datasource, desc, ext, timestamp=None):
     """Make a name for query results to be saved.  If parameters
     'ext' is set to blank, '', can be used to name folders.
 
@@ -380,9 +403,12 @@ def make_name(db, test, cid, kind, datasource, desc, ext):
     datasource : str, dataset if bq or database if snowflake
     desc : str, description of experiment
     ext : str, extension including '.' i.e. '.csv'
+    timestamp : pandas Timestamp object
     """
+    if timestamp is None:
+        timestamp = pd.Timestamp.now("UTC")
 
     f = (f'{config.fp_results}{config.sep}{db}_{test}_{cid}_{kind}-' +
-         f'{datasource}-{desc}-{str(pd.Timestamp.now())}{ext}')
+         f'{datasource}-{desc}-{str(timestamp)}{ext}')
 
     return f
