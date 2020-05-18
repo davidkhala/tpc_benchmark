@@ -7,11 +7,11 @@ SF_USERNAME = 'dauren'
 SF_PASSWORD = '239nj8834uffe'
 SF_ACCOUNT = 'wja13212'
 SF_DATABASE = 'TEST_CONCURRENT_DS_100GB'
-STORAGE_INTEGRATION = 'gcs_ds_100GB_integration'
+STORAGE_INTEGRATION = 'gcs_ds_1000GB_integration'
 GCS_LOCATION = 'gcs://tpc-benchmark-5947'
 GCS_FILEPATH = ''
 TABLES = [
-    'customer_address', 'customer_demographics', 'ship_mode', 'time_dim', 'reason', 'income_band', 'item',
+    'customer_address', 'customer_demographics', 'ship_mode', 'time_dim', 'date_dim', 'reason', 'income_band', 'item',
     'store', 'call_center', 'customer', 'web_site', 'store_returns', 'household_demographics', 'web_page', 'promotion', 'catalog_page',
     'inventory', 'catalog_returns', 'web_returns', 'web_sales', 'catalog_sales', 'store_sales',
 ]
@@ -108,8 +108,8 @@ def run_query(conn, query):
     return row_count, rows
 
 
-def upload(idx, table, files):
-    logging.info("START thread %s: table (%s), files (%s)", idx, table, len(files))
+def upload(idx, table, gcs_filepath):
+    logging.info("START thread %s: table (%s), file (%s)", idx, table, gcs_filepath)
     # open snowflake connection
     conn = snowflake.connector.Connect(user=SF_USERNAME, password=SF_PASSWORD, account=SF_ACCOUNT)
 
@@ -119,7 +119,7 @@ def upload(idx, table, files):
     run_query(conn, query_text)
 
     # select proper warehouse
-    query_text = f'CREATE OR REPLACE WAREHOUSE WH_{idx} WITH WAREHOUSE_SIZE="X-SMALL";'
+    query_text = f'CREATE OR REPLACE WAREHOUSE IF NOT EXISTS WH_{idx} WITH WAREHOUSE_SIZE="X-SMALL";'
     logging.info(f'thread {idx}: {query_text}')
     run_query(conn, query_text)
     query_text = f'ALTER WAREHOUSE WH_{idx} RESUME'
@@ -135,12 +135,12 @@ def upload(idx, table, files):
     run_query(conn, query_text)
 
     # loop through gcs filepaths
-    for gcs_filepath in sorted(files):
-        logging.info(f'\tthread {idx}: [{datetime.datetime.now()}] importing file: {gcs_filepath}')
-        query_text = (f"copy into {table} from '{gcs_filepath}'  storage_integration={STORAGE_INTEGRATION} file_format=(format_name=csv_file_format);")
-        logging.info(query_text)
-        run_query(conn, query_text)
-        logging.info(f'\tthread {idx}: finished import file @ {datetime.datetime.now().time()}')
+    # for gcs_filepath in sorted(files):
+    logging.info(f'\tthread {idx}: [{datetime.datetime.now()}] importing file: {gcs_filepath}')
+    query_text = (f"copy into {table} from '{gcs_filepath}'  storage_integration={STORAGE_INTEGRATION} file_format=(format_name=csv_file_format);")
+    logging.info(query_text)
+    run_query(conn, query_text)
+    logging.info(f'\tthread {idx}: finished import file @ {datetime.datetime.now().time()}')
 
     query_text = f'ALTER WAREHOUSE WH_{idx} SUSPEND'
     logging.info(f'thread {idx}: {query_text}')
@@ -152,6 +152,8 @@ def upload(idx, table, files):
 if __name__ == "__main__":
     format = "%(asctime)s: %(message)s"
     logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
+    logging.info("Main: start")
+
 
     # get list of tables/files to upload from GCS to snowflake
     listConn = snowflake.connector.connect(user=SF_USERNAME, password=SF_PASSWORD, account=SF_ACCOUNT)
@@ -162,11 +164,11 @@ if __name__ == "__main__":
     # load each table in a separate thread
     thread_idx = 0
     for table, files in db.items():
-        thread_idx += 1
-        logging.info(f'starting thread {thread_idx} to process table: {table}')
-        t = threading.Thread(target=upload, args=(thread_idx, table, files), name=f'worker_{thread_idx}')
-        t.start()
-        threads.append(t)
+        logging.info(f'processing table: {table}')
+        for gcs_filepath in files:
+            t = threading.Thread(target=upload, args=(thread_idx, table, gcs_filepath), name=f'worker_{thread_idx}')
+            t.start()
+            threads.append(t)
 
     # wait for all threads to finish:
     for t in threads:
