@@ -41,12 +41,12 @@ def brute_force_clean_query(query_text):
     return query_text
 
 
-def parse_query_job(query_job, verbose=False):
+def parse_query_job(query_result, verbose=False):
     """
 
     Parameters
     ----------
-    query_job_tuple : results from snowflake
+    query_result : results from snowflake
     verbose : bool, print results
 
     Returns
@@ -57,7 +57,7 @@ def parse_query_job(query_job, verbose=False):
     bytes_billed : int, bytes billed for query
     df : Pandas DataFrame containing results of query
     """
-    t0, t1, bytes_processed, row_count, cost, data = query_job
+    t0, t1, bytes_processed, row_count, cost, data = query_result
     df = pd.DataFrame(data)
 
     if verbose:
@@ -475,7 +475,8 @@ class SFTPC:
                 print("Done!")
                 print()
 
-    def parse_query_result(self, query_result):
+    @staticmethod
+    def parse_query_result(query_result):
         """
         Parameters
         ----------
@@ -556,7 +557,8 @@ class SFTPC:
         t0 = t0.strftime("%Y-%m-%d %H:%M:%S")
         t1 = t1.strftime("%Y-%m-%d %H:%M:%S")
 
-        query_text = ("from table(information_schema.query_history(" +
+        query_text = ("select * " +
+                      "from table(information_schema.query_history(" +
                       f"end_time_range_start=>to_timestamp_ltz('{t0}')," +
                       f"end_time_range_end=>to_timestamp_ltz('{t1}')));")
         query_result = self.sfc.query(query_text)
@@ -590,15 +592,19 @@ class SFTPC:
                    "query_n", "seq_id", "driver_t0", "driver_t1", "qid"]
 
         t0_seq = pd.Timestamp.now("UTC")
-
-        for n in seq:
+        i_total = len(seq)
+        for i, n in enumerate(seq):
             qn_label = self.database + "-q" + str(n) + "-" + seq_id + "-" + self.desc
             qn_label = qn_label.lower()
 
             if verbose_iter:
-                print("===============")
-                print("START QUERY:", n)
-                print("QUERY Label:", qn_label)
+                print("="*40)
+                print("Start Query:", n)
+                print("-"*20)
+                print("Stream Completion: {} / {}".format(i+1, i_total))
+                print("Query Label:", qn_label)
+                print("-"*20)
+                print()
 
             self.set_query_label(qn_label)
 
@@ -622,13 +628,14 @@ class SFTPC:
             if self.verbose_query:
                 print()
                 print("QUERY EXECUTED")
-                print("==============")
+                print("--------------")
                 print(query_text)
+                print()
 
             if verbose_iter:
                 dt = t1 - t0
                 print("QUERY:", n)
-                print("=" * 40)
+                print("-" * 40)
                 print("Query ID: {}".format(qid))
                 print("Total Time Elapsed: {}".format(dt))
                 print("-"*40)
@@ -637,23 +644,24 @@ class SFTPC:
             if self.verbose:
                 if len(df_result) < 25:
                     print("Result:")
-                    print("=======")
+                    print("-------")
                     print(df_result)
                     print()
                 else:
                     print("Head of Result:")
-                    print("===============")
+                    print("---------------")
                     print(df_result.head())
                     print()
 
         t1_seq = pd.Timestamp.now("UTC")
 
-        if self.verbose:
-            dt_seq = t1_seq - t0_seq
-            print("Query Sequence Statistics")
-            print("=========================")
-            print("Total Time Elapsed: {}".format(dt_seq))
-            print()
+        #if self.verbose:
+        dt_seq = t1_seq - t0_seq
+        print()
+        print("="*40)
+        print("Query Stream Done!")
+        print("Total Time Elapsed: {}".format(dt_seq))
+        print()
 
         # write local timing results to file
         self.write_times_csv(results_list=n_time_data, columns=columns)

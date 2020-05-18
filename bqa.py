@@ -682,8 +682,8 @@ class BQTPC:
         bytes_processed : int, bytes processed with query
         bytes_billed : int, bytes billed for query
         """
-        result = query_result.result()
-        df_result = result.to_dataframe()
+        #result = query_result.result()
+        df_result = query_result.to_dataframe()
         t0 = query_result.started
         t1 = query_result.ended
         bytes_processed = query_result.total_bytes_processed
@@ -754,10 +754,11 @@ class BQTPC:
         t0 = t0.strftime("%Y-%m-%d %H:%M:%S")
         t1 = t1.strftime("%Y-%m-%d %H:%M:%S")
 
-        query_text = ("select * from `region-us`.INFORMATION_SCHEMA.JOBS_BY_PROJECT" +
+        query_text = ("select * from `region-us`.INFORMATION_SCHEMA.JOBS_BY_PROJECT " +
                       "where job_type = 'QUERY' " +
-                      f"and end_time between {t0} AND {t1}")
+                      f"and end_time between '{t0}' AND '{t1}'")
         query_result = self.query(query_text=query_text)
+        #return query_result
         df_result, qid, _, _, _, _, _ = self.parse_query_result(query_result)
         return df_result, qid
 
@@ -787,15 +788,19 @@ class BQTPC:
                    "query_n", "seq_id", "driver_t0", "driver_t1", "qid"]
 
         t0_seq = pd.Timestamp.now("UTC")
-
-        for n in seq:
+        i_total = len(seq)
+        for i, n in enumerate(seq):
             qn_label = self.dataset + "-q" + str(n) + "-" + seq_id + "-" + self.desc
             qn_label = qn_label.lower()
 
             if verbose_iter:
-                print("===============")
-                print("START QUERY:", n)
-                print("QUERY Label:", qn_label)
+                print("="*40)
+                print("Start Query:", n)
+                print("-"*20)
+                print("Stream Completion: {} / {}".format(i+1, i_total))
+                print("Query Label:", qn_label)
+                print("-"*20)
+                print()
 
             self.set_query_label(qn_label)
 
@@ -819,13 +824,14 @@ class BQTPC:
             if self.verbose_query:
                 print()
                 print("QUERY EXECUTED")
-                print("==============")
+                print("--------------")
                 print(query_text)
+                print()
 
             if verbose_iter:
                 dt = t1 - t0
                 print("QUERY:", n)
-                print("=" * 40)
+                print("-" * 40)
                 print("Query ID: {}".format(qid))
                 print("Total Time Elapsed: {}".format(dt))
                 print("-"*40)
@@ -834,23 +840,24 @@ class BQTPC:
             if self.verbose:
                 if len(df_result) < 25:
                     print("Result:")
-                    print("=======")
+                    print("-------")
                     print(df_result)
                     print()
                 else:
                     print("Head of Result:")
-                    print("===============")
+                    print("---------------")
                     print(df_result.head())
                     print()
 
         t1_seq = pd.Timestamp.now("UTC")
 
-        if self.verbose:
-            dt_seq = t1_seq - t0_seq
-            print("Query Sequence Statistics")
-            print("=========================")
-            print("Total Time Elapsed: {}".format(dt_seq))
-            print()
+        #if self.verbose:
+        dt_seq = t1_seq - t0_seq
+        print()
+        print("="*40)
+        print("Query Stream Done!")
+        print("Total Time Elapsed: {}".format(dt_seq))
+        print()
 
         # write local timing results to file
         self.write_times_csv(results_list=n_time_data, columns=columns)
