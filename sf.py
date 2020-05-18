@@ -71,7 +71,7 @@ GCS_LOCATION = 'gcs://tpc-benchmark-5947'  # TODO: needs to go to config
 # storage_integration_name = 'gcs_storage_integration' #TODO: needs to go to config
 # config.sf_named_file_format = 'csv_file_format'  # TODO: move to config
 
-WAREHOUSE_TEST_PREFIX = 'test_wh_x_small_'
+WAREHOUSE_TEST_PREFIX = 'test_concurrent_'
 
 
 class SnowflakeHelper:
