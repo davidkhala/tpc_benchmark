@@ -744,6 +744,9 @@ https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environme
 TPC-H: 
 
 generate refresh dataset with `dbgen -s 1 -U 1 -S 1 -i 1 -d 1 -f` 
-
 generate sql statements with `python refresh.py`
 
+TPC-DS:
+
+generate refresh dataset with `./dsdgen -UPDATE = 1 -DIR = upd`
+generate sql statements with `python dsrefresh.py`
