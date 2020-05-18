@@ -794,6 +794,9 @@ https://docs.snowflake.com/en/sql-reference/operators-query.html#union-all
 TPC-H: 
 
 generate refresh dataset with `dbgen -s 1 -U 1 -S 1 -i 1 -d 1 -f` 
-
 generate sql statements with `python refresh.py`
 
+TPC-DS:
+
+generate refresh dataset with `./dsdgen -UPDATE = 1 -DIR = upd`
+generate sql statements with `python dsrefresh.py`
