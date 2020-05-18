@@ -101,7 +101,7 @@ create table s_store_returns
     sret_refunded_cash numeric(7,2),
     sret_reversed_charge numeric(7,2),
     sret_store_credit numeric(7,2),
-    sret_reason_id char(16),
+    sret_reason_id char(16)
 );
 
 create table s_catalog_returns
@@ -125,7 +125,7 @@ create table s_catalog_returns
     cret_reason_id char(16),
     cret_shipmode_id char(16),
     cret_catalog_page_id char(16),
-    cret_warehouse_id char(16),
+    cret_warehouse_id char(16)
 );
 
 create table s_web_returns
@@ -146,7 +146,7 @@ create table s_web_returns
     wret_refunded_cash numeric(7,2),
     wret_reversed_charge numeric(7,2),
     wret_account_credit numeric(7,2),
-    wret_reason_id char(16),
+    wret_reason_id char(16)
 );
 
 create table s_inventory
@@ -154,6 +154,6 @@ create table s_inventory
     invn_warehouse_id char(16),
     invn_item_id char(16),
     invn_date char(10),
-    invn_qty_on_hand integer,
+    invn_qty_on_hand integer
 );
 
