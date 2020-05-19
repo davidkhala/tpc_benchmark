@@ -196,6 +196,10 @@ class Connector:
         """ Drop a database from the current warehouse"""
         self.query(f"DROP DATABASE IF EXISTS {name} CASCADE", verbose=verbose)
 
+    def schema_use(self, name, verbose=False):
+        """Use a specific schema in a database"""
+        self.query(f"USE SCHEMA {name}", verbose=verbose)
+
     def create_named_file_format(self, named_ff, verbose=False):
         """Create named file format"""
         query_text = f"""create or replace file format {named_ff}
@@ -248,6 +252,107 @@ class Connector:
                       "file_format=(format_name=csv_file_format);")
         result = self.query(query_text, verbose=verbose)
         return result
+
+
+class AU:
+    def __init__(self, warehouse):
+        """Connect to the snowflake.account_usage context
+
+        Note: requires import access:
+        grant imported privileges on database snowflake to role ...;
+
+        Parameters
+        ----------
+        warehouse : str, what Snowflake warehouse to run the queries on
+        """
+
+        self.role_str = None  # defaults to SYSADMIN
+        self.warehouse = warehouse
+        self.database = "snowflake"
+        self.schema = "account_usage"
+
+        self.verbose = False
+        self.verbose_query = False
+
+        self.sfc = Connector(verbose_query=self.verbose_query,
+                             verbose=self.verbose)
+
+    def connect(self):
+        """Initializes a network connection to Snowflake using
+        values saved in config.py and poor_security.py
+        """
+
+        self.sfc.connect(username=poor_security.sf_username,
+                         password=poor_security.sf_password,
+                         account=config.sf_account,
+                         verbose=self.verbose)
+        self.sfc.set_timezone("UTC")
+        self.sfc.set_query_tag("read_query_history")
+        self.sfc.cache_off()
+        self.sfc.warehouse_use(self.warehouse, verbose=self.verbose)
+        self.sfc.database_use(self.database, verbose=self.verbose)
+        self.sfc.schema_use("account_usage")
+
+    def close(self):
+        self.sfc.close()
+
+    def cache_set(self, state="off"):
+        """Set Snowflake user cache, API defaults to True, here we default to False
+
+        Parameters
+        ----------
+        state : str, 'on' = cache on, anything else = cache off
+        """
+        if state == "on":
+            self.sfc.cache_on()
+        else:
+            self.sfc.cache_off()
+
+    @staticmethod
+    def parse_query_result(query_result):
+        """
+        Parameters
+        ----------
+        query_result : Snowflake connector cursor object result
+
+        Returns
+        -------
+        df_result : Pandas DataFrame containing results of query
+        qid : str, query id - unique id of query on Snowflake platform
+        """
+        df_result = query_result.fetch_pandas_all()
+        qid = query_result.sfqid
+        return df_result, qid
+
+    def query_history_view(self, t0, t1):
+        """Get the time bound query history for all queries run on this account using the
+        `snowflake.account_usage` database
+
+        Note: Activity in the last 1 year is available, latency is 45 minutes.
+        https://docs.snowflake.com/en/sql-reference/account-usage.html
+        https://docs.snowflake.com/en/sql-reference/account-usage/query_history.html
+
+        Parameters
+        ----------
+        Both parameters can be either datetime, pd.Timestamp, or str objects
+        that can be parsed by pd.to_datetime
+        t0 : start time
+        t1 : end time
+        """
+        t0 = pd.to_datetime(t0)
+        t1 = pd.to_datetime(t1)
+        t0 = t0.strftime("%Y-%m-%d %H:%M:%S")
+        t1 = t1.strftime("%Y-%m-%d %H:%M:%S")
+
+        query_text = ("select * " +
+                      "from query_history " +
+                      f"where start_time>=to_timestamp_ltz('{t0}')"  #+
+                      #f"end_time_range_end=>to_timestamp_ltz('{t1}')));"
+                      )
+
+        query_result = self.sfc.query(query_text)
+        df_result, qid = self.parse_query_result(query_result)
+        return df_result, qid
 
 
 class SFTPC:
@@ -541,9 +646,13 @@ class SFTPC:
         return t0, t1, query_result, query_text
 
     def query_history(self, t0, t1):
-        """Get the query history for the current Snowflake project, bound by
-        time.
+        """Get the time bound query history for the current Snowflake context, as set
+        by connector cursor - project, warehouse and database - using the
+        `information_schema` database
 
+        Note: Activity in the last 7 days - 6 months is available, latency should be none.
+        https://docs.snowflake.com/en/sql-reference/info-schema.html
+        https://docs.snowflake.com/en/sql-reference/functions/query_history.html
 
         Parameters
         ----------
@@ -561,6 +670,7 @@ class SFTPC:
                       "from table(information_schema.query_history(" +
                       f"end_time_range_start=>to_timestamp_ltz('{t0}')," +
                       f"end_time_range_end=>to_timestamp_ltz('{t1}')));")
+
         query_result = self.sfc.query(query_text)
         df_result, qid = self.parse_query_result(query_result)
         return df_result, qid

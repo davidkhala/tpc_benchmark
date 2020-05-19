@@ -741,6 +741,10 @@ class BQTPC:
         """Get the query history for the current BigQuery project, bound by
         time.
 
+        Note: for access to information_schema, the account needs role
+        'BigQuery Resource Admin' (or perhaps a lower level)
+
+        https://cloud.google.com/bigquery/docs/information-schema-jobs
 
         Parameters
         ----------
@@ -758,7 +762,6 @@ class BQTPC:
                       "where job_type = 'QUERY' " +
                       f"and end_time between '{t0}' AND '{t1}'")
         query_result = self.query(query_text=query_text)
-        #return query_result
         df_result, qid, _, _, _, _, _ = self.parse_query_result(query_result)
         return df_result, qid
 
