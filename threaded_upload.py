@@ -1,13 +1,14 @@
 import logging
 import threading
+import time
 import datetime
 import snowflake.connector
 
 SF_USERNAME = 'dauren'
 SF_PASSWORD = '239nj8834uffe'
 SF_ACCOUNT = 'wja13212'
-SF_DATABASE = 'TEST_CONCURRENT_DS_100GB'
-STORAGE_INTEGRATION = 'gcs_ds_1000GB_integration'
+SF_DATABASE = 'TEST_CONCURRENT_DS_10000GB'
+STORAGE_INTEGRATION = 'gcs_ds_10000GB_integration'
 GCS_LOCATION = 'gcs://tpc-benchmark-5947'
 GCS_FILEPATH = ''
 TABLES = [
@@ -26,7 +27,7 @@ def _extract_table_name_from_gcs_filepath(gcs_filepath):
 
     # different tests have different naming conventions
     # validate filename prefix (make sure it belongs to this test and size)
-    gcs_prefix = f'{GCS_LOCATION}/ds_100GB_'
+    gcs_prefix = f'{GCS_LOCATION}/ds_10000GB_'
 
     # before proceeding, check if ignore everything not matching our TEST TYPE and TEST SIZE
     if not gcs_filepath.startswith(gcs_prefix):
@@ -108,8 +109,8 @@ def run_query(conn, query):
     return row_count, rows
 
 
-def upload(idx, table, gcs_filepath):
-    logging.info("START thread %s: table (%s), file (%s)", idx, table, gcs_filepath)
+def upload(idx, table, files):
+    logging.info("START thread %s: table (%s), filecount (%s)", idx, table, len(files))
     # open snowflake connection
     conn = snowflake.connector.Connect(user=SF_USERNAME, password=SF_PASSWORD, account=SF_ACCOUNT)
 
@@ -119,7 +120,7 @@ def upload(idx, table, gcs_filepath):
     run_query(conn, query_text)
 
     # select proper warehouse
-    query_text = f'CREATE OR REPLACE WAREHOUSE IF NOT EXISTS WH_{idx} WITH WAREHOUSE_SIZE="X-SMALL";'
+    query_text = f'CREATE OR REPLACE WAREHOUSE WH_{idx} WITH WAREHOUSE_SIZE="X-SMALL";'
     logging.info(f'thread {idx}: {query_text}')
     run_query(conn, query_text)
     query_text = f'ALTER WAREHOUSE WH_{idx} RESUME'
@@ -135,12 +136,12 @@ def upload(idx, table, gcs_filepath):
     run_query(conn, query_text)
 
     # loop through gcs filepaths
-    # for gcs_filepath in sorted(files):
-    logging.info(f'\tthread {idx}: [{datetime.datetime.now()}] importing file: {gcs_filepath}')
-    query_text = (f"copy into {table} from '{gcs_filepath}'  storage_integration={STORAGE_INTEGRATION} file_format=(format_name=csv_file_format);")
-    logging.info(query_text)
-    run_query(conn, query_text)
-    logging.info(f'\tthread {idx}: finished import file @ {datetime.datetime.now().time()}')
+    for gcs_filepath in sorted(files):
+        logging.info(f'\tthread {idx}: [{datetime.datetime.now()}] importing file: {gcs_filepath}')
+        query_text = (f"copy into {table} from '{gcs_filepath}'  storage_integration={STORAGE_INTEGRATION} file_format=(format_name=csv_file_format);")
+        logging.info(query_text)
+        run_query(conn, query_text)
+        logging.info(f'\tthread {idx}: finished import file @ {datetime.datetime.now().time()}')
 
     query_text = f'ALTER WAREHOUSE WH_{idx} SUSPEND'
     logging.info(f'thread {idx}: {query_text}')
@@ -163,12 +164,21 @@ if __name__ == "__main__":
 
     # load each table in a separate thread
     thread_idx = 0
+
+    logging.info(f"total tables to process: {len(db.keys())}")
+
     for table, files in db.items():
         logging.info(f'processing table: {table}')
-        for gcs_filepath in files:
-            t = threading.Thread(target=upload, args=(thread_idx, table, gcs_filepath), name=f'worker_{thread_idx}')
+        chunks = [files[x:x + 10] for x in range(0, len(files), 10)]
+
+        for chunk in chunks:
+            t = threading.Thread(target=upload, args=(thread_idx, table, chunk), name=f'worker_{thread_idx}')
             t.start()
             threads.append(t)
+            thread_idx += 1
+            time.sleep(1)  # sleep 1 seconds before firing off another thread
+
+    logging.info(f'total threads started: {thread_idx}')
 
     # wait for all threads to finish:
     for t in threads:
