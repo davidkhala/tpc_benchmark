@@ -169,7 +169,7 @@ if __name__ == "__main__":
 
     for table, files in db.items():
         logging.info(f'processing table: {table}')
-        chunks = [files[x:x + 10] for x in range(0, len(files), 10)]
+        chunks = [files[x:x + 5] for x in range(0, len(files), 5)]
 
         for chunk in chunks:
             t = threading.Thread(target=upload, args=(thread_idx, table, chunk), name=f'worker_{thread_idx}')
