@@ -54,15 +54,15 @@ with inv as
       group by w_warehouse_name,w_warehouse_sk,i_item_sk,d_moy) foo
  where case mean when 0 then 0 else stdev/mean end > 1)
 select 
-    inv1.w_warehouse_sk,
-    inv1.i_item_sk,
-    inv1.d_moy,
-    inv1.mean,
-    inv1.cov,
-    inv2.w_warehouse_sk as w_warehouse_sk_2,
-    inv2.i_item_sk as i_item_sk_2,
+    inv1.w_warehouse_sk as w_warehouse_sk_1, 
+    inv1.i_item_sk as i_item_1, 
+    inv1.d_moy as d_moy_1,
+    inv1.mean as mean_1, 
+    inv1.cov as cov_1,
+    inv2.w_warehouse_sk as w_warehouse_sk_2, 
+    inv2.i_item_sk as i_item_2, 
     inv2.d_moy as d_moy_2,
-    inv2.mean as mean_2,
+    inv2.mean as mean_2, 
     inv2.cov as cov_2
 from inv inv1,inv inv2
 where inv1.i_item_sk = inv2.i_item_sk
@@ -90,15 +90,15 @@ with inv as
       group by w_warehouse_name,w_warehouse_sk,i_item_sk,d_moy) foo
  where case mean when 0 then 0 else stdev/mean end > 1)
 select
-    inv1.w_warehouse_sk,
-    inv1.i_item_sk,
-    inv1.d_moy,
-    inv1.mean,
-    inv1.cov,
-    inv2.w_warehouse_sk as w_warehouse_sk_2,
-    inv2.i_item_sk as i_item_sk_2,
+    inv1.w_warehouse_sk as w_warehouse_sk_1, 
+    inv1.i_item_sk as i_item_1, 
+    inv1.d_moy as d_moy_1,
+    inv1.mean as mean_1, 
+    inv1.cov as cov_1,
+    inv2.w_warehouse_sk as w_warehouse_sk_2, 
+    inv2.i_item_sk as i_item_2, 
     inv2.d_moy as d_moy_2,
-    inv2.mean as mean_2,
+    inv2.mean as mean_2, 
     inv2.cov as cov_2
 from inv inv1,inv inv2
 where inv1.i_item_sk = inv2.i_item_sk
