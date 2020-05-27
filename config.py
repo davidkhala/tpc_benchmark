@@ -125,6 +125,10 @@ fp_h_stream_order  = cwd + sep + "h_stream_seq.csv"
 ds_schema_ansi_sql_filepath = fp_ds_src + sep + "tools" + sep + "tpcds.sql"
 h_schema_ddl_filepath = fp_h_src + sep + "dbgen" + sep + "dss.ddl"
 
+fp_sf_ds_schema = cwd + sep + "sc" + sep + "sf_ds_01.sql"
+fp_sf_h_schema = cwd + sep + "sc" + sep + "sf_h_01.sql"
+
+
 # 4.2 Basic BigQuery Schema Files
 
 fp_schema = cwd + sep + "schema"

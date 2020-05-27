@@ -559,9 +559,10 @@ class BQTPC:
         self.cache_set("off")
 
         self.timestamp = timestamp
-        self.results_dir = tools.make_name(db="bq", test=self.test, cid=self.cid,
-                                           kind="results", datasource=self.dataset,
-                                           desc=self.desc, ext="", timestamp=self.timestamp)
+        self.results_dir, _ = tools.make_name(db="bq", test=self.test, cid=self.cid,
+                                              kind="results", datasource=self.dataset,
+                                              desc=self.desc, ext="", timestamp=self.timestamp)
+        self.results_csv_fp = None
 
         if verbose:
             service_account = self.client.get_service_account_email()
@@ -824,20 +825,17 @@ class BQTPC:
                 # write results as collected by each query
                 self.write_results_csv(df=df_result, query_n=n)
 
-            if self.verbose_query:
-                print()
-                print("QUERY EXECUTED")
-                print("--------------")
-                print(query_text)
-                print()
-
             if verbose_iter:
                 dt = t1 - t0
-                print("QUERY:", n)
-                print("-" * 40)
                 print("Query ID: {}".format(qid))
                 print("Total Time Elapsed: {}".format(dt))
                 print("-"*40)
+                print()
+
+            if self.verbose_query:
+                print("QUERY EXECUTED")
+                print("--------------")
+                print(query_text)
                 print()
 
             if self.verbose:
@@ -882,8 +880,9 @@ class BQTPC:
 
         fd = self.results_dir + config.sep
         tools.mkdir_safe(fd)
-        fp = fd + "bq_{0:02d}.csv".format(query_n)
-        df.to_csv(fp, index=False)
+        fp = fd + "query_result_bq_{0:02d}.csv".format(query_n)
+        #df = tools.to_consistent(df)
+        df.to_csv(fp, index=False, float_format="%.3f")
 
     def write_times_csv(self, results_list, columns):
         """Write a list of results from queries to a CSV file
@@ -893,11 +892,15 @@ class BQTPC:
         results_list : list, data as recorded on the local machine
         columns : list, column names for output CSV
         """
-        fp = tools.make_name(db="bq", test=self.test, cid=self.cid, kind="times",
-                             datasource=self.dataset, desc=self.desc, ext=".csv",
-                             timestamp=self.timestamp)
+        _, fp = tools.make_name(db="bq", test=self.test, cid=self.cid,
+                                kind="times",
+                                datasource=self.dataset, desc=self.desc,
+                                ext=".csv",
+                                timestamp=self.timestamp)
+        self.results_csv_fp = self.results_dir + config.sep + fp
         df = pd.DataFrame(results_list, columns=columns)
-        df.to_csv(fp, index=False)
+        tools.mkdir_safe(self.results_dir)
+        df.to_csv(self.results_csv_fp, index=False)
 
 
 class Stats(BQTPC):

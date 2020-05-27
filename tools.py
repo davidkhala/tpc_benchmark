@@ -407,8 +407,46 @@ def make_name(db, test, cid, kind, datasource, desc, ext, timestamp=None):
     """
     if timestamp is None:
         timestamp = pd.Timestamp.now("UTC")
+        timestamp = str(timestamp).replace(" ", "_")
 
-    f = (f'{config.fp_results}{config.sep}{db}_{test}_{cid}_{kind}-' +
-         f'{datasource}-{desc}-{str(timestamp)}{ext}')
+    folder = (f'{config.fp_results}{config.sep}{db}_{test}_{cid}_{kind}-' +
+              f'{datasource}-{desc}-{str(timestamp)}')
+    file = (f'{db}_{test}_{cid}_{kind}-' +
+            f'{datasource}-{desc}-{timestamp}{ext}')
+    return folder, file
 
-    return f
+
+def to_numeric(df):
+    """Convert columns to numeric types if possible
+
+    Parameters
+    ----------
+    df : Pandas DataFrame
+
+    Returns
+    -------
+    df : Pandas DataFrame
+    """
+    for col in df.columns:
+        try:
+            df[col] = pd.to_numeric(df[col])
+        except:
+            pass
+    return df
+
+
+def to_consistent(df):
+    """Convert Pandas DataFrame to consistent representation
+
+    Parameters
+    ----------
+    df : Pandas DataFrame
+
+    Returns
+    -------
+    df : Pandas DataFrame
+    """
+    df.columns = map(str.lower, df.columns)
+    df = to_numeric(df)
+    df.fillna(value=-9999.99, inplace=True)
+    return df

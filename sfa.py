@@ -402,19 +402,23 @@ class SFTPC:
         self.cache = False
 
         self.timestamp = timestamp
-        self.results_dir = tools.make_name(db="sf", test=self.test, cid=self.cid,
-                                           kind="results", datasource=self.database,
-                                           desc=self.desc, ext="", timestamp=self.timestamp)
+        self.results_dir, _ = tools.make_name(db="sf", test=self.test, cid=self.cid,
+                                              kind="results", datasource=self.database,
+                                              desc=self.desc, ext="", timestamp=self.timestamp)
+        self.results_csv_fp = None
+
+    def _connect(self):
+        self.sfc.connect(username=poor_security.sf_username,
+                         password=poor_security.sf_password,
+                         account=config.sf_account,
+                         verbose=self.verbose)
 
     def connect(self):
         """Initializes a network connection to Snowflake using
         values saved in config.py and poor_security.py
         """
 
-        self.sfc.connect(username=poor_security.sf_username,
-                         password=poor_security.sf_password,
-                         account=config.sf_account,
-                         verbose=self.verbose)
+        self._connect()
         self.sfc.set_timezone("UTC")
         self.set_query_label(self.q_label_base)
         self.cache_set("off")
@@ -675,6 +679,14 @@ class SFTPC:
         df_result, qid = self.parse_query_result(query_result)
         return df_result, qid
 
+    def copy(self, destination):
+        """Copy current database to new database"""
+
+        #query_text = f"create or replace database DS_100GB_01 clone DS_100GB"
+        query_text = f"create or replace database {destination} clone {self.database}"
+        query_result = self.sfc.query(query_text)
+        return query_result
+
     def query_seq(self, seq, seq_id=None, qual=None, save=False, verbose_iter=False):
         """Query Snowflake with TPC-DS or TPC-H query template number n
 
@@ -735,20 +747,17 @@ class SFTPC:
                 # write results as collected by each query
                 self.write_results_csv(df=df_result, query_n=n)
 
-            if self.verbose_query:
-                print()
-                print("QUERY EXECUTED")
-                print("--------------")
-                print(query_text)
-                print()
-
             if verbose_iter:
                 dt = t1 - t0
-                print("QUERY:", n)
-                print("-" * 40)
                 print("Query ID: {}".format(qid))
                 print("Total Time Elapsed: {}".format(dt))
                 print("-"*40)
+                print()
+
+            if self.verbose_query:
+                print("QUERY EXECUTED")
+                print("--------------")
+                print(query_text)
                 print()
 
             if self.verbose:
@@ -793,8 +802,9 @@ class SFTPC:
 
         fd = self.results_dir + config.sep
         tools.mkdir_safe(fd)
-        fp = fd + "sf_{0:02d}.csv".format(query_n)
-        df.to_csv(fp, index=False)
+        fp = fd + "query_result_sf_{0:02d}.csv".format(query_n)
+        #df = tools.to_consistent(df)
+        df.to_csv(fp, index=False, float_format="%.3f")
 
     def write_times_csv(self, results_list, columns):
         """Write a list of results from queries to a CSV file
@@ -804,8 +814,12 @@ class SFTPC:
         results_list : list, data as recorded on the local machine
         columns : list, column names for output CSV
         """
-        fp = tools.make_name(db="sf", test=self.test, cid=self.cid, kind="times",
-                             datasource=self.database, desc=self.desc, ext=".csv",
-                             timestamp=self.timestamp)
+        _, fp = tools.make_name(db="sf", test=self.test, cid=self.cid,
+                                kind="times",
+                                datasource=self.database, desc=self.desc,
+                                ext=".csv",
+                                timestamp=self.timestamp)
+        self.results_csv_fp = self.results_dir + config.sep + fp
         df = pd.DataFrame(results_list, columns=columns)
-        df.to_csv(fp, index=False)
+        tools.mkdir_safe(self.results_dir)
+        df.to_csv(self.results_csv_fp, index=False)
