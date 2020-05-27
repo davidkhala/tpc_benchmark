@@ -10,6 +10,7 @@ dependencies:
   - jupyterlab
   - snowflake-connector-python
   - pandas
+  - pyarrow>=0.17
   - matplotlib
   - seaborn
   - google-cloud-bigquery

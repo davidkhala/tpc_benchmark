@@ -21,7 +21,7 @@ import atexit
 
 import pandas as pd
 
-import config, poor_security, gcp_storage
+import config, poor_security, gcp_storage, tools
 import h_setup, ds_setup
 
 
@@ -41,12 +41,12 @@ def brute_force_clean_query(query_text):
     return query_text
 
 
-def parse_query_job(query_job, verbose=False):
+def parse_query_job(query_result, verbose=False):
     """
 
     Parameters
     ----------
-    query_job_tuple : results from snowflake
+    query_result : results from snowflake
     verbose : bool, print results
 
     Returns
@@ -57,7 +57,7 @@ def parse_query_job(query_job, verbose=False):
     bytes_billed : int, bytes billed for query
     df : Pandas DataFrame containing results of query
     """
-    t0, t1, bytes_processed, row_count, cost, data = query_job
+    t0, t1, bytes_processed, row_count, cost, data = query_result
     df = pd.DataFrame(data)
 
     if verbose:
@@ -95,10 +95,10 @@ class Warehouse:
 
 
 class Connector:
-    def __init__(self, verbose_query=False, verbose=False):
+    def __init__(self, verbose=False, verbose_query=False):
         """"Snowflake Connector wrapper class"""
-        self.verbose_query = verbose_query  # print query text
         self.verbose = verbose              # debug output for whole class
+        self.verbose_query = verbose_query  # print query text
         self.cached = False                 # user cache control for queries
         self.conn = None                    # Connector class connection
         self.cursor = None                  # Connector cursor
@@ -116,17 +116,17 @@ class Connector:
         """
 
         if verbose:
-            print(f'Using configuration: user:{username}')
-            print(f'Password: {password}')
-            print(f'Account: {account}')
+            print("Snowflake configuration")
+            print("=======================")
+            print(f'Username: {username}')
+            print(f'Account:  {account}')
+            print()
 
         self.conn = snowflake.connector.connect(user=username,
                                                 password=password,
                                                 account=account
                                                 )
         self.cursor = self.conn.cursor()
-        if verbose:
-            print("Connector cursor created.")
 
     def query(self, query_text, verbose=False):
         """Opens cursor, runs query and returns all results at once
@@ -135,6 +135,10 @@ class Connector:
         ----------
         query_text : str, query to execute
         verbose : bool, print debug statements
+
+        Returns
+        -------
+        query_result : Snowflake connector cursor object result
         """
 
         assert self.conn is not None, "Connection not initialized"
@@ -147,8 +151,8 @@ class Connector:
                 print("==========")
                 print(query_text)
                 print()
-            result = self.cursor.execute(query_text)
-            return result
+            query_result = self.cursor.execute(query_text)
+            return query_result
 
     def cache_on(self):
         self.query("ALTER SESSION SET USE_CACHED_RESULT=true")
@@ -158,6 +162,12 @@ class Connector:
 
     def role_select(self, role, verbose=False):
         self.query(f'USE ROLE {role}', verbose=verbose)
+
+    def set_query_tag(self, tag_text):
+        self.query(f"ALTER SESSION SET QUERY_TAG = '{tag_text}'")
+
+    def set_timezone(self, timezone_code):
+        self.query(f"ALTER SESSION SET TIMEZONE = '{timezone_code}'")
 
     def show_warehouses(self):
         return self.query("SHOW WAREHOUSES")
@@ -185,6 +195,10 @@ class Connector:
     def database_drop(self, name, verbose=False):
         """ Drop a database from the current warehouse"""
         self.query(f"DROP DATABASE IF EXISTS {name} CASCADE", verbose=verbose)
+
+    def schema_use(self, name, verbose=False):
+        """Use a specific schema in a database"""
+        self.query(f"USE SCHEMA {name}", verbose=verbose)
 
     def create_named_file_format(self, named_ff, verbose=False):
         """Create named file format"""
@@ -240,25 +254,25 @@ class Connector:
         return result
 
 
-class SFTPC:
-    def __init__(self, warehouse, test, scale, n, verbose_query=False, verbose=False):
+class AU:
+    def __init__(self, warehouse):
+        """Connect to the snowflake.account_usage context
+
+        Note: requires import access:
+        grant imported privileges on database snowflake to role ...;
+
+        Parameters
+        ----------
+        warehouse : str, what Snowflake warehouse to run the queries on
+        """
+
+        self.role_str = None  # defaults to SYSADMIN
         self.warehouse = warehouse
-        self.test = test
-        self.scale = scale
-        self.n = n
+        self.database = "snowflake"
+        self.schema = "account_usage"
 
-        self.role_str = None
-        self.scale_str = str(scale)+"GB"
-
-        self.database = f"{self.test}_{self.scale_str}_{self.n}"
-
-        self.storage_integration_name = self.database + "_gcs_integration"
-
-        self.df_gcs_full = None  # all files in bucket, as fyi
-        self.df_gcs = None       # just files for this dataset
-
-        self.verbose = verbose
-        self.verbose_query = verbose_query
+        self.verbose = False
+        self.verbose_query = False
 
         self.sfc = Connector(verbose_query=self.verbose_query,
                              verbose=self.verbose)
@@ -272,12 +286,156 @@ class SFTPC:
                          password=poor_security.sf_password,
                          account=config.sf_account,
                          verbose=self.verbose)
+        self.sfc.set_timezone("UTC")
+        self.sfc.set_query_tag("read_query_history")
+        self.sfc.cache_off()
+        self.sfc.warehouse_use(self.warehouse, verbose=self.verbose)
+        self.sfc.database_use(self.database, verbose=self.verbose)
+        self.sfc.schema_use("account_usage")
 
     def close(self):
         self.sfc.close()
 
-    def cache(self, on=False):
-        if on:
+    def cache_set(self, state="off"):
+        """Set Snowflake user cache, API defaults to True, here we default to False
+
+        Parameters
+        ----------
+        state : str, 'on' = cache on, anything else = cache off
+        """
+        if state == "on":
+            self.sfc.cache_on()
+        else:
+            self.sfc.cache_off()
+
+    @staticmethod
+    def parse_query_result(query_result):
+        """
+        Parameters
+        ----------
+        query_result : Snowflake connector cursor object result
+
+        Returns
+        -------
+        df_result : Pandas DataFrame containing results of query
+        qid : str, query id - unique id of query on Snowflake platform
+        """
+        df_result = query_result.fetch_pandas_all()
+        qid = query_result.sfqid
+        return df_result, qid
+
+    def query_history_view(self, t0, t1):
+        """Get the time bound query history for all queries run on this account using the
+        `snowflake.account_usage` database
+
+        Note: Activity in the last 1 year is available, latency is 45 minutes.
+        https://docs.snowflake.com/en/sql-reference/account-usage.html
+        https://docs.snowflake.com/en/sql-reference/account-usage/query_history.html
+
+        Parameters
+        ----------
+        Both parameters can be either datetime, pd.Timestamp, or str objects
+        that can be parsed by pd.to_datetime
+        t0 : start time
+        t1 : end time
+        """
+        t0 = pd.to_datetime(t0)
+        t1 = pd.to_datetime(t1)
+        t0 = t0.strftime("%Y-%m-%d %H:%M:%S")
+        t1 = t1.strftime("%Y-%m-%d %H:%M:%S")
+
+        query_text = ("select * " +
+                      "from query_history " +
+                      f"where start_time>=to_timestamp_ltz('{t0}')"  #+
+                      #f"end_time_range_end=>to_timestamp_ltz('{t1}')));"
+                      )
+
+        query_result = self.sfc.query(query_text)
+        df_result, qid = self.parse_query_result(query_result)
+        return df_result, qid
+
+
+class SFTPC:
+    def __init__(self, test, scale, cid, warehouse, desc="",
+                 timestamp=None, verbose=False, verbose_query=False):
+        """Snowflake Connector query class
+
+        Parameters
+        ----------
+        test : str, TPC test being executed, either "ds" or "h"
+        scale : int, database scale factor (i.e. 1, 100, 1000 etc)
+        cid : str, config identifier, i.e. "01" or "03A"
+        desc : str, description of current tdata collection effort
+        warehouse : str, what Snowflake warehouse to run the queries on
+        timestamp : Pandas Timestamp object, optional
+        verbose : bool, print debug statements
+        verbose_query : bool, print query text
+        """
+
+        self.test = test
+        self.scale = scale
+        self.cid = cid
+
+        self.warehouse = warehouse
+
+        self.role_str = None
+        self.scale_str = str(scale)+"GB"
+
+        self.database = f"{self.test}_{self.scale_str}_{self.cid}"
+        self.desc = desc
+
+        self.storage_integration_name = self.database + "_gcs_integration"
+
+        self.df_gcs_full = None  # all files in bucket, as fyi
+        self.df_gcs = None       # just files for this dataset
+
+        self.verbose = verbose
+        self.verbose_query = verbose_query
+        self.verbose_iter = False
+
+        self.sfc = Connector(verbose_query=self.verbose_query,
+                             verbose=self.verbose)
+
+        self.q_label_base = self.database + "-xx-" + self.desc
+        self.q_label_base = self.q_label_base.lower()
+
+        self.cache = False
+
+        self.timestamp = timestamp
+        self.results_dir, _ = tools.make_name(db="sf", test=self.test, cid=self.cid,
+                                              kind="results", datasource=self.database,
+                                              desc=self.desc, ext="", timestamp=self.timestamp)
+        self.results_csv_fp = None
+
+    def _connect(self):
+        self.sfc.connect(username=poor_security.sf_username,
+                         password=poor_security.sf_password,
+                         account=config.sf_account,
+                         verbose=self.verbose)
+
+    def connect(self):
+        """Initializes a network connection to Snowflake using
+        values saved in config.py and poor_security.py
+        """
+
+        self._connect()
+        self.sfc.set_timezone("UTC")
+        self.set_query_label(self.q_label_base)
+        self.cache_set("off")
+        self.warehouse_use()
+        self.database_use()
+
+    def close(self):
+        self.sfc.close()
+
+    def cache_set(self, state="off"):
+        """Set Snowflake user cache, API defaults to True, here we default to False
+
+        Parameters
+        ----------
+        state : str, 'on' = cache on, anything else = cache off
+        """
+        if state == "on":
             self.sfc.cache_on()
         else:
             self.sfc.cache_off()
@@ -285,6 +443,9 @@ class SFTPC:
     def role(self, role):
         self.role_str = role
         self.sfc.role_select(role, verbose=self.verbose)
+
+    def set_query_label(self, query_label):
+        self.sfc.set_query_tag(query_label)
 
     def show_warehouses(self):
         return self.sfc.show_warehouses()
@@ -393,6 +554,7 @@ class SFTPC:
         self.sfc.query(query_text)
 
     def gcs_inventory(self):
+        """Inventory files in GCS that match this class' test and scale"""
         self.df_gcs_full = gcp_storage.inventory_bucket_df(config.gcs_data_bucket)
         self.df_gcs_full.sort_values(by=["test", "scale", "table", "n"], inplace=True)
         self.df_gcs = self.df_gcs_full.loc[(self.df_gcs_full.test == self.test) &
@@ -414,6 +576,7 @@ class SFTPC:
             _df = self.df_gcs.loc[self.df_gcs.table == table]
             if self.verbose:
                 print("Loading table:", table)
+            # this could be turned into a pooled apply
             _df.apply(lambda r: self.import_data_apply(table=r.table,
                                                        gcs_file_path=r.uri),
                       axis=1)
@@ -421,41 +584,242 @@ class SFTPC:
                 print("Done!")
                 print()
 
-    def query_n(self, n,
-                qual=None,
-                verbose=False, verbose_out=False):
+    @staticmethod
+    def parse_query_result(query_result):
+        """
+        Parameters
+        ----------
+        query_result : Snowflake connector cursor object result
 
-        """Query Snowflake with a specific Nth query"""
+        Returns
+        -------
+        df_result : Pandas DataFrame containing results of query
+        qid : str, query id - unique id of query on Snowflake platform
+        """
+        df_result = query_result.fetch_pandas_all()
+        qid = query_result.sfqid
+        return df_result, qid
+
+    def query_n(self, n, qual=None, std_out=False):
+
+        """Query Snowflake with a specific nth query
+
+        Parameters
+        ----------
+        n : int, query number to execute
+        qual : None, or True to use qualifying values (to test 1GB qualification db)
+        std_out : bool, print std_out and std_err output
+
+        Returns
+        -------
+        t0 : datetime object, time query started
+        t1 : datetime object, time query ended
+        query_result : Snowflake connector cursor object result
+        query_text : str, query text generated for query
+        """
         tpl_dir = f"{config.fp_query_templates}{config.sep}{'sf'}_{self.test}"
 
-        # generate query text
         if self.test == "ds":
             query_text = ds_setup.qgen_template(n=n,
                                                 templates_dir=tpl_dir,
                                                 dialect="sqlserver_tpc",
                                                 scale=self.scale,
                                                 qual=qual,
-                                                verbose=verbose,
-                                                verbose_out=verbose_out)
+                                                verbose=self.verbose,
+                                                verbose_std_out=std_out)
         elif self.test == "h":
             query_text = h_setup.qgen_template(n=n,
                                                templates_dir=tpl_dir,
                                                scale=self.scale,
                                                qual=qual,
-                                               verbose=verbose,
-                                               verbose_out=verbose_out)
+                                               verbose=self.verbose,
+                                               verbose_std_out=std_out)
         else:
             return None
-        t0 = pd.Timestamp.now()
+
+        t0 = pd.Timestamp.now("UTC")
+
+        # Snowflake doesn't handle multiple queries in one query statement
+        # this also means that only the LAST query_result is returned
+        query_list = [q + ";" for q in query_text.split(";") if len(q.strip()) > 0]
+        for query_text in query_list:
+            query_result = self.sfc.query(query_text)
+
+        t1 = pd.Timestamp.now("UTC")
+
+        return t0, t1, query_result, query_text
+
+    def query_history(self, t0, t1):
+        """Get the time bound query history for the current Snowflake context, as set
+        by connector cursor - project, warehouse and database - using the
+        `information_schema` database
+
+        Note: Activity in the last 7 days - 6 months is available, latency should be none.
+        https://docs.snowflake.com/en/sql-reference/info-schema.html
+        https://docs.snowflake.com/en/sql-reference/functions/query_history.html
+
+        Parameters
+        ----------
+        Both parameters can be either datetime, pd.Timestamp, or str objects
+        that can be parsed by pd.to_datetime
+        t0 : start time
+        t1 : end time
+        """
+        t0 = pd.to_datetime(t0)
+        t1 = pd.to_datetime(t1)
+        t0 = t0.strftime("%Y-%m-%d %H:%M:%S")
+        t1 = t1.strftime("%Y-%m-%d %H:%M:%S")
+
+        query_text = ("select * " +
+                      "from table(information_schema.query_history(" +
+                      f"end_time_range_start=>to_timestamp_ltz('{t0}')," +
+                      f"end_time_range_end=>to_timestamp_ltz('{t1}')));")
+
         query_result = self.sfc.query(query_text)
-        t1 = pd.Timestamp.now()
-        #return n, query_text, start, end, bytes_processed, rows_count, cost, df
+        df_result, qid = self.parse_query_result(query_result)
+        return df_result, qid
+
+    def copy(self, destination):
+        """Copy current database to new database"""
+
+        #query_text = f"create or replace database DS_100GB_01 clone DS_100GB"
+        query_text = f"create or replace database {destination} clone {self.database}"
+        query_result = self.sfc.query(query_text)
         return query_result
 
-    def query_history(self):
-        query_text = ("select * from table(information_schema.query_history()) " +
-                      "order by start_time;")
-        query_result = self.sfc.query(query_text)
-        df = query_result.fetch_pandas_all()
-        qid = query_result.sfqid
-        return df, qid
+    def query_seq(self, seq, seq_id=None, qual=None, save=False, verbose_iter=False):
+        """Query Snowflake with TPC-DS or TPC-H query template number n
+
+        Parameters
+        ----------
+        seq : iterable sequence int, query numbers to execute between
+            1 and 99 for ds and 1 and 22 for h
+        seq_id : str, optional id for stream sequence - i.e. 0 or 4 etc,
+            this id is the stream id from ds or h
+        qual : None, or True to use qualifying values (to test 1GB qualification db)
+        save : bool, save data about this query sequence to disk
+        verbose_iter : bool, print per iteration status statements
+
+        Returns
+        -------
+        if length of sequence is 1, Snowflake cursor reply object
+        else None
+        """
+
+        if seq_id is None:
+            seq_id = "sNA"
+        query_result = "NA"
+        n_time_data = []
+        columns = ["db", "test", "scale", "source", "cid", "desc",
+                   "query_n", "seq_id", "driver_t0", "driver_t1", "qid"]
+
+        t0_seq = pd.Timestamp.now("UTC")
+        i_total = len(seq)
+        for i, n in enumerate(seq):
+            qn_label = self.database + "-q" + str(n) + "-" + seq_id + "-" + self.desc
+            qn_label = qn_label.lower()
+
+            if verbose_iter:
+                print("="*40)
+                print("Start Query:", n)
+                print("-"*20)
+                print("Stream Completion: {} / {}".format(i+1, i_total))
+                print("Query Label:", qn_label)
+                print("-"*20)
+                print()
+
+            self.set_query_label(qn_label)
+
+            (t0, t1,
+             query_result, query_text) = self.query_n(n=n,
+                                                      qual=qual,
+                                                      std_out=False
+                                                      )
+
+            df_result = query_result.fetch_pandas_all()
+            qid = query_result.sfqid
+
+            _d = ["sf", self.test, self.scale, self.database, self.cid, self.desc,
+                  n, seq_id, t0, t1, qid]
+            n_time_data.append(_d)
+
+            if save:
+                # write results as collected by each query
+                self.write_results_csv(df=df_result, query_n=n)
+
+            if verbose_iter:
+                dt = t1 - t0
+                print("Query ID: {}".format(qid))
+                print("Total Time Elapsed: {}".format(dt))
+                print("-"*40)
+                print()
+
+            if self.verbose_query:
+                print("QUERY EXECUTED")
+                print("--------------")
+                print(query_text)
+                print()
+
+            if self.verbose:
+                if len(df_result) < 25:
+                    print("Result:")
+                    print("-------")
+                    print(df_result)
+                    print()
+                else:
+                    print("Head of Result:")
+                    print("---------------")
+                    print(df_result.head())
+                    print()
+
+        t1_seq = pd.Timestamp.now("UTC")
+
+        #if self.verbose:
+        dt_seq = t1_seq - t0_seq
+        print()
+        print("="*40)
+        print("Query Stream Done!")
+        print("Total Time Elapsed: {}".format(dt_seq))
+        print()
+
+        # write local timing results to file
+        self.write_times_csv(results_list=n_time_data, columns=columns)
+
+        if len(seq) == 1:
+            return query_result
+        else:
+            return
+
+    def write_results_csv(self, df, query_n):
+        """Write the results of a TPC query to a CSV file in a specific
+        folder
+
+        Parameters
+        ----------
+        df : Pandas DataFrame
+        query_n : int, query number in TPC test
+        """
+
+        fd = self.results_dir + config.sep
+        tools.mkdir_safe(fd)
+        fp = fd + "query_result_sf_{0:02d}.csv".format(query_n)
+        #df = tools.to_consistent(df)
+        df.to_csv(fp, index=False, float_format="%.3f")
+
+    def write_times_csv(self, results_list, columns):
+        """Write a list of results from queries to a CSV file
+
+        Parameters
+        ----------
+        results_list : list, data as recorded on the local machine
+        columns : list, column names for output CSV
+        """
+        _, fp = tools.make_name(db="sf", test=self.test, cid=self.cid,
+                                kind="times",
+                                datasource=self.database, desc=self.desc,
+                                ext=".csv",
+                                timestamp=self.timestamp)
+        self.results_csv_fp = self.results_dir + config.sep + fp
+        df = pd.DataFrame(results_list, columns=columns)
+        tools.mkdir_safe(self.results_dir)
+        df.to_csv(self.results_csv_fp, index=False)

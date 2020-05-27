@@ -366,3 +366,87 @@ def parse_ds_seq_stream():
     _df = _df.transpose()
     return _df
 
+
+def tpc_stream(test, n):
+    """Generate the correct TPC query stream sequence
+
+    Parameters
+    ----------
+    test : str, TPC test name, either 'ds' or 'h'
+    n : int, query stream number for the test, 1-99 for ds, 1-22 for h
+    
+    Returns
+    -------
+    list of str, query numbers to execute in order index 0 to index -1
+    """
+    
+    assert test in ["ds", "h"], "Must be valid TPC test name"
+    
+    if test == "h":
+        _df = parse_h_stream_seq()
+    if test == "ds":
+        _df = parse_ds_seq_stream()
+    query_sequence = _df.loc[n].values
+    return list(query_sequence)
+
+
+def make_name(db, test, cid, kind, datasource, desc, ext, timestamp=None):
+    """Make a name for query results to be saved.  If parameters
+    'ext' is set to blank, '', can be used to name folders.
+
+    Parameters
+    ----------
+    db : str, data base name, either 'bq' or 'sf'
+    test : str, test being done, either 'h' or 'ds'
+    cid : str, config id, i.e. '02A' for the experiment config number
+    kind : str, kind of record, either 'results' or 'times'
+    datasource : str, dataset if bq or database if snowflake
+    desc : str, description of experiment
+    ext : str, extension including '.' i.e. '.csv'
+    timestamp : pandas Timestamp object
+    """
+    if timestamp is None:
+        timestamp = pd.Timestamp.now("UTC")
+        timestamp = str(timestamp).replace(" ", "_")
+
+    folder = (f'{config.fp_results}{config.sep}{db}_{test}_{cid}_{kind}-' +
+              f'{datasource}-{desc}-{str(timestamp)}')
+    file = (f'{db}_{test}_{cid}_{kind}-' +
+            f'{datasource}-{desc}-{timestamp}{ext}')
+    return folder, file
+
+
+def to_numeric(df):
+    """Convert columns to numeric types if possible
+
+    Parameters
+    ----------
+    df : Pandas DataFrame
+
+    Returns
+    -------
+    df : Pandas DataFrame
+    """
+    for col in df.columns:
+        try:
+            df[col] = pd.to_numeric(df[col])
+        except:
+            pass
+    return df
+
+
+def to_consistent(df):
+    """Convert Pandas DataFrame to consistent representation
+
+    Parameters
+    ----------
+    df : Pandas DataFrame
+
+    Returns
+    -------
+    df : Pandas DataFrame
+    """
+    df.columns = map(str.lower, df.columns)
+    df = to_numeric(df)
+    df.fillna(value=-9999.99, inplace=True)
+    return df

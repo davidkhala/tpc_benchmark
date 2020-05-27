@@ -60,10 +60,10 @@ and cs_warehouse_sk   = w_warehouse_sk
 and cs_ship_mode_sk   = sm_ship_mode_sk
 and cs_call_center_sk = cc_call_center_sk
 group by
-   substr(w_warehouse_name,1,20)
+   1
   ,sm_type
   ,cc_name
-order by substr(w_warehouse_name,1,20)
+order by 1
         ,sm_type
         ,cc_name
 [_LIMITC];

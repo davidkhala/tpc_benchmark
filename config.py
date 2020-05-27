@@ -58,7 +58,7 @@ sf_warehouse = "TEST9000"
 sf_warehouse_cost = 0.00056  # price per second for this warehouse size
 
 # 2.5 Snowflake connector configuration
-sf_role = "ACCOUNTADMIN"
+sf_role = "SYSADMIN"
 sf_storage_integration = "gcs_storage_integration"
 sf_named_file_format = "csv_file_format"
 
@@ -125,13 +125,15 @@ fp_h_stream_order  = cwd + sep + "h_stream_seq.csv"
 ds_schema_ansi_sql_filepath = fp_ds_src + sep + "tools" + sep + "tpcds.sql"
 h_schema_ddl_filepath = fp_h_src + sep + "dbgen" + sep + "dss.ddl"
 
+fp_sf_ds_schema = cwd + sep + "sc" + sep + "sf_ds_01.sql"
+fp_sf_h_schema = cwd + sep + "sc" + sep + "sf_h_01.sql"
+
+
 # 4.2 Basic BigQuery Schema Files
 
 fp_schema = cwd + sep + "schema"
 fp_ds_schema = fp_schema + sep + "ds"
 fp_h_schema  = fp_schema + sep + "h"
-
-
 
 # 4.3 Files output by data generators from either test to ignore
 # >> Do NOT edit
