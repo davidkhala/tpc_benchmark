@@ -36,17 +36,17 @@ define DMS = random(1176,1224, uniform);
 define _LIMIT=100;
 
 [_LIMITA] select [_LIMITB] 
-   substr(w_warehouse_name,1,20)
+   substr(w_warehouse_name,1,20) as r1
   ,sm_type
   ,cc_name
-  ,sum(case when (cs_ship_date_sk - cs_sold_date_sk <= 30 ) then 1 else 0 end)  as _30_days 
+  ,sum(case when (cs_ship_date_sk - cs_sold_date_sk <= 30 ) then 1 else 0 end)  as r_30_days 
   ,sum(case when (cs_ship_date_sk - cs_sold_date_sk > 30) and 
-                 (cs_ship_date_sk - cs_sold_date_sk <= 60) then 1 else 0 end )  as _31_60_days 
+                 (cs_ship_date_sk - cs_sold_date_sk <= 60) then 1 else 0 end )  as r_31_60_days 
   ,sum(case when (cs_ship_date_sk - cs_sold_date_sk > 60) and 
-                 (cs_ship_date_sk - cs_sold_date_sk <= 90) then 1 else 0 end)  as _61_90_days 
+                 (cs_ship_date_sk - cs_sold_date_sk <= 90) then 1 else 0 end)  as r_61_90_days 
   ,sum(case when (cs_ship_date_sk - cs_sold_date_sk > 90) and
-                 (cs_ship_date_sk - cs_sold_date_sk <= 120) then 1 else 0 end)  as _91_120_days 
-  ,sum(case when (cs_ship_date_sk - cs_sold_date_sk  > 120) then 1 else 0 end)  as _greater_than_120_days 
+                 (cs_ship_date_sk - cs_sold_date_sk <= 120) then 1 else 0 end)  as r_91_120_days 
+  ,sum(case when (cs_ship_date_sk - cs_sold_date_sk  > 120) then 1 else 0 end)  as r_greater_than_120_days 
 from
    catalog_sales
   ,warehouse
@@ -60,10 +60,11 @@ and cs_warehouse_sk   = w_warehouse_sk
 and cs_ship_mode_sk   = sm_ship_mode_sk
 and cs_call_center_sk = cc_call_center_sk
 group by
-   1
-  ,sm_type
-  ,cc_name
-order by 1
-        ,sm_type
-        ,cc_name
+  r1,
+  sm_type,
+  cc_name
+order by
+  r1 nulls last,
+  sm_type nulls last,
+  cc_name nulls last
 [_LIMITC];

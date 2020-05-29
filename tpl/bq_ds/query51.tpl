@@ -75,6 +75,7 @@ from (select item_sk
                                                           and web.d_date = store.d_date)
           )x )y
 where web_cumulative > store_cumulative
-order by item_sk
-        ,d_date
+order by 
+  item_sk nulls last,
+  d_date nulls last
 [_LIMITC];

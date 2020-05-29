@@ -103,5 +103,7 @@ WITH all_sales AS (
    AND curr_yr.d_year=[YEAR]
    AND prev_yr.d_year=[YEAR]-1
    AND CAST(curr_yr.sales_cnt AS FLOAT64)/CAST(prev_yr.sales_cnt AS FLOAT64)<0.9
- ORDER BY sales_cnt_diff,sales_amt_diff
+ ORDER BY
+  sales_cnt_diff nulls last,
+  sales_amt_diff nulls last
  [_LIMITC];

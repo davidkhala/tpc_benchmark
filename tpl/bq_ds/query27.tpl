@@ -62,7 +62,8 @@
        d_year = [YEAR] and
        s_state in ('[STATE_A]','[STATE_B]', '[STATE_C]', '[STATE_D]', '[STATE_E]', '[STATE_F]')
  group by i_item_id, s_state
- order by i_item_id
-         ,s_state
+ order by 
+  i_item_id nulls last,
+  s_state nulls last
  [_LIMITC];
 
