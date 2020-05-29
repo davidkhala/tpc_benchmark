@@ -193,15 +193,5 @@ fp_ds_answers = fp_ds_src + sep + "answer_sets"
 fp_results = cwd + sep + "results"
 fp_plots   = cwd + sep + "plots"
 
-# 5.4 Test Schema Combinations
-# TODO: perhaps remove?
-test_schema_bq = []
-for test in tests:
-    for scale in scale_factors:
-        for schema in bq_schema:
-            test_schema_bq.append(test + "_" + str(scale) + "GB_" + schema)
-
-test_schema_sf = []
-for test in tests:
-    for schema in sf_schema:
-        test_schema_sf.append(test + "_" + schema)
+# 5.6 Data Quality Control
+truncate_float_to = 1
