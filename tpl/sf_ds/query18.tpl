@@ -43,13 +43,13 @@
         ca_country,
         ca_state, 
         ca_county,
-        avg( cast(cs_quantity as decimal(12,2))) agg1,
-        avg( cast(cs_list_price as decimal(12,2))) agg2,
-        avg( cast(cs_coupon_amt as decimal(12,2))) agg3,
-        avg( cast(cs_sales_price as decimal(12,2))) agg4,
-        avg( cast(cs_net_profit as decimal(12,2))) agg5,
-        avg( cast(c_birth_year as decimal(12,2))) agg6,
-        avg( cast(cd1.cd_dep_count as decimal(12,2))) agg7
+        avg( cast(cs_quantity as decimal(12,2))) r1,
+        avg( cast(cs_list_price as decimal(12,2))) r2,
+        avg( cast(cs_coupon_amt as decimal(12,2))) r3,
+        avg( cast(cs_sales_price as decimal(12,2))) r4,
+        avg( cast(cs_net_profit as decimal(12,2))) r5,
+        avg( cast(c_birth_year as decimal(12,2))) r6,
+        avg( cast(cd1.cd_dep_count as decimal(12,2))) r7
  from catalog_sales, customer_demographics cd1, 
       customer_demographics cd2, customer, customer_address, date_dim, item
  where cs_sold_date_sk = d_date_sk and
@@ -65,9 +65,10 @@
        ca_state in ('[STATE.1]','[STATE.2]','[STATE.3]'
                    ,'[STATE.4]','[STATE.5]','[STATE.6]','[STATE.7]')
  group by rollup (i_item_id, ca_country, ca_state, ca_county)
- order by ca_country,
-        ca_state, 
-        ca_county,
+ order by 
+  ca_country nulls last,
+  ca_state nulls last, 
+  ca_county nulls last,
 	i_item_id
  [_LIMITC];
 

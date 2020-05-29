@@ -39,7 +39,7 @@
 [_LIMITA]  select [_LIMITB] dt.d_year
  	,item.i_category_id
  	,item.i_category
- 	,sum(ss_ext_sales_price)
+ 	,sum(ss_ext_sales_price) as r1
  from 	date_dim dt
  	,store_sales
  	,item

@@ -87,12 +87,12 @@
           cd_dep_count,
           cd_dep_employed_count,
           cd_dep_college_count
- order by ca_state,
-          cd_gender,
-          cd_marital_status,
-          cd_dep_count,
-          cd_dep_employed_count,
-          cd_dep_college_count
+ order by ca_state nulls last,
+          cd_gender nulls last,
+          cd_marital_status nulls last,
+          cd_dep_count nulls last,
+          cd_dep_employed_count nulls last,
+          cd_dep_college_count nulls last
  [_LIMITC];
  
 

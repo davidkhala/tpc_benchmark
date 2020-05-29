@@ -38,10 +38,11 @@
  define YEAR= random(1998,2002, uniform);
  define _LIMIT=100;
 
- [_LIMITA] select [_LIMITB] substr(r_reason_desc,1,20)
-       ,avg(ws_quantity)
-       ,avg(wr_refunded_cash)
-       ,avg(wr_fee)
+ [_LIMITA] select [_LIMITB] 
+  substr(r_reason_desc,1,20) as r1,
+       avg(ws_quantity) as r2,
+       avg(wr_refunded_cash) as r3,
+       avg(wr_fee) as r4
  from web_sales, web_returns, web_page, customer_demographics cd1,
       customer_demographics cd2, customer_address, date_dim, reason 
  where ws_web_page_sk = wp_web_page_sk
