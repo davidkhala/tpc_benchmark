@@ -5,9 +5,11 @@ Colin Dietrich, SADA 2020
 
 import os
 import re
+import math
 import zipfile
 import shutil
 import glob
+import numpy as np
 
 import pandas as pd
 
@@ -435,12 +437,48 @@ def to_numeric(df):
     return df
 
 
-def to_consistent(df):
+def truncate(x, n):
+    """Truncate a float to a certain number of decimal places
+    
+    Parameters
+    ----------
+    x : float, value to truncate
+    n : int, number of decimal places to keep
+    
+    Returns
+    -------
+    float : truncated value
+    """
+    #if pd.isnull(x):
+    #    return np.nan
+    #else:
+    return math.trunc(x * math.pow(10, n)) / math.pow(10, n)
+
+
+def to_truncated(df, n):
+    """Truncate all float values in dataframe
+    
+    Parameters
+    ----------
+    df : Pandas Dataframe
+    n : int, number of decimal places to keep
+    
+    Returns
+    -------
+    Pandas Dataframe with float values truncated
+    """
+    for col in df.select_dtypes(float).columns:
+        df[col] = df[col].apply(lambda r: truncate(r, n))
+    return df
+
+
+def to_consistent(df, n):
     """Convert Pandas DataFrame to consistent representation
 
     Parameters
     ----------
     df : Pandas DataFrame
+    n : int, number of decimal places to truncate float to
 
     Returns
     -------
@@ -449,4 +487,6 @@ def to_consistent(df):
     df.columns = map(str.lower, df.columns)
     df = to_numeric(df)
     df.fillna(value=-9999.99, inplace=True)
+    df = to_truncated(df=df, n=n)
+    #df = df.round(decimals=1)
     return df
