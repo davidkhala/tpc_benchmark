@@ -14,7 +14,7 @@ GCS_FILEPATH = ''
 TABLES = [
     'customer_address', 'customer_demographics', 'ship_mode', 'time_dim', 'date_dim', 'reason', 'income_band', 'item',
     'store', 'call_center', 'customer', 'web_site', 'store_returns', 'household_demographics', 'web_page', 'promotion', 'catalog_page',
-    'inventory', 'catalog_returns', 'web_returns', 'web_sales', 'catalog_sales', 'store_sales',
+    'inventory', 'catalog_returns', 'web_returns', 'web_sales', 'catalog_sales', 'store_sales', 'warehouse',
 ]
 
 def _extract_table_name_from_gcs_filepath(gcs_filepath):
