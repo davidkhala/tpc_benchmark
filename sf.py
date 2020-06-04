@@ -21,7 +21,7 @@ import pandas as pd
 import logging
 import atexit
 
-import config, poor_security
+import config  # , poor_security
 
 
 def open_connection(verbose=False):
@@ -33,40 +33,50 @@ def open_connection(verbose=False):
     conn : Snowflake connector object
     """
 
-    if verbose:
-        print(f'using configuration: user:{poor_security.sf_username}')
-        print(f'pass: {poor_security.sf_password}')
-        print(f'account: {config.sf_account}')
+    #     if verbose:
+    #         print(f'using configuration: user:{poor_security.sf_username}')
+    #         print(f'pass: {poor_security.sf_password}')
+    #         print(f'account: {config.sf_account}')
 
-    conn = snowflake.connector.connect(user=poor_security.sf_username,
-                                       password=poor_security.sf_password,
-                                       account=config.sf_account
-                                       )
+    #     conn = snowflake.connector.connect(user=poor_security.sf_username,
+    #                                        password=poor_security.sf_password,
+    #                                        account=config.sf_account
+    #                                        )
+
+    conn = snowflake.connector.connect(
+        user=config.sf_username,
+        password=config.sf_password,
+        account=config.sf_account)
+
     return conn
 
 
 # Variables
 TABLES_DS = [
     'customer_address', 'customer_demographics', 'ship_mode', 'time_dim', 'reason', 'income_band', 'item',
-    'store', 'call_center', 'customer', 'web_site', 'store_returns', 'household_demographics', 'web_page', 'promotion', 'catalog_page',
+    'store', 'call_center', 'customer', 'web_site', 'store_returns', 'household_demographics', 'web_page', 'promotion',
+    'catalog_page',
     'inventory', 'catalog_returns', 'web_returns', 'web_sales', 'catalog_sales', 'store_sales',
 ]
 TABLE_DS_SKIP = ['date_dim']
 TABLES_H = ['nation', 'lineitem', 'customer', 'orders', 'part', 'partsupp', 'region', 'supplier']
 
-#DATASET_SIZES = ['1GB', '2GB', '100GB', '1000GB', '10000GB']
+# DATASET_SIZES = ['1GB', '2GB', '100GB', '1000GB', '10000GB']
 
-GCS_LOCATION = 'gcs://tpc-benchmark-5947' #TODO: needs to go to config
+GCS_LOCATION = 'gcs://tpc-benchmark-5947'  # TODO: needs to go to config
 
-#config.sf_role = 'ACCOUNTADMIN' # TODO: needs to go to config
-#config.sf_role = 'SYSADMIN'
+# config.sf_role = 'ACCOUNTADMIN' # TODO: needs to go to config
+# config.sf_role = 'SYSADMIN'
 
-#storage_integration_name = 'gcs_storage_integration' #TODO: needs to go to config
-#config.sf_named_file_format = 'csv_file_format'  # TODO: move to config
+# storage_integration_name = 'gcs_storage_integration' #TODO: needs to go to config
+# config.sf_named_file_format = 'csv_file_format'  # TODO: move to config
+
+WAREHOUSE_TEST_PREFIX = 'test_concurrent_'
 
 
 class SnowflakeHelper:
     """ manages snowflake db  """
+
     def __init__(self, test, scale, verbose=False):
         """"Snowflake connection Class
 
@@ -76,9 +86,9 @@ class SnowflakeHelper:
         scale : TPC scale factor in Gigabytes, 100, 1000 or 10000 expected
         """
 
-        self.test = test            # TPC-DS or TPC-h as 'ds' or 'h'
-        self.scale = scale          # TPC Scale factor in GB
-        #self.gcs_file_range = config.cpu_count  # auto detected in config.py
+        self.test = test  # TPC-DS or TPC-h as 'ds' or 'h'
+        self.scale = scale  # TPC Scale factor in GB
+        self.gcs_file_range = 96 # config.cpu_count  # auto detected in config.py
 
         # user cache control for queries
         self.cached = False
@@ -147,7 +157,7 @@ class SnowflakeHelper:
                 batch_t0 = t0
 
             # add this query time to batch total running time
-            #print(t1, t0)
+            # print(t1, t0)
             dt = t1 - t0
             batch_running_time += dt.total_seconds()
 
@@ -209,7 +219,7 @@ class SnowflakeHelper:
 
         return t0, t1, -1, row_count, cost, rows
 
-    def warehouse_start(self, verbose=False):  #create_db=False, verbose=False):
+    def warehouse_start(self, verbose=False):  # create_db=False, verbose=False):
         """ starts warehouse """
         # check if connection is set
         if not self.conn:
@@ -230,25 +240,24 @@ class SnowflakeHelper:
         print(f'running query: {query_text}')
         self.run_query(query_text)
 
-        #if create_db:
-        #    query_text = f'CREATE DATABASE IF NOT EXISTS {self.test}_{self.scale}'
-        #    if verbose:
-        #        print(f'running query: {query_text}')
-        #    self.run_query(query_text)
+        query_text = f'CREATE DATABASE IF NOT EXISTS {WAREHOUSE_TEST_PREFIX}{self.test}_{self.scale}'
+        if verbose:
+            print(f'running query: {query_text}')
+            self.run_query(query_text)
 
-        #query_text = f'USE DATABASE {self.test}_{self.scale}'
-        #if verbose:
-        #    print(f'running query: {query_text}')
-        #self.run_query(query_text)
+        query_text = f'USE DATABASE {WAREHOUSE_TEST_PREFIX}{self.test}_{self.scale}'
+        if verbose:
+            print(f'running query: {query_text}')
+        self.run_query(query_text)
 
     def select_database(self, verbose=False):
-        query_text = f'USE DATABASE {self.test}_{self.scale}'
+        query_text = f'USE DATABASE {WAREHOUSE_TEST_PREFIX}{self.test}_{self.scale}'
         if verbose:
             print(f'running query: {query_text}')
         self.run_query(query_text)
 
     def create_database(self, verbose=False):
-        query_text = f'CREATE DATABASE IF NOT EXISTS {self.test}_{self.scale}'
+        query_text = f'CREATE DATABASE IF NOT EXISTS {WAREHOUSE_TEST_PREFIX}{self.test}_{self.scale}'
         if verbose:
             print(f'running query: {query_text}')
         self.run_query(query_text)
