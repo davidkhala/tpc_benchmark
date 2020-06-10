@@ -511,8 +511,8 @@ def qgen_template(n, templates_dir, scale, qual=None,
     query_text = std_out_filter(std_out)
     
     if verbose_std_out:
-        print("QUERY:", n)
-        print("=========")
+        print("QUERY STD OUT:", n)
+        print("==============")
         print()
 
         std_err_print(std_out, err_out)

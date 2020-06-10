@@ -856,7 +856,7 @@ class BQTPC:
         dt_seq = t1_seq - t0_seq
         print()
         print("="*40)
-        print("Query Stream Done!")
+        print("BigQuery Query Stream Done!")
         print("Total Time Elapsed: {}".format(dt_seq))
         print()
 
