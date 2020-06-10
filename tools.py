@@ -403,7 +403,7 @@ def make_name(db, test, cid, kind, datasource, desc, ext, timestamp=None):
     cid : str, config id, i.e. '02A' for the experiment config number
     kind : str, kind of record, either 'results' or 'times'
     datasource : str, dataset if bq or database if snowflake
-    desc : str, description of experiment
+    desc : str, description of experimentself.desc
     ext : str, extension including '.' i.e. '.csv'
     timestamp : pandas Timestamp object
     """
@@ -486,6 +486,7 @@ def to_consistent(df, n):
     """
     df.columns = map(str.lower, df.columns)
     df = to_numeric(df)
+    df.sort_values(by=list(df.columns)).reset_index(drop=True)
     df.fillna(value=-9999.99, inplace=True)
     df = to_truncated(df=df, n=n)
     #df = df.round(decimals=1)
