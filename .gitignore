@@ -147,3 +147,5 @@ poor_security.py
 tpl/alibaba_ds/
 
 tpl/fivetran_ds/
+
+tpl/sf_ds_backup/
