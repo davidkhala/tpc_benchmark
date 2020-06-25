@@ -38,67 +38,80 @@
  define RETURNED_DATE_THREE=date([YEAR]+"-11-01",[YEAR]+"-11-24",sales);
  define _LIMIT=100;
  
- with sr_items as
- (select i_item_id item_id,
-        sum(sr_return_quantity) sr_item_qty
- from store_returns,
-      item,
-      date_dim
- where sr_item_sk = i_item_sk
- and   d_date    in 
-	(select d_date
-	from date_dim
-	where d_week_seq in 
-		(select d_week_seq
-		from date_dim
-	  where d_date in ('[RETURNED_DATE_ONE]','[RETURNED_DATE_TWO]','[RETURNED_DATE_THREE]')))
- and   sr_returned_date_sk   = d_date_sk
- group by i_item_id),
- cr_items as
- (select i_item_id item_id,
-        sum(cr_return_quantity) cr_item_qty
- from catalog_returns,
-      item,
-      date_dim
- where cr_item_sk = i_item_sk
- and   d_date    in 
-	(select d_date
-	from date_dim
-	where d_week_seq in 
-		(select d_week_seq
-		from date_dim
-	  where d_date in ('[RETURNED_DATE_ONE]','[RETURNED_DATE_TWO]','[RETURNED_DATE_THREE]')))
- and   cr_returned_date_sk   = d_date_sk
- group by i_item_id),
- wr_items as
- (select i_item_id item_id,
-        sum(wr_return_quantity) wr_item_qty
- from web_returns,
-      item,
-      date_dim
- where wr_item_sk = i_item_sk
- and   d_date    in 
-	(select d_date
-	from date_dim
-	where d_week_seq in 
-		(select d_week_seq
-		from date_dim
-		where d_date in ('[RETURNED_DATE_ONE]','[RETURNED_DATE_TWO]','[RETURNED_DATE_THREE]')))
- and   wr_returned_date_sk   = d_date_sk
- group by i_item_id)
- [_LIMITA] select [_LIMITB] sr_items.item_id
-       ,sr_item_qty
-       ,sr_item_qty/(sr_item_qty+cr_item_qty+wr_item_qty)/3.0 * 100 sr_dev
-       ,cr_item_qty
-       ,cr_item_qty/(sr_item_qty+cr_item_qty+wr_item_qty)/3.0 * 100 cr_dev
-       ,wr_item_qty
-       ,wr_item_qty/(sr_item_qty+cr_item_qty+wr_item_qty)/3.0 * 100 wr_dev
-       ,(sr_item_qty+cr_item_qty+wr_item_qty)/3.0 average
- from sr_items
-     ,cr_items
-     ,wr_items
- where sr_items.item_id=cr_items.item_id
-   and sr_items.item_id=wr_items.item_id 
- order by sr_items.item_id
-         ,sr_item_qty
- [_LIMITC];
+WITH sr_items AS 
+( 
+         SELECT   i_item_id               item_id, 
+                  Sum(sr_return_quantity) sr_item_qty 
+         FROM     store_returns, 
+                  item, 
+                  date_dim 
+         WHERE    sr_item_sk = i_item_sk 
+         AND      d_date IN 
+                  ( 
+                         SELECT d_date 
+                         FROM   date_dim 
+                         WHERE  d_week_seq IN 
+                                ( 
+                                       SELECT d_week_seq 
+                                       FROM   date_dim 
+                                       WHERE  d_date IN ('[RETURNED_DATE_ONE]', 
+                                                         '[RETURNED_DATE_TWO]', 
+                                                         '[RETURNED_DATE_THREE]'))) 
+         AND      sr_returned_date_sk = d_date_sk 
+         GROUP BY i_item_id), cr_items AS 
+( 
+         SELECT   i_item_id               item_id, 
+                  Sum(cr_return_quantity) cr_item_qty 
+         FROM     catalog_returns, 
+                  item, 
+                  date_dim 
+         WHERE    cr_item_sk = i_item_sk 
+         AND      d_date IN 
+                  ( 
+                         SELECT d_date 
+                         FROM   date_dim 
+                         WHERE  d_week_seq IN 
+                                ( 
+                                       SELECT d_week_seq 
+                                       FROM   date_dim 
+                                       WHERE  d_date IN ('[RETURNED_DATE_ONE]', 
+                                                         '[RETURNED_DATE_TWO]', 
+                                                         '[RETURNED_DATE_THREE]'))) 
+         AND      cr_returned_date_sk = d_date_sk 
+         GROUP BY i_item_id), wr_items AS 
+( 
+         SELECT   i_item_id               item_id, 
+                  Sum(wr_return_quantity) wr_item_qty 
+         FROM     web_returns, 
+                  item, 
+                  date_dim 
+         WHERE    wr_item_sk = i_item_sk 
+         AND      d_date IN 
+                  ( 
+                         SELECT d_date 
+                         FROM   date_dim 
+                         WHERE  d_week_seq IN 
+                                ( 
+                                       SELECT d_week_seq 
+                                       FROM   date_dim 
+                                       WHERE  d_date IN ('[RETURNED_DATE_ONE]', 
+                                                         '[RETURNED_DATE_TWO]', 
+                                                         '[RETURNED_DATE_THREE]'))) 
+         AND      wr_returned_date_sk = d_date_sk 
+         GROUP BY i_item_id) [_LIMITA] 
+SELECT   [_LIMITB] sr_items.item_id , 
+         sr_item_qty , 
+         sr_item_qty/(sr_item_qty+cr_item_qty+wr_item_qty)/3.0 * 100 sr_dev , 
+         cr_item_qty , 
+         cr_item_qty/(sr_item_qty+cr_item_qty+wr_item_qty)/3.0 * 100 cr_dev , 
+         wr_item_qty , 
+         wr_item_qty/(sr_item_qty+cr_item_qty+wr_item_qty)/3.0 * 100 wr_dev , 
+         (sr_item_qty+cr_item_qty+wr_item_qty)/3.0                   average 
+FROM     sr_items , 
+         cr_items , 
+         wr_items 
+WHERE    sr_items.item_id=cr_items.item_id 
+AND      sr_items.item_id=wr_items.item_id 
+ORDER BY sr_items.item_id , 
+         sr_item_qty
+[_LIMITC];
