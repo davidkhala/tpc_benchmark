@@ -99,6 +99,7 @@ class Connector:
         """"Snowflake Connector wrapper class"""
         self.verbose = verbose              # debug output for whole class
         self.verbose_query = verbose_query  # print query text
+        self.verbose_query_n = False        # print line numbers in query text
         self.cached = False                 # user cache control for queries
         self.conn = None                    # Connector class connection
         self.cursor = None                  # Connector cursor
@@ -147,9 +148,13 @@ class Connector:
             return
         else:
             if self.verbose_query:
-                print("QUERY TEXT")
-                print("==========")
-                print(query_text)
+                if self.verbose_query_n:
+                    qt = "\n".join([str(n) + "  " + line for n, line in enumerate(query_text.split("\n"))])
+                else:
+                    qt = query_text
+                print("SNOWFLAKE QUERY TEXT")
+                print("====================")
+                print(qt)
                 print()
             query_result = self.cursor.execute(query_text)
             return query_result
@@ -391,6 +396,7 @@ class SFTPC:
 
         self.verbose = verbose
         self.verbose_query = verbose_query
+        self.verbose_query_n = False  # print line numbers in query text
         self.verbose_iter = False
 
         self.sfc = Connector(verbose_query=self.verbose_query,
@@ -412,6 +418,7 @@ class SFTPC:
                          password=poor_security.sf_password,
                          account=config.sf_account,
                          verbose=self.verbose)
+        self.sfc.verbose_query_n = self.verbose_query_n
 
     def connect(self):
         """Initializes a network connection to Snowflake using
@@ -636,18 +643,39 @@ class SFTPC:
                                                verbose_std_out=std_out)
         else:
             return None
-
         t0 = pd.Timestamp.now("UTC")
 
-        # Snowflake doesn't handle multiple queries in one query statement
-        # this also means that only the LAST query_result is returned
+        # Snowflake doesn't process multiple queries in one query statement,
+        # additionally another query command will wipe out the previous query_result
+        # data.
+        # Also, TPC-DS is completely single-queries, TPC-H has a view created and
+        # deleted in #15, the creation and delete steps don't have data to capture
         query_list = [q + ";" for q in query_text.split(";") if len(q.strip()) > 0]
-        for query_text in query_list:
+
+        # if query includes a view (make view, query, delete view)
+        if len(query_list) == 3:
+            query_1_result = self.sfc.query(query_list[0])
+            if self.verbose:
+                print("Non-query reply:", query_1_result.fetchall())
+
+            query_2_result = self.sfc.query(query_list[1])
+            query_result = query_2_result
+            df_result = query_result.fetch_pandas_all()
+            qid = query_result.sfqid
+
+            query_3_result = self.sfc.query(query_list[2])
+            if self.verbose:
+                print("Non-query reply:", query_3_result.fetchall())
+
+        # single query statement
+        else:
             query_result = self.sfc.query(query_text)
+            df_result = query_result.fetch_pandas_all()
+            qid = query_result.sfqid
 
         t1 = pd.Timestamp.now("UTC")
 
-        return t0, t1, query_result, query_text
+        return t0, t1, df_result, query_text, qid
 
     def query_history(self, t0, t1):
         """Get the time bound query history for the current Snowflake context, as set
@@ -708,7 +736,6 @@ class SFTPC:
 
         if seq_id is None:
             seq_id = "sNA"
-        query_result = "NA"
         n_time_data = []
         columns = ["db", "test", "scale", "source", "cid", "desc",
                    "query_n", "seq_id", "driver_t0", "driver_t1", "qid"]
@@ -721,7 +748,7 @@ class SFTPC:
 
             if verbose_iter:
                 print("="*40)
-                print("Start Query:", n)
+                print("Snowflake Start Query:", n)
                 print("-"*20)
                 print("Stream Completion: {} / {}".format(i+1, i_total))
                 print("Query Label:", qn_label)
@@ -731,33 +758,25 @@ class SFTPC:
             self.set_query_label(qn_label)
 
             (t0, t1,
-             query_result, query_text) = self.query_n(n=n,
-                                                      qual=qual,
-                                                      std_out=False
-                                                      )
-
-            df_result = query_result.fetch_pandas_all()
-            qid = query_result.sfqid
+             df_result, query_text, qid) = self.query_n(n=n,
+                                                        qual=qual,
+                                                        std_out=False
+                                                        )
 
             _d = ["sf", self.test, self.scale, self.database, self.cid, self.desc,
                   n, seq_id, t0, t1, qid]
             n_time_data.append(_d)
 
+            # write results as collected by each query
             if save:
-                # write results as collected by each query
-                self.write_results_csv(df=df_result, query_n=n)
+                if len(df_result) > 0:
+                    self.write_results_csv(df=df_result, query_n=n)
 
             if verbose_iter:
                 dt = t1 - t0
                 print("Query ID: {}".format(qid))
                 print("Total Time Elapsed: {}".format(dt))
                 print("-"*40)
-                print()
-
-            if self.verbose_query:
-                print("QUERY EXECUTED")
-                print("--------------")
-                print(query_text)
                 print()
 
             if self.verbose:
@@ -785,8 +804,9 @@ class SFTPC:
         # write local timing results to file
         self.write_times_csv(results_list=n_time_data, columns=columns)
 
+        # this was for multi-query results, maybe remove?
         if len(seq) == 1:
-            return query_result
+            return df_result
         else:
             return
 
@@ -803,7 +823,7 @@ class SFTPC:
         fd = self.results_dir + config.sep
         tools.mkdir_safe(fd)
         fp = fd + "query_result_sf_{0:02d}.csv".format(query_n)
-        #df = tools.to_consistent(df)
+        df = tools.to_consistent(df, n=config.float_precision)
         df.to_csv(fp, index=False, float_format="%.3f")
 
     def write_times_csv(self, results_list, columns):
