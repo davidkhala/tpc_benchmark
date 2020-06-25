@@ -399,12 +399,13 @@ def qgen(path_dir=None, config_dir=None, templates_dir=None,
     
     if x is not None:
         kwargs.append("-x")
-            
+
     if type(n) == int:
         n = str(n)
         kwargs.append(n)
-    elif type(n) == list:
-        n = " ".join([str(_) for _ in x])
+
+    if type(n) == list:
+        n = " ".join([str(_) for _ in n])
         kwargs.append(n)
    
     fp = config.fp_h_src + config.sep + "dbgen"
@@ -507,7 +508,7 @@ def qgen_template(n, templates_dir, scale, qual=None,
                             verbose=verbose,
                             x=True
                             )
-    
+
     query_text = std_out_filter(std_out)
     
     if verbose_std_out:
