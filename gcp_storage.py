@@ -389,7 +389,6 @@ class PooledSync:
         self.producer_lock = threading.Lock()
         
     def sync_upload_chunk(self, local_files, n):
-        print("here 1")
         fs = FolderSync(client=self.client,
                         bucket_name=self.bucket_name,
                         local_directory=self.local_directory,

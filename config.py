@@ -103,7 +103,7 @@ fp_h_src               = fp_h  + sep + fp_h_src_version
 # >> Edit this if desired, specified for repeatable results
 # Note: this could be set to random with `int(random.random()*100)`
 
-random_seed = 13
+random_seed = 220
 #random_seed = None
 
 # 3.5 TPC-H makefile parameters
@@ -193,4 +193,4 @@ fp_results = cwd + sep + "results"
 fp_plots   = cwd + sep + "plots"
 
 # 5.6 Data Quality Control
-truncate_float_to = 1
+float_precision = 2  # number of decimal places in str conversion
