@@ -40,7 +40,7 @@ WITH web_v1 as (
 select
   ws_item_sk item_sk, d_date,
   sum(sum(ws_sales_price))
-      over (partition by ws_item_sk order by d_date rows between unbounded preceding and current row) cume_sales
+      over (partition by ws_item_sk order by d_date nulls last rows between unbounded preceding and current row) cume_sales
 from web_sales
     ,date_dim
 where ws_sold_date_sk=d_date_sk
@@ -51,22 +51,23 @@ store_v1 as (
 select
   ss_item_sk item_sk, d_date,
   sum(sum(ss_sales_price))
-      over (partition by ss_item_sk order by d_date rows between unbounded preceding and current row) cume_sales
+      over (partition by ss_item_sk order by d_date nulls last rows between unbounded preceding and current row) cume_sales
 from store_sales
     ,date_dim
 where ss_sold_date_sk=d_date_sk
   and d_month_seq between [DMS] and [DMS]+11
   and ss_item_sk is not NULL
 group by ss_item_sk, d_date)
+
 [_LIMITA] select [_LIMITB] *
 from (select item_sk
      ,d_date
      ,web_sales
      ,store_sales
      ,max(web_sales)
-         over (partition by item_sk order by d_date rows between unbounded preceding and current row) web_cumulative
+         over (partition by item_sk order by d_date nulls last rows between unbounded preceding and current row) web_cumulative
      ,max(store_sales)
-         over (partition by item_sk order by d_date rows between unbounded preceding and current row) store_cumulative
+         over (partition by item_sk order by d_date nulls last rows between unbounded preceding and current row) store_cumulative
      from (select case when web.item_sk is not null then web.item_sk else store.item_sk end item_sk
                  ,case when web.d_date is not null then web.d_date else store.d_date end d_date
                  ,web.cume_sales web_sales
