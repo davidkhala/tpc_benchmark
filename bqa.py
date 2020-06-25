@@ -545,6 +545,7 @@ class BQTPC:
 
         self.verbose = verbose
         self.verbose_query = verbose_query
+        self.verbose_query_n = False  # print line numbers in query text
         self.verbose_iter = False
 
         self.client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
@@ -659,9 +660,13 @@ class BQTPC:
         query_text = self.add_view(query_text)
 
         if self.verbose_query:
-            print("QUERY TEXT")
-            print("==========")
-            print(query_text)
+            if self.verbose_query_n:
+                qt = "\n".join([str(n) + "  " + line for n, line in enumerate(query_text.split("\n"))])
+            else:
+                qt = query_text
+            print("BIGQUERY QUERY TEXT")
+            print("===================")
+            print(qt)
             print()
 
         query_result = self.client.query(query_text, job_config=self.job_config)
@@ -732,11 +737,35 @@ class BQTPC:
 
         t0 = pd.Timestamp.now("UTC")
 
-        query_result = self.query(query_text=query_text)
+        # BigQuery will process multiple queries in one query statement
+        # However, TPC-DS is completely single-queries, TPC-H has a view created and
+        # deleted in #15, the creation and delete steps don't have data to capture
+        query_list = [q + ";" for q in query_text.split(";") if len(q.strip()) > 0]
+
+        # if query includes a view (make view, query, delete view)
+        if len(query_list) == 3:
+            query_1_result = self.query(query_list[0])
+            if self.verbose:
+                print("Non-query reply:", query_1_result.result())
+
+            query_2_result = self.query(query_list[1])
+            query_result = query_2_result
+            df_result = query_result.result().to_dataframe()
+            qid = query_result.job_id
+
+            query_3_result = self.query(query_list[2])
+            if self.verbose:
+                print("Non-query reply:", query_3_result.result())
+
+        # single query statement
+        else:
+            query_result = self.query(query_text)
+            df_result = query_result.result().to_dataframe()
+            qid = query_result.job_id
 
         t1 = pd.Timestamp.now("UTC")
 
-        return t0, t1, query_result, query_text
+        return t0, t1, df_result, query_text, qid
 
     def query_history(self, t0, t1):
         """Get the query history for the current BigQuery project, bound by
@@ -786,7 +815,6 @@ class BQTPC:
         """
         if seq_id is None:
             seq_id = "sNA"
-        query_result = "NA"
         n_time_data = []
         columns = ["db", "test", "scale", "source", "cid", "desc",
                    "query_n", "seq_id", "driver_t0", "driver_t1", "qid"]
@@ -799,7 +827,7 @@ class BQTPC:
 
             if verbose_iter:
                 print("="*40)
-                print("Start Query:", n)
+                print("BigQuery Start Query:", n)
                 print("-"*20)
                 print("Stream Completion: {} / {}".format(i+1, i_total))
                 print("Query Label:", qn_label)
@@ -809,33 +837,25 @@ class BQTPC:
             self.set_query_label(qn_label)
 
             (t0, t1,
-             query_result, query_text) = self.query_n(n=n,
-                                                      qual=qual,
-                                                      std_out=False
-                                                      )
-
-            df_result = query_result.result().to_dataframe()
-            qid = query_result.job_id
+             df_result, query_text, qid) = self.query_n(n=n,
+                                                        qual=qual,
+                                                        std_out=False
+                                                        )
 
             _d = ["bq", self.test, self.scale, self.dataset, self.cid, self.desc,
                   n, seq_id, t0, t1, qid]
             n_time_data.append(_d)
 
+            # write results as collected by each query
             if save:
-                # write results as collected by each query
-                self.write_results_csv(df=df_result, query_n=n)
+                if len(df_result) > 0:
+                    self.write_results_csv(df=df_result, query_n=n)
 
             if verbose_iter:
                 dt = t1 - t0
                 print("Query ID: {}".format(qid))
                 print("Total Time Elapsed: {}".format(dt))
                 print("-"*40)
-                print()
-
-            if self.verbose_query:
-                print("QUERY EXECUTED")
-                print("--------------")
-                print(query_text)
                 print()
 
             if self.verbose:
@@ -863,8 +883,9 @@ class BQTPC:
         # write local timing results to file
         self.write_times_csv(results_list=n_time_data, columns=columns)
 
+        # this was for multi-query results, maybe remove?
         if len(seq) == 1:
-            return query_result
+            return df_result
         else:
             return
 
@@ -881,7 +902,7 @@ class BQTPC:
         fd = self.results_dir + config.sep
         tools.mkdir_safe(fd)
         fp = fd + "query_result_bq_{0:02d}.csv".format(query_n)
-        #df = tools.to_consistent(df)
+        df = tools.to_consistent(df, n=config.float_precision)
         df.to_csv(fp, index=False, float_format="%.3f")
 
     def write_times_csv(self, results_list, columns):
