@@ -21,7 +21,7 @@ from
 where
 	c_custkey = o_custkey
 	and l_orderkey = o_orderkey
-	and o_orderdate >= date ':1'
+	and o_orderdate >= to_date(':1')
 	and o_orderdate < dateadd(month, 3, to_date(':1'))
 	and l_returnflag = 'R'
 	and c_nationkey = n_nationkey

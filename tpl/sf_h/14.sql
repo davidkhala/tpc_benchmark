@@ -15,6 +15,6 @@ from
 	part
 where
 	l_partkey = p_partkey
-	and l_shipdate >= date ':1'
+	and l_shipdate >= to_date(':1')
 	and l_shipdate < dateadd(month, 1, to_date(':1'))
 ;
