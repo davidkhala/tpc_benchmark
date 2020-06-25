@@ -347,7 +347,7 @@ def parse_h_stream_seq():
     d = []
     for line in d_str:
         d.append(line.strip().split("\t"))
-    _df = pd.DataFrame(d, columns=["stream"]+list(range(1,23)))
+    _df = pd.DataFrame(d, columns=["stream"]+list(range(1, 23)))
     _df.drop("stream", axis=1, inplace=True)
     return _df
 
@@ -363,7 +363,7 @@ def parse_ds_seq_stream():
         columns = query number to execute
     """
     fp = config.fp_ds_stream_order
-    _df = pd.read_csv(fp, skiprows=2, names=["seq"]+list(range(0,21)))
+    _df = pd.read_csv(fp, skiprows=2, names=["seq"]+list(range(0, 21)))
     _df.drop("seq", axis=1, inplace=True)
     _df = _df.transpose()
     return _df
@@ -388,7 +388,7 @@ def tpc_stream(test, n):
         _df = parse_h_stream_seq()
     if test == "ds":
         _df = parse_ds_seq_stream()
-    query_sequence = _df.loc[n].values
+    query_sequence = [int(str(v)) for v in _df.loc[n].values]
     return list(query_sequence)
 
 
@@ -437,7 +437,7 @@ def to_numeric(df):
     return df
 
 
-def truncate(x, n):
+def truncate_old(x, n):
     """Truncate a float to a certain number of decimal places
     
     Parameters
@@ -449,14 +449,22 @@ def truncate(x, n):
     -------
     float : truncated value
     """
-    #if pd.isnull(x):
-    #    return np.nan
-    #else:
-    return math.trunc(x * math.pow(10, n)) / math.pow(10, n)
+    if pd.isnull(x):
+        return np.nan
+    else:
+        return math.trunc(x * math.pow(10, n)) / math.pow(10, n)
 
 
-def to_truncated(df, n):
-    """Truncate all float values in dataframe
+def truncate(s, n):
+    """Vectorized version of float truncation"""
+    s = s * np.power(10, n)
+    s = s.astype(int)
+    s = s / np.power(10, n)
+    return s
+
+
+def to_truncated(df, n=None):
+    """Truncate all float values in DataFrame
     
     Parameters
     ----------
@@ -465,10 +473,23 @@ def to_truncated(df, n):
     
     Returns
     -------
-    Pandas Dataframe with float values truncated
+    Pandas DataFrame with float values converted to int * 1000
     """
-    for col in df.select_dtypes(float).columns:
-        df[col] = df[col].apply(lambda r: truncate(r, n))
+    for col in df.columns:
+        try:
+            df[col] = df[col].apply(lambda x: truncate(x, n))
+        except ValueError:
+            pass
+    return df
+
+
+def to_str(df, n):
+    dec_str = "{:." + str(n) + "f}"
+    for col in df.columns:
+        try:
+            df[col] = df[col].apply(lambda x: dec_str.format(x))
+        except ValueError:
+            pass
     return df
 
 
@@ -484,10 +505,15 @@ def to_consistent(df, n):
     -------
     df : Pandas DataFrame
     """
+    if n is None:
+        n = config.float_precision
+
     df.columns = map(str.lower, df.columns)
+    drop_columns = ["lochierarchy"]
+    df = df[[c for c in df.columns if c not in drop_columns]].copy()
     df = to_numeric(df)
-    df.sort_values(by=list(df.columns)).reset_index(drop=True)
+    df = df.sort_values(by=list(df.columns), na_position='last').reset_index(drop=True)
     df.fillna(value=-9999.99, inplace=True)
-    df = to_truncated(df=df, n=n)
-    #df = df.round(decimals=1)
+    #df = to_truncated(df=df, n=config.float_precision)
+    df = to_str(df=df, n=n)
     return df
