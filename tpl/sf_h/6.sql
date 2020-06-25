@@ -9,7 +9,7 @@ select
 from
 	lineitem
 where
-	l_shipdate >= date ':1'
+	l_shipdate >= to_date(':1')
 	and l_shipdate < dateadd(year, 1, to_date(':1'))
 	and l_discount between :2 - 0.01 and :2 + 0.01
 	and l_quantity < :3
