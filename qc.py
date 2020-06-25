@@ -18,29 +18,48 @@ def splitter(fp):
     y = x[-2].split("_")[-1]
     return y
 
-def equals(df1, df2):
-    try:
-        assert_frame_equal(df1, df2, check_names=False)
-        return True
-    except AssertionError:
+
+def assert_equal(df1, df2, check_less_precise=True):
+
+    if (len(df1) == 0) & len(df2 == 0):
         return False
-    
-def equals_csv(fp1, fp2):
-    _df1 = pd.read_csv(fp1)
-    _df2 = pd.read_csv(fp2)
+
     try:
-        _df1 = tools.to_consistent(df=_df1, n=config.truncate_float_to)
-        _df2 = tools.to_consistent(df=_df2, n=config.truncate_float_to)
-        assert_frame_equal(_df1, _df2, 
+        assert_frame_equal(df1, df2,
                            check_names=False,
                            check_exact=False,
-                           check_less_precise=1)
+                           check_less_precise=check_less_precise)
         return True
     except AssertionError:
         return False
 
 
-def compare_results(df):
+def equal_percent(df1, df2):
+    diff = df1.eq(df2)
+    return diff.sum().sum() / (diff.shape[0] * diff.shape[1])
+
+
+def csv_consistent(fp_df1, fp_df2):
+    """Print head middle and tail values of Pandas Dataframe"""
+    df1 = pd.read_csv(fp_df1)
+    df2 = pd.read_csv(fp_df2)
+    df1 = tools.to_consistent(df=df1, n=config.float_precision)
+    df2 = tools.to_consistent(df=df2, n=config.float_precision)
+    return df1, df2
+
+
+def assert_equal_csv(fp1, fp2):
+
+    df1, df2 = csv_consistent(fp_df1=fp1, fp_df2=fp2)
+    return assert_equal(df1, df2)
+
+
+def percent_equal_csv(fp1, fp2):
+    df1, df2 = csv_consistent(fp_df1=fp1, fp_df2=fp2)
+    return equal_percent(df1, df2)
+
+
+def apply_assert_equal(df):
     """Compare the CSV results from a dual SF/BQ query sequence
     
     Parameters
@@ -50,13 +69,15 @@ def compare_results(df):
     Returns
     -------
     result : Pandas Series, bool if results were identical according 
-        to equals_csv function
+        to assert_equal_csv function
     """
-    
-    
-    result = df.apply(lambda r: equals_csv(r.fp_bq, r.fp_sf), axis=1)
-    
-    return result
+
+    return df.apply(lambda r: assert_equal_csv(r.fp_bq, r.fp_sf), axis=1)
+
+
+def apply_percent_equal(df):
+
+    return df.apply(lambda r: percent_equal_csv(r.fp_bq, r.fp_sf), axis=1)
 
 def collate_results(results_dir):
     """Compare the CSV results from a dual SF/BQ query sequence
@@ -92,18 +113,7 @@ def collate_results(results_dir):
     return df
 
 
-def print_head(df, n, n0, n1):
-    """Print head middle and tail values of Pandas Dataframe"""
-    df_bq = pd.read_csv(df.loc[n, "fp_bq"])
-    df_sf = pd.read_csv(df.loc[n, "fp_sf"])
-
-    df_bq = tools.to_consistent(df=df_bq, n=config.truncate_float_to)
-    df_sf = tools.to_consistent(df=df_sf, n=config.truncate_float_to)
-
-    #df_bq.fillna(value=-9999, inplace=True)
-    #df_sf.fillna(value=-9999, inplace=True)
-    #df_bq.columns = map(str.lower, df_bq.columns)
-    #df_sf.columns = map(str.lower, df_sf.columns)
+def print_dfs(df_bq, df_sf, n0, n1):
 
     print("BQ:")
     print(df_bq.head())
@@ -129,7 +139,19 @@ def print_head(df, n, n0, n1):
     print()
     print("="*40)
     print()
-    print(df_bq.eq(df_sf))
+    _df = df_bq.eq(df_sf)
+    print()
+    if len(_df) < 25:
+        print("Result:")
+        print("-------")
+        print(_df)
+        print()
+    else:
+        print("Head of Result:")
+        print("---------------")
+        print(_df.head(10))
+        print()
+
     return df_bq, df_sf
 
 
@@ -145,6 +167,7 @@ class QueryQC:
         
         self.verbose = False
         self.verbose_query = False
+        self.verbose_query_n = False  # print line numbers in query text
         self.verbose_iter = False
         
         self.qual = False
@@ -157,6 +180,12 @@ class QueryQC:
         
         self.results_sf_csv_fp = None
         self.results_bq_csv_fp = None
+
+        # only used in single query comparison
+        self.result_bq = None
+        self.result_sf = None
+        self.result_bq_csv = None
+        self.result_sf_csv = None
         
     def set_timestamp_dir(self):
         self.shared_timestamp = pd.Timestamp.now()  # "UTC"
@@ -180,12 +209,13 @@ class QueryQC:
     def run(self, seq):
         
         sf = sfa.SFTPC(test=self.test,
-               scale=self.scale,
-               cid=self.cid,
-               warehouse="TEST9000",
-               desc=self.desc,
-               verbose=self.verbose,
-               verbose_query=self.verbose_query)
+                       scale=self.scale,
+                       cid=self.cid,
+                       warehouse="TEST9000",
+                       desc=self.desc,
+                       verbose=self.verbose,
+                       verbose_query=self.verbose_query)
+        sf.verbose_query_n = self.verbose_query_n
         
         if self.verbose:
             print('Using database:', sf.database)
@@ -194,30 +224,31 @@ class QueryQC:
         sf.results_dir = self.results_dir
 
         sf.connect()
-        sf.query_seq(seq=seq, 
-                     seq_id=self.seq_id, 
-                     qual=self.qual, 
-                     save=self.save, 
-                     verbose_iter=self.verbose_iter)
+        self.result_sf = sf.query_seq(seq=seq,
+                                      seq_id=self.seq_id,
+                                      qual=self.qual,
+                                      save=self.save,
+                                      verbose_iter=self.verbose_iter)
         sf.close()
 
         self.results_sf_csv_fp = sf.results_csv_fp
         
         bq = bqa.BQTPC(test=self.test,
-               scale=self.scale,
-               cid=self.cid,
-               desc=self.desc,
-               verbose_query=self.verbose_query, 
-               verbose=self.verbose)
+                       scale=self.scale,
+                       cid=self.cid,
+                       desc=self.desc,
+                       verbose_query=self.verbose_query,
+                       verbose=self.verbose)
+        bq.verbose_query_n = self.verbose_query_n
 
         bq.timestamp = self.shared_timestamp
         bq.results_dir = self.results_dir
 
-        bq.query_seq(seq,
-                     seq_id=self.seq_id,
-                     qual=self.qual,
-                     save=self.save,
-                     verbose_iter=self.verbose_iter)
+        self.result_bq = bq.query_seq(seq,
+                                      seq_id=self.seq_id,
+                                      qual=self.qual,
+                                      save=self.save,
+                                      verbose_iter=self.verbose_iter)
 
         self.results_bq_csv_fp = bq.results_csv_fp
 
@@ -491,19 +522,21 @@ class QueryQC:
 
     def compare(self):
         df = collate_results(self.results_dir)
-        df["match"] = result = compare_results(df)
-        
-        print("-"*30)
-        #print(result, "<<< DataFrames Match")
-        print("-"*30)
-        print()
-        
-        #print(len(df))
-        if len(df) == 1:
-            n = 1
-            mid = int(len(df)/2)
+        df["equal"] = apply_assert_equal(df)
+        df["equal_percent"] = apply_percent_equal(df)
 
-            df_bq, df_sf = print_head(df=df, n=n, n0=mid, n1=mid+5)
+        if len(df) == 1:
+
+            fp_df_bq = df.loc[1, "fp_bq"]
+            fp_df_sf = df.loc[1, "fp_sf"]
+
+            df_bq, df_sf = csv_consistent(fp_df1=fp_df_bq,
+                                          fp_df2=fp_df_sf)
+            self.result_bq_csv = df_bq
+            self.result_sf_csv = df_sf
+
+            mid = int(len(df_bq)/2)
+            print_dfs(df_bq=df_bq, df_sf=df_sf, n0=mid, n1=mid + 5)
 
             c1 = " ".join([c for c in df_bq.columns])  # BQ
             c2 = " ".join([c for c in df_sf.columns])  # SF
@@ -517,5 +550,4 @@ class QueryQC:
             print(c2)
             print() 
 
-            #return df_bq, df_sf
         return df
