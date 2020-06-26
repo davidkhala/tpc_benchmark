@@ -150,12 +150,8 @@ def upload(idx, table, files):
     logging.info("END thread %s: (%s)", idx, table)
     return conn
 
-if __name__ == "__main__":
-    format = "%(asctime)s: %(message)s"
-    logging.basicConfig(format=format, level=logging.INFO, datefmt="%H:%M:%S")
-    logging.info("Main: start")
 
-
+def threaded_upload():
     # get list of tables/files to upload from GCS to snowflake
     listConn = snowflake.connector.connect(user=SF_USERNAME, password=SF_PASSWORD, account=SF_ACCOUNT)
     db = list_integration(listConn)

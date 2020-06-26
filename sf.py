@@ -558,3 +558,39 @@ class SnowflakeHelper:
             result = self.run_query(query)
             print(f'result {result}')
         return
+
+    def threaded_upload():
+        # get list of tables/files to upload from GCS to snowflake
+        listConn = snowflake.connector.connect(user=SF_USERNAME, password=SF_PASSWORD, account=SF_ACCOUNT)
+        db = list_integration(listConn)
+
+        threads = []
+
+        # load each table in a separate thread
+        thread_idx = 0
+
+        logging.info(f"total tables to process: {len(db.keys())}")
+
+        for table, files in db.items():
+            logging.info(f'processing table: {table}')
+            chunks = [files[x:x + 5] for x in range(0, len(files), 5)]
+
+            for chunk in chunks:
+                t = threading.Thread(target=upload, args=(thread_idx, table, chunk), name=f'worker_{thread_idx}')
+                t.start()
+                threads.append(t)
+                thread_idx += 1
+                time.sleep(1)  # sleep 1 seconds before firing off another thread
+
+        logging.info(f'total threads started: {thread_idx}')
+
+        # wait for all threads to finish:
+        for t in threads:
+            if t.is_alive():
+                logging.info(f'joining threads {t.getName()}')
+                t.join()
+            else:
+                logging.info(f'thread is not alive {t.getName()}')
+
+        listConn.close()
+        logging.info("Main: all done")
