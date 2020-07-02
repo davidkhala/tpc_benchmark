@@ -617,7 +617,7 @@ class DGenPool:
         t0 = pd.Timestamp.now()
         
         with self.lock:
-            self.results.append(["h", str(self.scale), "start",
+            self.results.append(["ds", str(self.scale), "start",
                                  child, parallel, 
                                  str(t0), "", "", ""])
         
