@@ -50,11 +50,10 @@ fp_h_output_mnt  = fp_output_mnt + sep + "h"
 
 # 2.4 Snowflake Connector Auth Basics
 # Note: credentials in 'poor_security.py' formatted as:
-# sf_username = 
-# sf_password = 
-
+sf_username = "dauren"
+sf_password = "239nj8834uffe"
 sf_account = "wja13212"
-sf_warehouse = "TEST9000"
+sf_warehouse = "TEST1"
 sf_warehouse_cost = 0.00056  # price per second for this warehouse size
 
 # 2.5 Snowflake connector configuration
