@@ -79,6 +79,7 @@ def apply_percent_equal(df):
 
     return df.apply(lambda r: percent_equal_csv(r.fp_bq, r.fp_sf), axis=1)
 
+
 def collate_results(results_dir):
     """Compare the CSV results from a dual SF/BQ query sequence
     

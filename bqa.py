@@ -749,13 +749,23 @@ class BQTPC:
                 print("Non-query reply:", query_1_result.result())
 
             query_2_result = self.query(query_list[1])
-            query_result = query_2_result
-            df_result = query_result.result().to_dataframe()
-            qid = query_result.job_id
+            df_result = query_2_result.result().to_dataframe()
+            qid = query_2_result.job_id
 
             query_3_result = self.query(query_list[2])
             if self.verbose:
                 print("Non-query reply:", query_3_result.result())
+
+        # two query statements in query file
+        # TPC-DS #39 is actually two query statements
+        elif len(query_list) == 2:
+
+            # the first query will not be captured for qc comparison
+            _ = self.query(query_list[0])
+            # second query is captured
+            query_2_result = self.query(query_list[1])
+            df_result = query_2_result.result().to_dataframe()
+            qid = query_2_result.job_id
 
         # single query statement
         else:
