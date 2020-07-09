@@ -1686,6 +1686,11 @@ class SFTPC:
             if save:
                 if len(df_result) > 0:
                     self.write_results_csv(df=df_result, query_n=n)
+                else:
+                    # filler for statistics when the query returns no values
+                    df_result.loc[0, :] = ["filler"] * df_result.shape[1]
+                    print("FILLER", type(df_result))
+                    self.write_results_csv(df=df_result, query_n=n)
 
             if verbose_iter:
                 dt = t1 - t0

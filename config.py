@@ -3,8 +3,8 @@
 import os
 
 # set logger
-import logging
-logging.basicConfig(filename='./nb.log', level=logging.DEBUG)
+#import logging
+#logging.basicConfig(filename='./nb.log', level=logging.DEBUG)
 
 # 1.0 Project's current path locations
 # >> Do NOT edit this section
@@ -103,7 +103,7 @@ fp_h_src               = fp_h  + sep + fp_h_src_version
 # >> Edit this if desired, specified for repeatable results
 # Note: this could be set to random with `int(random.random()*100)`
 
-random_seed = 220
+random_seed = 14
 #random_seed = None
 
 # 3.5 TPC-H makefile parameters
