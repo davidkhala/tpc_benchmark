@@ -4,7 +4,6 @@ Colin Dietrich, SADA 2020
 """
 
 import glob
-import decimal
 
 import numpy as np
 import pandas as pd
@@ -164,7 +163,7 @@ class QueryQC:
         self.cid = None
         self.stream_n = None
         self.desc = None
-        self.seq_id = None
+        #self.seq_id = None
         
         self.verbose = False
         self.verbose_query = False
@@ -191,17 +190,17 @@ class QueryQC:
     def set_timestamp_dir(self):
         self.shared_timestamp = pd.Timestamp.now()  # "UTC"
         self.shared_timestamp = str(self.shared_timestamp).replace(" ", "_")
-
+        data_source = self.test + "_" + str(self.scale) + "GB_" + self.cid
         self.results_dir, _ = tools.make_name(db="bqsf",
                                               test=self.test,
                                               cid=self.cid,
                                               kind="results",
-                                              datasource="", 
+                                              datasource=data_source,
                                               desc=self.desc, ext="", 
                                               timestamp=self.shared_timestamp)
-        #if self.verbose:
-        print("Result Folder Name:")
-        print(self.results_dir)
+        if self.verbose:
+            print("Result Folder Name:")
+            print(self.results_dir)
             
     def run_single(self, query_n):
         seq = [query_n]
@@ -226,7 +225,7 @@ class QueryQC:
 
         sf.connect()
         self.result_sf = sf.query_seq(seq=seq,
-                                      seq_id=self.seq_id,
+                                      seq_n=self.stream_n,
                                       qual=self.qual,
                                       save=self.save,
                                       verbose_iter=self.verbose_iter)
@@ -246,7 +245,7 @@ class QueryQC:
         bq.results_dir = self.results_dir
 
         self.result_bq = bq.query_seq(seq,
-                                      seq_id=self.seq_id,
+                                      seq_n=self.stream_n,
                                       qual=self.qual,
                                       save=self.save,
                                       verbose_iter=self.verbose_iter)

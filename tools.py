@@ -403,18 +403,28 @@ def make_name(db, test, cid, kind, datasource, desc, ext, timestamp=None):
     cid : str, config id, i.e. '02A' for the experiment config number
     kind : str, kind of record, either 'results' or 'times'
     datasource : str, dataset if bq or database if snowflake
-    desc : str, description of experimentself.desc
+    desc : str, description of experiment self.desc
     ext : str, extension including '.' i.e. '.csv'
     timestamp : pandas Timestamp object
+
+    Returns
+    folder : str, folder name to save data to
+    file : str, file name to save timing data to
+
+    # TODO: remove test, cid references
     """
     if timestamp is None:
         timestamp = pd.Timestamp.now("UTC")
         timestamp = str(timestamp).replace(" ", "_")
 
-    folder = (f'{config.fp_results}{config.sep}{db}_{test}_{cid}_{kind}-' +
-              f'{datasource}-{desc}-{str(timestamp)}')
-    file = (f'{db}_{test}_{cid}_{kind}-' +
-            f'{datasource}-{desc}-{timestamp}{ext}')
+    folder = (f'{config.fp_results}{config.sep}' +
+              f'{kind}_{db}_{datasource}_' +
+              f'{desc}_{str(timestamp)}')
+    file =   (f'benchmark_' +
+              f'{kind}_{db}_{datasource}_' +
+              f'{desc}_{str(timestamp)}{ext}')
+    #file =  (f'benchmark_result_{db}_{test}_{cid}_{kind}-' +
+    #         f'{datasource}-{desc}-{timestamp}{ext}')
     return folder, file
 
 

@@ -1313,7 +1313,7 @@ class SFTPC:
 
         self.timestamp = timestamp
         self.results_dir, _ = tools.make_name(db="sf", test=self.test, cid=self.cid,
-                                              kind="results", datasource=self.database,
+                                              kind="result", datasource=self.database,
                                               desc=self.desc, ext="", timestamp=self.timestamp)
         self.results_csv_fp = None
 
@@ -1630,15 +1630,14 @@ class SFTPC:
         query_result = self.sfc.query(query_text)
         return query_result
 
-    def query_seq(self, seq, seq_id=None, qual=None, save=False, verbose_iter=False):
+    def query_seq(self, seq, seq_n=None, qual=None, save=False, verbose_iter=False):
         """Query Snowflake with TPC-DS or TPC-H query template number n
 
         Parameters
         ----------
         seq : iterable sequence int, query numbers to execute between
             1 and 99 for ds and 1 and 22 for h
-        seq_id : str, optional id for stream sequence - i.e. 0 or 4 etc,
-            this id is the stream id from ds or h
+        seq_n : int, stream sequence number for test - i.e. 0 or 4 etc
         qual : None, or True to use qualifying values (to test 1GB qualification db)
         save : bool, save data about this query sequence to disk
         verbose_iter : bool, print per iteration status statements
@@ -1649,16 +1648,18 @@ class SFTPC:
         else None
         """
 
-        if seq_id is None:
-            seq_id = "sNA"
+        if seq_n is None:
+            seq_n = "sNA"
+        else:
+            seq_n = str(seq_n)
         n_time_data = []
         columns = ["db", "test", "scale", "source", "cid", "desc",
-                   "query_n", "seq_id", "driver_t0", "driver_t1", "qid"]
+                   "query_n", "seq_n", "driver_t0", "driver_t1", "qid"]
 
         t0_seq = pd.Timestamp.now("UTC")
         i_total = len(seq)
         for i, n in enumerate(seq):
-            qn_label = self.database + "-q" + str(n) + "-" + seq_id + "-" + self.desc
+            qn_label = self.database + "-q" + str(n) + "-" + seq_n + "-" + self.desc
             qn_label = qn_label.lower()
 
             if verbose_iter:
@@ -1679,7 +1680,7 @@ class SFTPC:
                                                         )
 
             _d = ["sf", self.test, self.scale, self.database, self.cid, self.desc,
-                  n, seq_id, t0, t1, qid]
+                  n, seq_n, t0, t1, qid]
             n_time_data.append(_d)
 
             # write results as collected by each query
@@ -1689,7 +1690,8 @@ class SFTPC:
                 else:
                     # filler for statistics when the query returns no values
                     df_result.loc[0, :] = ["filler"] * df_result.shape[1]
-                    print("FILLER", type(df_result))
+                    if verbose_iter:
+                        print("No result rows, FILLER DataFrame created.")
                     self.write_results_csv(df=df_result, query_n=n)
 
             if verbose_iter:
@@ -1763,7 +1765,6 @@ class SFTPC:
         df = pd.DataFrame(results_list, columns=columns)
         tools.mkdir_safe(self.results_dir)
         df.to_csv(self.results_csv_fp, index=False)
-
 
     def threaded_upload(idx, table, files):
         # get list of tables/files to upload from GCS to snowflake
