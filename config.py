@@ -184,10 +184,47 @@ fp_query = cwd + sep + "q"
 # >> Do NOT edit
 fp_ds_answers = fp_ds_src + sep + "answer_sets"
 
-# 5.5 Test Results and plots
+# 5.5 Test Results and plot location
 # >> Do NOT edit
 fp_results = cwd + sep + "results"
 fp_plots   = cwd + sep + "plots"
 
-# 5.6 Data Quality Control
+# 5.6 SnowFlake Information Schema columns to keep
+sf_keep = ["QUERY_ID", "QUERY_TEXT", "DATABASE_NAME", "WAREHOUSE_SIZE", "WAREHOUSE_TYPE",
+           "QUERY_TAG", "START_TIME", "END_TIME", "TOTAL_ELAPSED_TIME", "BYTES_SCANNED",
+           "CREDITS_USED_CLOUD_SERVICES"]
+
+sf_extended_keep = sf_keep + ["PERCENTAGE_SCANNED_FROM_CACHE",
+                              "PARTITIONS_SCANNED", "PARTITIONS_TOTAL",
+                              "BYTES_SPILLED_TO_LOCAL_STORAGE", "BYTES_SPILLED_TO_REMOTE_STORAGE"]
+
+# 5.7 BigQuery Information Schema columns to keep
+bq_keep = ["statement_type", "start_time", "end_time", "total_bytes_processed",
+           "total_slot_ms",  "cache_hit", "labels"]
+
+# 5.7 Cost calculations
+
+sf_dollars_per_tebibyte = 5.00
+
+# https://cloud.google.com/bigquery/pricing
+bq_dollars_per_terabyte = 5.00
+
+# 5.8 Benchmark Data Output Format
+# db : str, database system under test, i.e. Snowflake "sf or BigQuery "bq"
+# test : str, TPC test, either "ds" or "h"
+# scale : int, TPC scale factor in GB
+# source : str, source dataset/database name test was conducted on
+# cid : str, configuration identifier, i.e. "01" or "03A" etc
+# desc : str, description of current data collection effort, i.e. "clustering"
+# query_n : int, query number in test stream
+# seq_n : int, test stream sequence number
+# dt : float, elapsed seconds query took to complete
+# dt_s :
+# TODO
+# TB : float, total number of Terabytes processed by query execution
+
+summary_short_columns = ["db", "test", "scale", "source", "cid", "desc", "query_n", "seq_n", "dt", "dt_s", "TB"]
+
+
+# 5.6 Data Quality Control Precision
 float_precision = 2  # number of decimal places in str conversion
