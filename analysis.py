@@ -37,7 +37,7 @@ def TebiBytes_to_dollars(tib):
         return tib * config.sf_dollars_per_tebibyte
 
 
-class Summary:
+class Results:
     """Summarize data from one results directory"""
     def __init__(self, results_dir):
         self.results_dir = results_dir
@@ -59,6 +59,12 @@ class Summary:
         self.dfsf_short = None
         self.dfbq_short = None
         self.df = None
+
+        # metadata from the file names
+        self.test = None
+        self.scale = None
+        self.query_stream_number = None
+        self.meta_data = None
 
     def load(self):
         """Load data from csv files into Pandas DataFrames"""
@@ -160,15 +166,28 @@ class Summary:
         self.df = pd.concat([self.dfsf_short, self.dfbq_short])
         self.df.reset_index(inplace=True, drop=True)
 
-    def summarize(self, drop=None, summary_suffix=None, verbose=False):
-        """Summarize TPC timing and processed bytes
+        # all of these records will be the same so just grab the 1st
+        self.test = self.df.loc[0, "test"]
+        self.scale = self.df.loc[0, "scale"]
+        self.query_stream_number = self.df.loc[0, "seq_n"]
+        self.meta_data = self.bq_results_csv_fp.split(config.sep)[-1].split("_")
+
+        # save totals back into same source directory
+        all_fp = (self.results_dir + config.sep +
+                  "benchmark_results_" +
+                  "_".join(self.meta_data[3:]))
+        self.df.to_csv(all_fp, index=False)
+
+    def total(self, drop=None, suffix=None, save=True, verbose=False):
+        """Total TPC timing and processed bytes
 
         Parameters
         ----------
         # df : Pandas DataFrame, all timing data
         # results_dir : str, results directory to save summary to
         drop : list, queries to not include in plot
-        summary_suffix : str, additional label for summary output .csv
+        suffix : str, additional label for summary output .csv
+        save : bool, True to save to .csv
         verbose : bool, print debug statements
 
         Returns
@@ -177,14 +196,14 @@ class Summary:
         """
 
         # all of these records will be the same so just grab the 1st
-        test = self.df.loc[0, "test"]
-        scale = self.df.loc[0, "scale"]
-        query_stream_number = self.df.loc[0, "seq_n"]
-        meta_data = self.bq_results_csv_fp.split(config.sep)[-1].split("_")
+        #test = self.df.loc[0, "test"]
+        #scale = self.df.loc[0, "scale"]
+        #query_stream_number = self.df.loc[0, "seq_n"]
+        #meta_data = self.bq_results_csv_fp.split(config.sep)[-1].split("_")
 
         if verbose:
             print("Meta Data:")
-            print(meta_data)
+            print(self.meta_data)
             print()
 
         if drop is not None:
@@ -198,14 +217,14 @@ class Summary:
         df_summary.reset_index(inplace=True)
         df_summary.db = df_summary.db.str.upper()
         df_summary.test = df_summary.test.str.upper()
-        df_summary["scale"] = meta_data[4]
-        df_summary["desc"] = meta_data[6]
+        df_summary["scale"] = self.meta_data[4]
+        df_summary["desc"] = self.meta_data[6]
 
         # usual printout option
         if verbose:
-            print("Test: TPC-{}".format(test.upper()))
-            print("Scale Factor: {}GB".format(scale))
-            print("Query Stream Number: {}".format(query_stream_number))
+            print("Test: TPC-{}".format(self.test.upper()))
+            print("Scale Factor: {}GB".format(self.scale))
+            print("Query Stream Number: {}".format(self.query_stream_number))
             print()
             print("Key:")
             print("  ds_s: elapsed time in seconds")
@@ -214,24 +233,25 @@ class Summary:
             print("Summary:")
             print(df_summary)
 
-        if summary_suffix is None:
-            ssfx = "all_"
+        if suffix is None:
+            suffix = "all_"
         else:
-            ssfx = summary_suffix + "_"
+            suffix = "_" + suffix
 
-        # save summary back into same source directory
-        summary_fp = (self.results_dir + config.sep +
-                      "benchmark_summary_" + ssfx +
-                      "_".join(meta_data[3:]))
-        df_summary.to_csv(summary_fp, index=False)
+        # save totals back into same source directory
+        _id = '_'.join(self.meta_data[3:]).split(".")[0]
+        total_fp = (self.results_dir + config.sep +
+                    "benchmark_total_" + _id  + suffix + ".csv")
+        if save:
+            df_summary.to_csv(total_fp, index=False)
 
         return df_summary
 
     def plot_total_time(self, df_summary, suffix=None):
         # all of these records will be the same so just grab the 1st
-        test = self.df.loc[0, "test"]
-        scale = self.df.loc[0, "scale"]
-        query_stream_number = self.df.loc[0, "seq_n"]
+        #test = self.df.loc[0, "test"]
+        #scale = self.df.loc[0, "scale"]
+        #query_stream_number = self.df.loc[0, "seq_n"]
 
         ax = df_summary[["db", "dt_s"]].plot.bar(x="db", rot=0, color="grey")
 
@@ -240,9 +260,9 @@ class Summary:
         else:
             suffix = " " + suffix
 
-        ax.set_xlabel("TPC-{} Stream {} at {}GB Scale {}".format(test.upper(),
-                                                                 query_stream_number,
-                                                                 scale,
+        ax.set_xlabel("TPC-{} Stream {} at {}GB Scale {}".format(self.test.upper(),
+                                                                 self.query_stream_number,
+                                                                 self.scale,
                                                                  suffix))
         ax.set_ylabel("Time in Seconds")
         ax.get_legend().remove()
@@ -250,9 +270,9 @@ class Summary:
 
     def plot_total_bytes(self, df_summary, suffix=None):
         # all of these records will be the same so just grab the 1st
-        test = self.df.loc[0, "test"]
-        scale = self.df.loc[0, "scale"]
-        query_stream_number = self.df.loc[0, "seq_n"]
+        #test = self.df.loc[0, "test"]
+        #scale = self.df.loc[0, "scale"]
+        #query_stream_number = self.df.loc[0, "seq_n"]
 
         ax = df_summary[["db", "TB"]].plot.bar(x="db", rot=0, color="purple")
 
@@ -261,13 +281,36 @@ class Summary:
         else:
             suffix = " " + suffix
 
-        ax.set_xlabel("TPC-{} Stream {} at {}GB Scale {}".format(test.upper(),
-                                                                 query_stream_number,
-                                                                 scale,
+        ax.set_xlabel("TPC-{} Stream {} at {}GB Scale {}".format(self.test.upper(),
+                                                                 self.query_stream_number,
+                                                                 self.scale,
                                                                  suffix))
         ax.set_ylabel("Data processed in Terabytes")
         ax.get_legend().remove()
         return ax
+
+    def plot_total_time_bytes(self, df_plot, suffix=None, y1lim=None, y2lim=None):
+        """Plot the total time and bytes processed per system under test"""
+
+        # name file and add suffix if needed
+        if suffix is None:
+            suffix = ""
+        else:
+            suffix = "_" + suffix
+
+        ax = df_plot.plot.bar(secondary_y="TB", rot=0, figsize=(8, 6), color=["grey", "purple"])
+        ax.set_xticklabels(df_plot.db)
+        ax1, ax2 = plt.gcf().get_axes()  # gets the current figure and then the axes
+        ax1.set_ylabel("Time in Seconds")
+        ax1.grid(False)
+        ax2.set_ylabel("Data processed in Terabytes")
+        ax2.grid(False)
+        ax2.set_xlabel(f"Totals for TPC-{self.test.upper()} Stream " +
+                       f"{self.query_stream_number} at {self.scale}GB Scale {suffix}")
+
+        _id = '_'.join(self.meta_data[3:]).split(".")[0]
+        plot_fp = f"plot_totals_{_id}{suffix}.png"
+        plt.savefig(self.results_dir + config.sep + plot_fp, bbox_to_anchor='tight')
 
     def per_query_plot(self, df=None, drop=None, suffix=None):
         """Plot per-query information
@@ -294,9 +337,6 @@ class Summary:
 
         # style setup
         sns.set_style("darkgrid", {"xtick.bottom": True})
-        #flatui = ["#9b59b6", "#3498db", "#95a5a6", "#e74c3c", "#34495e", "#2ecc71"]
-        #set2 = sns.color_palette("Set2", 8)
-        hls = sns.hls_palette(n_colors=12)
 
         # name file and add suffix if needed
         if suffix is None:
@@ -304,11 +344,7 @@ class Summary:
         else:
             suffix = "_" + suffix
 
-        plot_name = "{}_{}_comparison{}.png".format(df.loc[0, "source"],
-                                                    df.loc[0, "desc"],
-                                                    suffix)
-
-        color_palette = hls
+        color_palette = sns.hls_palette(n_colors=12)
         fig, (ax1, ax2) = plt.subplots(2, 1)
         ax1 = dfp_dt.plot.bar(ax=ax1, legend=False, color=color_palette)
 
@@ -337,6 +373,9 @@ class Summary:
         plt.subplots_adjust(right=0.97)
 
         fig.legend(handles, labels, loc="right")
-        plt.savefig(self.results_dir + config.sep + plot_name, bbox_to_anchor='tight')
+
+        _id = '_'.join(self.meta_data[3:]).split(".")[0]
+        plot_fp = f"plot_query_comparison_{_id}{suffix}.png"
+        plt.savefig(self.results_dir + config.sep + plot_fp, bbox_to_anchor='tight')
 
         return fig

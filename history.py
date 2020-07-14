@@ -10,7 +10,7 @@ import config, sfa, bqa
 def exp_log_t0(results_dir):
     """Get query history for experiment"""
     fps_time = glob.glob(results_dir + config.sep + "benchmark_times*")
-    source_csv = {k:v for k,v in zip([os.path.basename(x).split("_")[2] for x in fps_time], fps_time)}
+    source_csv = {k: v for k, v in zip([os.path.basename(x).split("_")[2] for x in fps_time], fps_time)}
     dfsf = pd.read_csv(source_csv["sf"])
     dfbq = pd.read_csv(source_csv["bq"])
     df = pd.concat([dfsf, dfbq])
