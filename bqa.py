@@ -51,12 +51,27 @@ for BigQuery datatype specifications in standard SQL
 
 """
 
-import re
+import importlib
+import inspect
 import pandas as pd
 from google.cloud import bigquery
+from google.api_core import exceptions as google_api_exceptions
 
 import config, tools, ds_setup, h_setup, utils
 from gcp_storage import inventory_bucket_df
+
+
+def is_google_exception(e):
+    m = importlib.import_module("google.api_core.exceptions")
+    exception_list = []
+    for k in m.__dict__.keys():
+        if inspect.isclass(m.__dict__[k]):
+            exception_list.append(k)
+    print(exception_list)
+    if e.__class__.__name__ in exception_list:
+        return True
+    else:
+        return False
 
 
 log_column_names = ["test", "scale", "dataset",
@@ -798,8 +813,14 @@ class BQTPC:
         # single query statement
         else:
             query_result = self.query(query_text)
-            df_result = query_result.result().to_dataframe()
-            qid = query_result.job_id
+            try:
+                df_result = query_result.result().to_dataframe()
+                qid = query_result.job_id
+            except google_api_exceptions.BadRequest as e:
+                error_data = e.errors[0]
+                error_data["exception"] = e.__class__.__name__
+                df_result = pd.DataFrame([error_data])
+                qid = "Exception - " + e.__class__.__name__
 
         t1 = pd.Timestamp.now("UTC")
 
@@ -847,8 +868,18 @@ class BQTPC:
 
         Returns
         -------
-        if length of sequence is 1, Snowflake cursor reply object
-        else None
+        n_time_data : list, timing data for query stream, with:
+            db : str, database system under test name ("sf" or "bq")
+            test : str, test name ("ds" or "h")
+            scale : int, TPC scale factor in GB
+            source : str, source dataset/database
+            cid : str, configuration id
+            desc : str, description of stream test
+            query_n : int, benchmark query number
+            seq_n : int, benchmark query sequence/stream number
+            driver_t0 : datetime, time on the driver when query was started
+            driver_t1 : datatime, time on the driver when query returned
+            qid : str, database system under test query id for the query run
         """
         if seq_n is None:
             seq_n = "sNA"
@@ -928,11 +959,7 @@ class BQTPC:
         # write local timing results to file
         self.write_times_csv(results_list=n_time_data, columns=columns)
 
-        # this was for multi-query results, maybe remove?
-        if len(seq) == 1:
-            return df_result
-        else:
-            return
+        return pd.DataFrame(n_time_data, columns=columns)
 
     def write_results_csv(self, df, query_n):
         """Write the results of a TPC query to a CSV file in a specific
