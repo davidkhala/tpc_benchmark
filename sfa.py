@@ -1095,6 +1095,10 @@ class Connector:
         """ suspends warehouse and closes connection """
         self.query(f'ALTER WAREHOUSE {name} SUSPEND;', verbose=verbose)
 
+    def warehouse_drop(self, name, verbose=False):
+        """Drop (delete) warehouse if it exists"""
+        self.query(f'DROP WAREHOUSE IF EXISTS {name};', verbose=verbose)
+
     def database_create(self, db, verbose=False):
         self.query(f'CREATE DATABASE IF NOT EXISTS {db}', verbose=verbose)
 
@@ -1585,8 +1589,12 @@ class SFTPC:
         # single query statement
         else:
             query_result = self.sfc.query(query_text)
-            df_result = query_result.fetch_pandas_all()
-            qid = query_result.sfqid
+            try:
+                df_result = query_result.fetch_pandas_all()
+                qid = query_result.sfqid
+            except Exception as e:
+                df_result = pd.DataFrame({"query_exception": e})
+                qid = "NaN-exception"
 
         t1 = pd.Timestamp.now("UTC")
 
@@ -1644,8 +1652,18 @@ class SFTPC:
 
         Returns
         -------
-        if length of sequence is 1, Snowflake cursor reply object
-        else None
+        n_time_data : list, timing data for query stream, with:
+            db : str, database system under test name ("sf" or "bq")
+            test : str, test name ("ds" or "h")
+            scale : int, TPC scale factor in GB
+            source : str, source dataset/database
+            cid : str, configuration id
+            desc : str, description of stream test
+            query_n : int, benchmark query number
+            seq_n : int, benchmark query sequence/stream number
+            driver_t0 : datetime, time on the driver when query was started
+            driver_t1 : datatime, time on the driver when query returned
+            qid : str, database system under test query id for the query run
         """
 
         if seq_n is None:
@@ -1726,11 +1744,7 @@ class SFTPC:
         # write local timing results to file
         self.write_times_csv(results_list=n_time_data, columns=columns)
 
-        # this was for multi-query results, maybe remove?
-        if len(seq) == 1:
-            return df_result
-        else:
-            return
+        return pd.DataFrame(n_time_data, columns=columns)
 
     def write_results_csv(self, df, query_n):
         """Write the results of a TPC query to a CSV file in a specific
