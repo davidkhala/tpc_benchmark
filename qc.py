@@ -7,6 +7,7 @@ import glob
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from pandas.testing import assert_frame_equal
 
 import sfa, bqa, tools, config
@@ -163,8 +164,8 @@ class QueryQC:
         self.cid = None
         self.stream_n = None
         self.desc = None
-        #self.seq_id = None
-        
+        self.data_source = None
+
         self.verbose = False
         self.verbose_query = False
         self.verbose_query_n = False  # print line numbers in query text
@@ -190,12 +191,12 @@ class QueryQC:
     def set_timestamp_dir(self):
         self.shared_timestamp = pd.Timestamp.now()  # "UTC"
         self.shared_timestamp = str(self.shared_timestamp).replace(" ", "_")
-        data_source = self.test + "_" + str(self.scale) + "GB_" + self.cid
+        self.data_source = self.test + "_" + str(self.scale) + "GB_" + self.cid
         self.results_dir, _ = tools.make_name(db="bqsf",
                                               test=self.test,
                                               cid=self.cid,
                                               kind="results",
-                                              datasource=data_source,
+                                              datasource=self.data_source,
                                               desc=self.desc, ext="", 
                                               timestamp=self.shared_timestamp)
         if self.verbose:
@@ -520,7 +521,20 @@ class QueryQC:
 
         return df, df_all
 
-    def compare(self):
+    def compare(self, plot=True, save=True):
+        """Collate and compare TPC test results
+
+        Parameters
+        ----------
+        plot : bool, generate and show plot
+        save : bool, save file to self.results_dir
+
+        Returns
+        -------
+        df_results : Pandas DataFrame, collate query comparison report
+        """
+
+        name = "_".join([x for x in self.results_dir.split(config.sep) if x != ""][-1].split("_")[1:6])
         df = collate_results(self.results_dir)
         df["equal"] = apply_assert_equal(df)
         df["equal_percent"] = apply_percent_equal(df)
@@ -550,4 +564,24 @@ class QueryQC:
             print(c2)
             print() 
 
+        _, qc_fp = tools.make_name(db="bqsf",
+                                   test=self.test,
+                                   cid=self.cid,
+                                   kind="qc",
+                                   datasource=self.data_source,
+                                   desc=self.desc, ext=".csv",
+                                   timestamp=self.shared_timestamp)
+        if save:
+            df.to_csv(self.results_dir + config.sep + "qc_" + name + ".csv")
+
+        if plot:
+            df["q"] = df["q_sf"]
+            ax = df[["q", "equal_percent"]].plot.bar(x="q", figsize=(16, 4), color="grey")
+            ax.set_xlabel("")
+            ax.set_xlabel("TPC-{} Query Comparison".format(name))
+            ax.set_ylabel("Percent Result Agreement")
+            ax.get_legend().remove()
+            plot_fp = f"plot_qc_{name}.png"
+            plt.savefig(self.results_dir + config.sep + plot_fp, bbox_to_anchor='tight')
+            plt.show()
         return df
