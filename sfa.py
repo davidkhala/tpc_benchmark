@@ -935,6 +935,7 @@ def calc_cost(running_time):
 
 
 def brute_force_clean_query(query_text):
+    """Brute force removal of TPC template text that isn't needed"""
     query_text = query_text.replace('set rowcount', 'LIMIT').strip()
     query_text = query_text.replace('top 100;', 'LIMIT 100;').strip()
     query_text = query_text.replace('\n top 100', '\n LIMIT 100').strip()
@@ -946,7 +947,7 @@ def brute_force_clean_query(query_text):
 
 
 def parse_query_job(query_result, verbose=False):
-    """
+    """Parse a Snowflake query result into usable attributes
 
     Parameters
     ----------
@@ -1703,6 +1704,8 @@ class SFTPC:
 
             # write results as collected by each query
             if save:
+                self.write_query_text(query_text=query_text, query_n=n)
+
                 if len(df_result) > 0:
                     self.write_results_csv(df=df_result, query_n=n)
                 else:
@@ -1745,6 +1748,20 @@ class SFTPC:
         self.write_times_csv(results_list=n_time_data, columns=columns)
 
         return pd.DataFrame(n_time_data, columns=columns)
+
+    def write_query_text(self, query_text, query_n):
+        """Write query text executed to a specific folder
+
+        Parameters
+        ----------
+        query_text : str, TPC query SQL executed
+        query_n : int, TPC query number
+        """
+        fd = self.results_dir + config.sep
+        tools.mkdir_safe(fd)
+        fp = fd + "query_text_sf_{0:02d}.sql".format(query_n)
+        with open(fp, "w") as f:
+            f.write(query_text)
 
     def write_results_csv(self, df, query_n):
         """Write the results of a TPC query to a CSV file in a specific

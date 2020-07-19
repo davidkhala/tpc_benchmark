@@ -918,6 +918,8 @@ class BQTPC:
 
             # write results as collected by each query
             if save:
+                self.write_query_text(query_text=query_text, query_n=n)
+
                 if len(df_result) > 0:
                     self.write_results_csv(df=df_result, query_n=n)
                 else:
@@ -960,6 +962,20 @@ class BQTPC:
         self.write_times_csv(results_list=n_time_data, columns=columns)
 
         return pd.DataFrame(n_time_data, columns=columns)
+
+    def write_query_text(self, query_text, query_n):
+        """Write query text executed to a specific folder
+
+        Parameters
+        ----------
+        query_text : str, TPC query SQL executed
+        query_n : int, TPC query number
+        """
+        fd = self.results_dir + config.sep
+        tools.mkdir_safe(fd)
+        fp = fd + "query_text_bq_{0:02d}.sql".format(query_n)
+        with open(fp, "w") as f:
+            f.write(query_text)
 
     def write_results_csv(self, df, query_n):
         """Write the results of a TPC query to a CSV file in a specific
