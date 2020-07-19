@@ -1,4 +1,8 @@
-"""Query history from BigQuery and Snowflake"""
+"""Query history from BigQuery and Snowflake
+
+MIT License, see LICENSE file for complete text.
+Copyright (c) 2020 SADA Systems, Inc.
+"""
 
 import os
 import glob

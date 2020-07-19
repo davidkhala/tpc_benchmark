@@ -1,6 +1,9 @@
 """Prepare TPC-DS tests for Snowflake
 
-...
+MIT License, see LICENSE file for complete text.
+Copyright (c) 2020 SADA Systems, Inc.
+
+## Type conversion used  
 
 | TPC-DS ANSI SQL | Snowflake    |
 | --------------- | ------------ |
@@ -14,8 +17,8 @@
 See
 https://docs.snowflake.com/en/sql-reference/intro-summary-data-types.html
 for Snowflake datatype specifications in standard SQL
-
 """
+
 import snowflake.connector
 import pandas as pd
 import logging

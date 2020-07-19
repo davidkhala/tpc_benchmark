@@ -1,3 +1,8 @@
+"""Setup of project for packaging
+
+MIT License, see LICENSE file for complete text.
+Copyright (c) 2020 SADA Systems, Inc.
+"""
 from setuptools import setup
 
 setup(name='bq_snowflake_benchmark',

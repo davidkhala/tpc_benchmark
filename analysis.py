@@ -1,4 +1,8 @@
-"""Compile and analyze TPC benchmark results"""
+"""Compile and analyze TPC benchmark results
+
+MIT License, see LICENSE file for complete text.
+Copyright (c) 2020 SADA Systems, Inc.
+"""
 
 import glob
 

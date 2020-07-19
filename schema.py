@@ -1,6 +1,8 @@
 """SQL Schema Definitions
 
-Colin Dietrich, SADA 2020"""
+MIT License, see LICENSE file for complete text.
+Copyright (c) 2020 SADA Systems, Inc.
+"""
 
 import re
 import shutil

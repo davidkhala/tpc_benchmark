@@ -1,5 +1,7 @@
 """GCP Storage local and remote file sync
-Requires a client be already instanced
+
+MIT License, see LICENSE file for complete text.
+Copyright (c) 2020 SADA Systems, Inc.
 """
 
 import io

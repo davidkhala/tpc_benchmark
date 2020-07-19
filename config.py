@@ -1,4 +1,8 @@
-"""BigQuery Snowflake Benchmark config values"""
+"""TPC Benchmark config values
+
+MIT License, see LICENSE file for complete text.
+Copyright (c) 2020 SADA Systems, Inc.
+"""
 
 import os
 import random

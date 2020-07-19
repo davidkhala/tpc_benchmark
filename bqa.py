@@ -1,6 +1,7 @@
 """Prepare TPC-DS tests for BigQuery
 
-Colin Dietrich, SADA, 2020
+MIT License, see LICENSE file for complete text.
+Copyright (c) 2020 SADA Systems, Inc.
 
 ## Data Types
 From TPC-DS Specifications, V1.0.0L, specifications.pdf, pg 21:

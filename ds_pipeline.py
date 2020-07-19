@@ -2,6 +2,9 @@
 
 Downloads, makes and generated bash scripts to generate
 TPC-DS data for benchmarking.
+
+MIT License, see LICENSE file for complete text.
+Copyright (c) 2020 SADA Systems, Inc.
 """
 
 import config, ds_setup, bq

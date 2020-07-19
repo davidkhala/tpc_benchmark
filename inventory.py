@@ -1,4 +1,8 @@
-"""Inventory all data output"""
+"""Inventory all data output by TPC Benchmark data generators
+
+MIT License, see LICENSE file for complete text.
+Copyright (c) 2020 SADA Systems, Inc.
+"""
 
 import config, tools, os
 
