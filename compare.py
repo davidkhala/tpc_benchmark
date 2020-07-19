@@ -167,7 +167,7 @@ def print_dfs(df_bq, df_sf, n0, n1):
         print()
 
 
-class QueryQC:
+class QueryCompare:
     def __init__(self):
         
         self.test = None
