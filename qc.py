@@ -222,10 +222,8 @@ class QueryQC:
         skip_attributes = ["result_bq", "result_sf"]
         d = {}
         for k, v in self.__dict__.items():
-
             if (k[0] != "_") and (k not in skip_attributes):
                 d[k] = v
-                print(k, type(v), v)
         return d
 
     def to_json(self, indent=None):
@@ -356,7 +354,6 @@ class QueryQC:
         self.test_stage = "SF and BQ done"
         metadata_fp = self.results_dir + config.sep + "metadata_final.json"
         metadata_final = self.to_json(indent="  ")
-        print(metadata_final)
         with open(metadata_fp, "w") as f:
             f.write(metadata_final)
 
