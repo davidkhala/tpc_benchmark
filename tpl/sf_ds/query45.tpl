@@ -37,7 +37,7 @@
  define QOY=random(1,2,uniform);
  define _LIMIT=100;
  
- [_LIMITA] select [_LIMITB] ca_zip, [GBOBC], sum(ws_sales_price)
+ [_LIMITA] select [_LIMITB] ca_zip, [GBOBC], sum(ws_sales_price) as r1
  from web_sales, customer, customer_address, date_dim, item
  where ws_bill_customer_sk = c_customer_sk
  	and c_current_addr_sk = ca_address_sk 
@@ -51,6 +51,10 @@
  	    )
  	and ws_sold_date_sk = d_date_sk
  	and d_qoy = [QOY] and d_year = [YEAR]
- group by ca_zip, [GBOBC]
- order by ca_zip, [GBOBC]
+ group by 
+ 	ca_zip, 
+ 	[GBOBC]
+ order by 
+ 	ca_zip nulls last, 
+ 	[GBOBC] nulls last
  [_LIMITC];

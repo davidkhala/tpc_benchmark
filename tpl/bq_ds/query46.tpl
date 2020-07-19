@@ -69,10 +69,11 @@
     where ss_customer_sk = c_customer_sk
       and customer.c_current_addr_sk = current_addr.ca_address_sk
       and current_addr.ca_city <> bought_city
-  order by c_last_name
-          ,c_first_name
-          ,ca_city
-          ,bought_city
-          ,ss_ticket_number
+  order by 
+    c_last_name nulls last,
+    c_first_name nulls last,
+    ca_city nulls last,
+    bought_city nulls last,
+    ss_ticket_number nulls last
   [_LIMITC];
 

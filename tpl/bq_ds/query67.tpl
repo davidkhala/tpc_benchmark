@@ -65,16 +65,17 @@ from (select i_category
           and d_month_seq between [DMS] and [DMS]+11
        group by  rollup(i_category, i_class, i_brand, i_product_name, d_year, d_qoy, d_moy,s_store_id))dw1) dw2
 where rk <= 100
-order by i_category
-        ,i_class
-        ,i_brand
-        ,i_product_name
-        ,d_year
-        ,d_qoy
-        ,d_moy
-        ,s_store_id
-        ,sumsales
-        ,rk
+order by 
+  i_category nulls last,
+  i_class nulls last,
+  i_brand nulls last,
+  i_product_name nulls last,
+  d_year nulls last,
+  d_qoy nulls last,
+  d_moy nulls last,
+  s_store_id nulls last,
+  sumsales nulls last,
+  rk nulls last
 [_LIMITC];
  
  

@@ -50,11 +50,10 @@ fp_h_output_mnt  = fp_output_mnt + sep + "h"
 
 # 2.4 Snowflake Connector Auth Basics
 # Note: credentials in 'poor_security.py' formatted as:
-# sf_username = 
-# sf_password = 
-
+sf_username = "dauren"
+sf_password = "239nj8834uffe"
 sf_account = "wja13212"
-sf_warehouse = "TEST9000"
+sf_warehouse = "TEST1"
 sf_warehouse_cost = 0.00056  # price per second for this warehouse size
 
 # 2.5 Snowflake connector configuration
@@ -104,7 +103,7 @@ fp_h_src               = fp_h  + sep + fp_h_src_version
 # >> Edit this if desired, specified for repeatable results
 # Note: this could be set to random with `int(random.random()*100)`
 
-random_seed = 13
+random_seed = 220
 #random_seed = None
 
 # 3.5 TPC-H makefile parameters
@@ -193,15 +192,5 @@ fp_ds_answers = fp_ds_src + sep + "answer_sets"
 fp_results = cwd + sep + "results"
 fp_plots   = cwd + sep + "plots"
 
-# 5.4 Test Schema Combinations
-# TODO: perhaps remove?
-test_schema_bq = []
-for test in tests:
-    for scale in scale_factors:
-        for schema in bq_schema:
-            test_schema_bq.append(test + "_" + str(scale) + "GB_" + schema)
-
-test_schema_sf = []
-for test in tests:
-    for schema in sf_schema:
-        test_schema_sf.append(test + "_" + schema)
+# 5.6 Data Quality Control
+float_precision = 2  # number of decimal places in str conversion

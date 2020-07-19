@@ -38,7 +38,12 @@
  define _LIMIT=100;
  
  [_LIMITA] select [_LIMITB]
-  c_last_name,c_first_name,substr(s_city,1,30),ss_ticket_number,amt,profit
+  c_last_name,
+  c_first_name,
+  substr(s_city,1,30) as r1,
+  ss_ticket_number,
+  amt,
+  profit
   from
    (select ss_ticket_number
           ,ss_customer_sk
@@ -55,6 +60,10 @@
     and store.s_number_employees between 200 and 295
     group by ss_ticket_number,ss_customer_sk,ss_addr_sk,store.s_city) ms,customer
     where ss_customer_sk = c_customer_sk
- order by c_last_name,c_first_name,substr(s_city,1,30), profit
+ order by
+  c_last_name nulls last,
+  c_first_name nulls last,
+  r1 nulls last,
+  profit nulls last
 [_LIMITC];
 

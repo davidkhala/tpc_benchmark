@@ -49,5 +49,7 @@ define _LIMIT=100;
             where sr_reason_sk = r_reason_sk
               and r_reason_desc = '[REASON]') t
       group by ss_customer_sk
-      order by sumsales, ss_customer_sk
+      order by 
+        sumsales nulls last,
+        ss_customer_sk nulls last
 [_LIMITC];

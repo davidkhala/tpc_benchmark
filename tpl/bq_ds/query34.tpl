@@ -73,5 +73,10 @@
     group by ss_ticket_number,ss_customer_sk) dn,customer
     where ss_customer_sk = c_customer_sk
       and cnt between 15 and 20
-    order by c_last_name,c_first_name,c_salutation,c_preferred_cust_flag desc, ss_ticket_number;
+    order by 
+      c_last_name nulls last,
+      c_first_name nulls last,
+      c_salutation nulls last,
+      c_preferred_cust_flag desc nulls last,
+      ss_ticket_number nulls last;
 

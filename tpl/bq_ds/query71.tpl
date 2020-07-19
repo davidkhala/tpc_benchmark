@@ -70,5 +70,7 @@
    and time_sk = t_time_sk
    and (t_meal_time = 'breakfast' or t_meal_time = 'dinner')
  group by i_brand, i_brand_id,t_hour,t_minute
- order by ext_price desc, i_brand_id
+ order by
+  ext_price desc nulls last,
+  i_brand_id nulls last
  ;
