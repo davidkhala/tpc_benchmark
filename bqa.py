@@ -51,12 +51,27 @@ for BigQuery datatype specifications in standard SQL
 
 """
 
-import re
+import importlib
+import inspect
 import pandas as pd
 from google.cloud import bigquery
+from google.api_core import exceptions as google_api_exceptions
 
 import config, tools, ds_setup, h_setup, utils
 from gcp_storage import inventory_bucket_df
+
+
+def is_google_exception(e):
+    m = importlib.import_module("google.api_core.exceptions")
+    exception_list = []
+    for k in m.__dict__.keys():
+        if inspect.isclass(m.__dict__[k]):
+            exception_list.append(k)
+    print(exception_list)
+    if e.__class__.__name__ in exception_list:
+        return True
+    else:
+        return False
 
 
 log_column_names = ["test", "scale", "dataset",
@@ -238,6 +253,34 @@ def validate(directory, dataset, byte_multiplier=1):
                                      "bq_size", "bq_rows"])
     df["bq_percent"] = (df.bq_rows / df.local_rows) * 100
     return df
+
+
+def create_table_remix(schema_name, source, destination, dot=False):
+    """Create table clone SQL from template file. Required to use
+    CREATE TABLE with project already set in API context.
+
+    Parameters
+    ----------
+    schema_name : str, name of sql schema file in /sc
+    source : str, source dataset to copy
+    destination : str, new dataset to create as copy
+    dot : bool, insert '.' into table reference
+
+    Returns
+    -------
+    str : SQL that will run on BigQuery
+    """
+    if dot:
+        source = source + "."
+        destination = destination + "."
+
+    fp_schema = config.fp_schema + config.sep + schema_name
+
+    with open(fp_schema, "r") as f:
+        query_text = f.read()
+    query_text = query_text.replace("_source_table.", source)
+    query_text = query_text.replace("_destination_table.", destination)
+    return query_text
 
 
 def parse_log(fp):
@@ -561,7 +604,7 @@ class BQTPC:
 
         self.timestamp = timestamp
         self.results_dir, _ = tools.make_name(db="bq", test=self.test, cid=self.cid,
-                                              kind="results", datasource=self.dataset,
+                                              kind="result", datasource=self.dataset,
                                               desc=self.desc, ext="", timestamp=self.timestamp)
         self.results_csv_fp = None
 
@@ -749,19 +792,35 @@ class BQTPC:
                 print("Non-query reply:", query_1_result.result())
 
             query_2_result = self.query(query_list[1])
-            query_result = query_2_result
-            df_result = query_result.result().to_dataframe()
-            qid = query_result.job_id
+            df_result = query_2_result.result().to_dataframe()
+            qid = query_2_result.job_id
 
             query_3_result = self.query(query_list[2])
             if self.verbose:
                 print("Non-query reply:", query_3_result.result())
 
+        # two query statements in query file
+        # TPC-DS #39 is actually two query statements
+        elif len(query_list) == 2:
+
+            # the first query will not be captured for qc comparison
+            _ = self.query(query_list[0])
+            # second query is captured
+            query_2_result = self.query(query_list[1])
+            df_result = query_2_result.result().to_dataframe()
+            qid = query_2_result.job_id
+
         # single query statement
         else:
             query_result = self.query(query_text)
-            df_result = query_result.result().to_dataframe()
-            qid = query_result.job_id
+            try:
+                df_result = query_result.result().to_dataframe()
+                qid = query_result.job_id
+            except google_api_exceptions.BadRequest as e:
+                error_data = e.errors[0]
+                error_data["exception"] = e.__class__.__name__
+                df_result = pd.DataFrame([error_data])
+                qid = "Exception - " + e.__class__.__name__
 
         t1 = pd.Timestamp.now("UTC")
 
@@ -795,34 +854,45 @@ class BQTPC:
         df_result, qid, _, _, _, _, _ = self.parse_query_result(query_result)
         return df_result, qid
 
-    def query_seq(self, seq, seq_id=None, qual=None, save=False, verbose_iter=False):
+    def query_seq(self, seq, seq_n=None, qual=None, save=False, verbose_iter=False):
         """Query BigQuery with TPC-DS or TPC-H query template number n
 
         Parameters
         ----------
         seq : iterable sequence int, query numbers to execute between
             1 and 99 for ds and 1 and 22 for h
-        seq_id : str, optional id for stream sequence - i.e. 0 or 4 etc,
-            this id is the stream id from ds or h
+        seq_n : int, stream sequence number for test - i.e. 0 or 4 etc
         qual : None, or True to use qualifying values (to test 1GB qualification db)
         save : bool, save data about this query sequence to disk
         verbose_iter : bool, print per iteration status statements
 
         Returns
         -------
-        if length of sequence is 1, Snowflake cursor reply object
-        else None
+        n_time_data : list, timing data for query stream, with:
+            db : str, database system under test name ("sf" or "bq")
+            test : str, test name ("ds" or "h")
+            scale : int, TPC scale factor in GB
+            source : str, source dataset/database
+            cid : str, configuration id
+            desc : str, description of stream test
+            query_n : int, benchmark query number
+            seq_n : int, benchmark query sequence/stream number
+            driver_t0 : datetime, time on the driver when query was started
+            driver_t1 : datatime, time on the driver when query returned
+            qid : str, database system under test query id for the query run
         """
-        if seq_id is None:
-            seq_id = "sNA"
+        if seq_n is None:
+            seq_n = "sNA"
+        else:
+            seq_n = str(seq_n)
         n_time_data = []
         columns = ["db", "test", "scale", "source", "cid", "desc",
-                   "query_n", "seq_id", "driver_t0", "driver_t1", "qid"]
+                   "query_n", "seq_n", "driver_t0", "driver_t1", "qid"]
 
         t0_seq = pd.Timestamp.now("UTC")
         i_total = len(seq)
         for i, n in enumerate(seq):
-            qn_label = self.dataset + "-q" + str(n) + "-" + seq_id + "-" + self.desc
+            qn_label = self.dataset + "-q" + str(n) + "-" + seq_n + "-" + self.desc
             qn_label = qn_label.lower()
 
             if verbose_iter:
@@ -843,12 +913,20 @@ class BQTPC:
                                                         )
 
             _d = ["bq", self.test, self.scale, self.dataset, self.cid, self.desc,
-                  n, seq_id, t0, t1, qid]
+                  n, seq_n, t0, t1, qid]
             n_time_data.append(_d)
 
             # write results as collected by each query
             if save:
+                self.write_query_text(query_text=query_text, query_n=n)
+
                 if len(df_result) > 0:
+                    self.write_results_csv(df=df_result, query_n=n)
+                else:
+                    # filler for statistics when the query returns no values
+                    df_result.loc[0, :] = ["filler"] * df_result.shape[1]
+                    if verbose_iter:
+                        print("No result rows, FILLER DataFrame created.")
                     self.write_results_csv(df=df_result, query_n=n)
 
             if verbose_iter:
@@ -883,11 +961,21 @@ class BQTPC:
         # write local timing results to file
         self.write_times_csv(results_list=n_time_data, columns=columns)
 
-        # this was for multi-query results, maybe remove?
-        if len(seq) == 1:
-            return df_result
-        else:
-            return
+        return pd.DataFrame(n_time_data, columns=columns)
+
+    def write_query_text(self, query_text, query_n):
+        """Write query text executed to a specific folder
+
+        Parameters
+        ----------
+        query_text : str, TPC query SQL executed
+        query_n : int, TPC query number
+        """
+        fd = self.results_dir + config.sep
+        tools.mkdir_safe(fd)
+        fp = fd + "query_text_bq_{0:02d}.sql".format(query_n)
+        with open(fp, "w") as f:
+            f.write(query_text)
 
     def write_results_csv(self, df, query_n):
         """Write the results of a TPC query to a CSV file in a specific

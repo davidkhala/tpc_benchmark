@@ -4,10 +4,11 @@ Colin Dietrich, SADA 2020
 """
 
 import glob
-import decimal
+import json
 
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from pandas.testing import assert_frame_equal
 
 import sfa, bqa, tools, config
@@ -79,6 +80,7 @@ def apply_percent_equal(df):
 
     return df.apply(lambda r: percent_equal_csv(r.fp_bq, r.fp_sf), axis=1)
 
+
 def collate_results(results_dir):
     """Compare the CSV results from a dual SF/BQ query sequence
     
@@ -114,7 +116,19 @@ def collate_results(results_dir):
 
 
 def print_dfs(df_bq, df_sf, n0, n1):
+    """Print benchmark quality control calculations
 
+    Parameters
+    ----------
+    df_bq : Pandas DataFrame, BigQuery query result
+    df_sf : Pandas DataFrame, Snowflake query result
+    n0 : int, row start for mid-DataFrame preview
+    n1 : int, row end for mid-DataFrame preview
+
+    Returns
+    -------
+    None, prints only
+    """
     print("BQ:")
     print(df_bq.head())
     print("-"*40)
@@ -152,24 +166,24 @@ def print_dfs(df_bq, df_sf, n0, n1):
         print(_df.head(10))
         print()
 
-    return df_bq, df_sf
 
-
-class QueryQC:
+class QueryCompare:
     def __init__(self):
         
         self.test = None
         self.scale = None
         self.cid = None
         self.stream_n = None
+        self.query_sequence = None
         self.desc = None
-        self.seq_id = None
-        
+        self.data_source = None
+
         self.verbose = False
         self.verbose_query = False
         self.verbose_query_n = False  # print line numbers in query text
         self.verbose_iter = False
-        
+
+        self.cache = False
         self.qual = False
         self.save = False
         
@@ -181,37 +195,150 @@ class QueryQC:
         self.results_sf_csv_fp = None
         self.results_bq_csv_fp = None
 
-        # only used in single query comparison
         self.result_bq = None
         self.result_sf = None
+
+        # only used in single query comparison
         self.result_bq_csv = None
         self.result_sf_csv = None
-        
+
+        # useful to be able to set if running multiple benchmarks
+        self.sf_warehouse_name = config.sf_warehouse[0]
+
+        self.sf_warehouse_size = None  # strictly depends on warehouse name
+
+        # for understanding the initial metadata record snapshot
+        self.test_stage = "initialization"
+
+    def values(self):
+        """Get all class attributes from __dict__ attribute
+        except those prefixed with underscore ('_')
+
+        Returns
+        -------
+        dict, of (attribute: value) pairs
+        """
+
+        skip_attributes = ["result_bq", "result_sf"]
+        d = {}
+        for k, v in self.__dict__.items():
+            if (k[0] != "_") and (k not in skip_attributes):
+                d[k] = v
+        return d
+
+    def to_json(self, indent=None):
+        """Return all class objects from __dict__ except
+        those prefixed with underscore ('_')
+
+        Paramters
+        ---------
+        indent : None or non-negative integer or string, then JSON array
+        elements and object members will be pretty-printed with that indent level.
+
+        Returns
+        -------
+        str, JSON formatted (attribute: value) pairs
+        """
+        return json.dumps(self, default=lambda o: o.values(),
+                          sort_keys=True, indent=indent)
+
     def set_timestamp_dir(self):
         self.shared_timestamp = pd.Timestamp.now()  # "UTC"
         self.shared_timestamp = str(self.shared_timestamp).replace(" ", "_")
-
+        self.data_source = self.test + "_" + str(self.scale) + "GB_" + self.cid
         self.results_dir, _ = tools.make_name(db="bqsf",
                                               test=self.test,
                                               cid=self.cid,
                                               kind="results",
-                                              datasource="", 
+                                              datasource=self.data_source,
                                               desc=self.desc, ext="", 
                                               timestamp=self.shared_timestamp)
-        #if self.verbose:
-        print("Result Folder Name:")
-        print(self.results_dir)
+        tools.mkdir_safe(self.results_dir)
+
+        if self.verbose:
+            print("Result Folder Name:")
+            print(self.results_dir)
             
     def run_single(self, query_n):
-        seq = [query_n]
-        self.run(seq)
-        
-    def run(self, seq):
-        
+        """Run a single query for comparison on both systems
+
+        Parameters
+        ----------
+        query_n : int, query number to run on both systems
+
+        Returns
+        -------
+        df_bq_result : Pandas DataFrame, query result
+        df_sf_result : Pandas DataFrame, query result
+        bq_qid : str, BigQuery query id for query job
+        sf_qid : str, Snowflake query ide for query job
+        """
+
         sf = sfa.SFTPC(test=self.test,
                        scale=self.scale,
                        cid=self.cid,
-                       warehouse="TEST9000",
+                       warehouse=self.sf_warehouse_name,
+                       desc=self.desc,
+                       verbose=self.verbose,
+                       verbose_query=self.verbose_query)
+        sf.verbose_query_n = self.verbose_query_n
+
+        if self.verbose:
+            print('Using database:', sf.database)
+
+        sf.timestamp = self.shared_timestamp
+        sf.results_dir = self.results_dir
+
+        sf.connect()
+
+        _sf_t0, _sf_t1, df_sf_result, _sf_query_text, sf_qid = sf.query_n(n=query_n)
+
+        sf.close()
+
+        bq = bqa.BQTPC(test=self.test,
+                       scale=self.scale,
+                       cid=self.cid,
+                       desc=self.desc,
+                       verbose_query=self.verbose_query,
+                       verbose=self.verbose)
+        bq.verbose_query_n = self.verbose_query_n
+
+        bq.timestamp = self.shared_timestamp
+        bq.results_dir = self.results_dir
+
+        if self.cache:
+            bq.cache_set("on")
+        else:
+            bq.cache_set("off")
+
+        _bq_t0, _bq_t1, df_bq_result, _bq_query_text, bq_qid = bq.query_n(n=query_n)
+
+        return df_bq_result, df_sf_result, bq_qid, sf_qid
+        
+    def run(self, seq):
+        """Run a benchmark comparison
+
+        Parameters
+        ----------
+        seq : list of int, query numbers to execute
+
+        Returns
+        -------
+        None, writes multiple files to self.results_dir location
+        """
+
+        self.query_sequence = seq
+
+        # stage 1 - start run
+        self.test_stage = "start run"
+        metadata_fp = self.results_dir + config.sep + "metadata_initial.json"
+        with open(metadata_fp, "w") as f:
+            f.write(self.to_json(indent="  "))
+
+        sf = sfa.SFTPC(test=self.test,
+                       scale=self.scale,
+                       cid=self.cid,
+                       warehouse=self.sf_warehouse_name,
                        desc=self.desc,
                        verbose=self.verbose,
                        verbose_query=self.verbose_query)
@@ -224,8 +351,26 @@ class QueryQC:
         sf.results_dir = self.results_dir
 
         sf.connect()
+
+        # record what the SF warehouse size is
+        query_result = sf.show_warehouses()
+        warehouse_size_mapper = {r[0]: r[3] for r in query_result.fetchall()}
+        self.sf_warehouse_size = warehouse_size_mapper[self.sf_warehouse_name]
+
+        # update initial metadata so warehouse size is captured
+        # stage 2 - connected to Snowflake and got warehouse size metadata
+        self.test_stage = "Snowflake connected"
+        metadata_fp = self.results_dir + config.sep + "metadata_initial.json"
+        with open(metadata_fp, "w") as f:
+            f.write(self.to_json(indent="  "))
+
+        if self.cache:
+            sf.cache_set("on")
+        else:
+            sf.cache_set("off")
+
         self.result_sf = sf.query_seq(seq=seq,
-                                      seq_id=self.seq_id,
+                                      seq_n=self.stream_n,
                                       qual=self.qual,
                                       save=self.save,
                                       verbose_iter=self.verbose_iter)
@@ -244,13 +389,25 @@ class QueryQC:
         bq.timestamp = self.shared_timestamp
         bq.results_dir = self.results_dir
 
+        if self.cache:
+            bq.cache_set("on")
+        else:
+            bq.cache_set("off")
+
         self.result_bq = bq.query_seq(seq,
-                                      seq_id=self.seq_id,
+                                      seq_n=self.stream_n,
                                       qual=self.qual,
                                       save=self.save,
                                       verbose_iter=self.verbose_iter)
 
         self.results_bq_csv_fp = bq.results_csv_fp
+
+        # stage 3 - done with both systems
+        self.test_stage = "SF and BQ done"
+        metadata_fp = self.results_dir + config.sep + "metadata_final.json"
+        metadata_final = self.to_json(indent="  ")
+        with open(metadata_fp, "w") as f:
+            f.write(metadata_final)
 
     def compare_sum(self):
 
@@ -520,7 +677,22 @@ class QueryQC:
 
         return df, df_all
 
-    def compare(self):
+    def compare(self, plot=True, save=True):
+        """Collate and compare TPC test results
+
+        Parameters
+        ----------
+        plot : bool, generate and show plot
+        save : bool, save file to self.results_dir
+
+        Returns
+        -------
+        df_results : Pandas DataFrame, collate query comparison report
+        """
+
+        # is comprehension is derrivative of the tools.make_name call,
+        # TODO: should probably unify file naming in one place
+        name = "_".join([x for x in self.results_dir.split(config.sep) if x != ""][-1].split("_")[1:6])
         df = collate_results(self.results_dir)
         df["equal"] = apply_assert_equal(df)
         df["equal_percent"] = apply_percent_equal(df)
@@ -550,4 +722,24 @@ class QueryQC:
             print(c2)
             print() 
 
+        _, qc_fp = tools.make_name(db="bqsf",
+                                   test=self.test,
+                                   cid=self.cid,
+                                   kind="qc",
+                                   datasource=self.data_source,
+                                   desc=self.desc, ext=".csv",
+                                   timestamp=self.shared_timestamp)
+        if save:
+            df.to_csv(self.results_dir + config.sep + "qc_" + name + ".csv")
+
+        if plot:
+            df["q"] = df["q_sf"]
+            ax = df[["q", "equal_percent"]].plot.bar(x="q", figsize=(16, 4), color="grey")
+            ax.set_xlabel("")
+            ax.set_xlabel("TPC-{} Query Comparison".format(name))
+            ax.set_ylabel("Percent Result Agreement")
+            ax.get_legend().remove()
+            plot_fp = f"plot_qc_{name}.png"
+            plt.savefig(self.results_dir + config.sep + plot_fp, bbox_to_anchor='tight')
+            plt.show()
         return df

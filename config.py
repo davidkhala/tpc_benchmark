@@ -1,10 +1,11 @@
 """BigQuery Snowflake Benchmark config values"""
 
 import os
+import random
 
 # set logger
-import logging
-logging.basicConfig(filename='./nb.log', level=logging.DEBUG)
+#import logging
+#logging.basicConfig(filename='./nb.log', level=logging.DEBUG)
 
 # 1.0 Project's current path locations
 # >> Do NOT edit this section
@@ -16,14 +17,10 @@ user_dir = os.path.expanduser('~')
 cpu_count = os.cpu_count()
 
 # 2.0 GCP Service Account Credential File
-# >> Edit this with your credential file location
-#cred_file_name = "sada-colin-dietrich-bd003814fcb1.json"
-cred_file_name = "tpc-benchmarking-9432-3fe6b68089ac.json"
-#cred_file_name = "bq_snowflake_benchmark/tpc-benchmarking-9432-c85b7ded395c.json"
-
-# full path used in method calls
-gcp_cred_file = user_dir + sep + "code" + sep + cred_file_name
-#gcp_cred_file = user_dir + sep + cred_file_name
+# >> Edit this with your credential file location,
+# here, user home directory
+cred_file_name = "tpc-benchmarking-9432-0579c287e85d.json"
+gcp_cred_file = user_dir + sep + cred_file_name
 
 
 # 2.1 GCP Project and BigQuery Dataset
@@ -53,7 +50,7 @@ fp_h_output_mnt  = fp_output_mnt + sep + "h"
 sf_username = "dauren"
 sf_password = "239nj8834uffe"
 sf_account = "wja13212"
-sf_warehouse = "TEST1"
+sf_warehouse = ["TEST9000", "TEST9001", "TEST9002"]
 sf_warehouse_cost = 0.00056  # price per second for this warehouse size
 
 # 2.5 Snowflake connector configuration
@@ -103,7 +100,7 @@ fp_h_src               = fp_h  + sep + fp_h_src_version
 # >> Edit this if desired, specified for repeatable results
 # Note: this could be set to random with `int(random.random()*100)`
 
-random_seed = 220
+random_seed = 14
 #random_seed = None
 
 # 3.5 TPC-H makefile parameters
@@ -187,10 +184,47 @@ fp_query = cwd + sep + "q"
 # >> Do NOT edit
 fp_ds_answers = fp_ds_src + sep + "answer_sets"
 
-# 5.5 Test Results and plots
+# 5.5 Test Results and plot location
 # >> Do NOT edit
 fp_results = cwd + sep + "results"
 fp_plots   = cwd + sep + "plots"
 
-# 5.6 Data Quality Control
+# 5.6 SnowFlake Information Schema columns to keep
+sf_keep = ["QUERY_ID", "QUERY_TEXT", "DATABASE_NAME", "WAREHOUSE_SIZE", "WAREHOUSE_TYPE",
+           "QUERY_TAG", "START_TIME", "END_TIME", "TOTAL_ELAPSED_TIME", "BYTES_SCANNED",
+           "CREDITS_USED_CLOUD_SERVICES"]
+
+sf_extended_keep = sf_keep + ["PERCENTAGE_SCANNED_FROM_CACHE",
+                              "PARTITIONS_SCANNED", "PARTITIONS_TOTAL",
+                              "BYTES_SPILLED_TO_LOCAL_STORAGE", "BYTES_SPILLED_TO_REMOTE_STORAGE"]
+
+# 5.7 BigQuery Information Schema columns to keep
+bq_keep = ["statement_type", "start_time", "end_time", "total_bytes_processed",
+           "total_slot_ms",  "cache_hit", "labels"]
+
+# 5.7 Cost calculations
+
+sf_dollars_per_tebibyte = 5.00
+
+# https://cloud.google.com/bigquery/pricing
+bq_dollars_per_terabyte = 5.00
+
+# 5.8 Benchmark Data Output Format
+# db : str, database system under test, i.e. Snowflake "sf or BigQuery "bq"
+# test : str, TPC test, either "ds" or "h"
+# scale : int, TPC scale factor in GB
+# source : str, source dataset/database name test was conducted on
+# cid : str, configuration identifier, i.e. "01" or "03A" etc
+# desc : str, description of current data collection effort, i.e. "clustering"
+# query_n : int, query number in test stream
+# seq_n : int, test stream sequence number
+# dt : float, elapsed seconds query took to complete
+# dt_s :
+# TODO
+# TB : float, total number of Terabytes processed by query execution
+
+summary_short_columns = ["db", "test", "scale", "source", "cid", "desc", "query_n", "seq_n", "dt", "dt_s", "TB"]
+
+
+# 5.6 Data Quality Control Precision
 float_precision = 2  # number of decimal places in str conversion
