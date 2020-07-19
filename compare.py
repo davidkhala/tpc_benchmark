@@ -260,8 +260,60 @@ class QueryCompare:
             print(self.results_dir)
             
     def run_single(self, query_n):
-        seq = [query_n]
-        self.run(seq)
+        """Run a single query for comparison on both systems
+
+        Parameters
+        ----------
+        query_n : int, query number to run on both systems
+
+        Returns
+        -------
+        df_bq_result : Pandas DataFrame, query result
+        df_sf_result : Pandas DataFrame, query result
+        bq_qid : str, BigQuery query id for query job
+        sf_qid : str, Snowflake query ide for query job
+        """
+
+        sf = sfa.SFTPC(test=self.test,
+                       scale=self.scale,
+                       cid=self.cid,
+                       warehouse=self.sf_warehouse_name,
+                       desc=self.desc,
+                       verbose=self.verbose,
+                       verbose_query=self.verbose_query)
+        sf.verbose_query_n = self.verbose_query_n
+
+        if self.verbose:
+            print('Using database:', sf.database)
+
+        sf.timestamp = self.shared_timestamp
+        sf.results_dir = self.results_dir
+
+        sf.connect()
+
+        _sf_t0, _sf_t1, df_sf_result, _sf_query_text, sf_qid = sf.query_n(n=query_n)
+
+        sf.close()
+
+        bq = bqa.BQTPC(test=self.test,
+                       scale=self.scale,
+                       cid=self.cid,
+                       desc=self.desc,
+                       verbose_query=self.verbose_query,
+                       verbose=self.verbose)
+        bq.verbose_query_n = self.verbose_query_n
+
+        bq.timestamp = self.shared_timestamp
+        bq.results_dir = self.results_dir
+
+        if self.cache:
+            bq.cache_set("on")
+        else:
+            bq.cache_set("off")
+
+        _bq_t0, _bq_t1, df_bq_result, _bq_query_text, bq_qid = bq.query_n(n=query_n)
+
+        return df_bq_result, df_sf_result, bq_qid, sf_qid
         
     def run(self, seq):
         """Run a benchmark comparison
