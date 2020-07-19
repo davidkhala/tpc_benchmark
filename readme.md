@@ -738,7 +738,6 @@ https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environme
 `$ln -s /data /home/jupyter/code/bq_snowflake_benchmark/data`  
 (a new directory `data` should appear in the project folderin in Jupyter Lab)
 
-
 ### Query Results Quality Control  
 For both TPC tests, query templates were copied and edited to create templates that when run with the query generation binaries produced executable SQL for BigQuery and Snowflake.  Since all operations in this benchmarking effort used Python and each database's official Python client, the outputs of each query were accessed using the respective client's Pandas Dataframe conversion method.  Comparison was then done using Pandas methods.  
 
