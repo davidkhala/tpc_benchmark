@@ -45,9 +45,9 @@ define COUNTY_E = distmember(fips_county, [COUNTYNUMBER.5], 2);
 define _LIMIT=100;
 
 [_LIMITA] select [_LIMITB] 
-   count(distinct cs_order_number) as "order count"
-  ,sum(cs_ext_ship_cost) as "total shipping cost"
-  ,sum(cs_net_profit) as "total net profit"
+   count(distinct cs_order_number) as order_count
+  ,sum(cs_ext_ship_cost) as total_shipping_cost
+  ,sum(cs_net_profit) as total_net_profit
 from
    catalog_sales cs1
   ,date_dim
@@ -70,7 +70,7 @@ and exists (select *
 and not exists(select *
                from catalog_returns cr1
                where cs1.cs_order_number = cr1.cr_order_number)
-order by count(distinct cs_order_number)
+order by count(distinct cs_order_number) nulls last
 [_LIMITC];
 
 

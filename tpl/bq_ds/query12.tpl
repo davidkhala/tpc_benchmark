@@ -57,16 +57,16 @@ where
 	and d_date between cast('[SDATE]' as date) 
         and date_add(cast('[SDATE]' as date), interval 30 day)
 group by 
-	i_item_id
-        ,i_item_desc 
-        ,i_category
-        ,i_class
-        ,i_current_price
+   i_item_id
+  ,i_item_desc 
+  ,i_category
+  ,i_class
+  ,i_current_price
 order by 
-	i_category
-        ,i_class
-        ,i_item_id
-        ,i_item_desc
-        ,revenueratio
+   i_category nulls last
+  ,i_class nulls last
+  ,i_item_id nulls last
+  ,i_item_desc nulls last
+  ,revenueratio nulls last
 [_LIMITC];
 

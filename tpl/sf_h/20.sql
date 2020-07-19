@@ -33,7 +33,7 @@ where
 				where
 					l_partkey = ps_partkey
 					and l_suppkey = ps_suppkey
-					and l_shipdate >= date ':2'
+					and l_shipdate >= to_date(':2')
 					and l_shipdate < dateadd(year, 1, to_date(':2'))
 			)
 	)

@@ -5,9 +5,11 @@ Colin Dietrich, SADA 2020
 
 import os
 import re
+import math
 import zipfile
 import shutil
 import glob
+import numpy as np
 
 import pandas as pd
 
@@ -345,7 +347,7 @@ def parse_h_stream_seq():
     d = []
     for line in d_str:
         d.append(line.strip().split("\t"))
-    _df = pd.DataFrame(d, columns=["stream"]+list(range(1,23)))
+    _df = pd.DataFrame(d, columns=["stream"]+list(range(1, 23)))
     _df.drop("stream", axis=1, inplace=True)
     return _df
 
@@ -361,7 +363,7 @@ def parse_ds_seq_stream():
         columns = query number to execute
     """
     fp = config.fp_ds_stream_order
-    _df = pd.read_csv(fp, skiprows=2, names=["seq"]+list(range(0,21)))
+    _df = pd.read_csv(fp, skiprows=2, names=["seq"]+list(range(0, 21)))
     _df.drop("seq", axis=1, inplace=True)
     _df = _df.transpose()
     return _df
@@ -386,7 +388,7 @@ def tpc_stream(test, n):
         _df = parse_h_stream_seq()
     if test == "ds":
         _df = parse_ds_seq_stream()
-    query_sequence = _df.loc[n].values
+    query_sequence = [int(str(v)) for v in _df.loc[n].values]
     return list(query_sequence)
 
 
@@ -401,7 +403,7 @@ def make_name(db, test, cid, kind, datasource, desc, ext, timestamp=None):
     cid : str, config id, i.e. '02A' for the experiment config number
     kind : str, kind of record, either 'results' or 'times'
     datasource : str, dataset if bq or database if snowflake
-    desc : str, description of experiment
+    desc : str, description of experimentself.desc
     ext : str, extension including '.' i.e. '.csv'
     timestamp : pandas Timestamp object
     """
@@ -435,18 +437,83 @@ def to_numeric(df):
     return df
 
 
-def to_consistent(df):
+def truncate_old(x, n):
+    """Truncate a float to a certain number of decimal places
+    
+    Parameters
+    ----------
+    x : float, value to truncate
+    n : int, number of decimal places to keep
+    
+    Returns
+    -------
+    float : truncated value
+    """
+    if pd.isnull(x):
+        return np.nan
+    else:
+        return math.trunc(x * math.pow(10, n)) / math.pow(10, n)
+
+
+def truncate(s, n):
+    """Vectorized version of float truncation"""
+    s = s * np.power(10, n)
+    s = s.astype(int)
+    s = s / np.power(10, n)
+    return s
+
+
+def to_truncated(df, n=None):
+    """Truncate all float values in DataFrame
+    
+    Parameters
+    ----------
+    df : Pandas Dataframe
+    n : int, number of decimal places to keep
+    
+    Returns
+    -------
+    Pandas DataFrame with float values converted to int * 1000
+    """
+    for col in df.columns:
+        try:
+            df[col] = df[col].apply(lambda x: truncate(x, n))
+        except ValueError:
+            pass
+    return df
+
+
+def to_str(df, n):
+    dec_str = "{:." + str(n) + "f}"
+    for col in df.columns:
+        try:
+            df[col] = df[col].apply(lambda x: dec_str.format(x))
+        except ValueError:
+            pass
+    return df
+
+
+def to_consistent(df, n):
     """Convert Pandas DataFrame to consistent representation
 
     Parameters
     ----------
     df : Pandas DataFrame
+    n : int, number of decimal places to truncate float to
 
     Returns
     -------
     df : Pandas DataFrame
     """
+    if n is None:
+        n = config.float_precision
+
     df.columns = map(str.lower, df.columns)
+    drop_columns = ["lochierarchy"]
+    df = df[[c for c in df.columns if c not in drop_columns]].copy()
     df = to_numeric(df)
+    df = df.sort_values(by=list(df.columns), na_position='last').reset_index(drop=True)
     df.fillna(value=-9999.99, inplace=True)
+    #df = to_truncated(df=df, n=config.float_precision)
+    df = to_str(df=df, n=n)
     return df

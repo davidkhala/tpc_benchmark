@@ -49,10 +49,17 @@
  where d_date_sk = ss_sold_date_sk
  group by d_week_seq,ss_store_sk
  )
- [_LIMITA] select [_LIMITB] s_store_name1,s_store_id1,d_week_seq1
-       ,sun_sales1/sun_sales2,mon_sales1/mon_sales2
-       ,tue_sales1/tue_sales2,wed_sales1/wed_sales2,thu_sales1/thu_sales2
-       ,fri_sales1/fri_sales2,sat_sales1/sat_sales2
+ [_LIMITA] select [_LIMITB] 
+  s_store_name1,
+  s_store_id1,
+  d_week_seq1,
+  sun_sales1/sun_sales2 as r1,
+  mon_sales1/mon_sales2 as r2,
+  tue_sales1/tue_sales2 as r3,
+  wed_sales1/wed_sales2 as r4,
+  thu_sales1/thu_sales2 as r5,
+  fri_sales1/fri_sales2 as r6,
+  sat_sales1/sat_sales2 as r7
  from
  (select s_store_name s_store_name1,wss.d_week_seq d_week_seq1
         ,s_store_id s_store_id1,sun_sales sun_sales1
@@ -74,6 +81,9 @@
         d_month_seq between [DMS]+ 12 and [DMS] + 23) x
  where s_store_id1=s_store_id2
    and d_week_seq1=d_week_seq2-52
- order by s_store_name1,s_store_id1,d_week_seq1
+ order by 
+  s_store_name1 nulls last,
+  s_store_id1 nulls last,
+  d_week_seq1 nulls last
 [_LIMITC];
 

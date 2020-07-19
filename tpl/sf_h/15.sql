@@ -10,7 +10,7 @@ create view revenue:s (supplier_no, total_revenue) as
 	from
 		lineitem
 	where
-		l_shipdate >= date ':1'
+		l_shipdate >= to_date(':1')
 		and l_shipdate < dateadd(month, 3, to_date(':1'))
 	group by
 		l_suppkey;

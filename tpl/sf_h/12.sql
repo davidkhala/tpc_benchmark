@@ -26,7 +26,7 @@ where
 	and l_shipmode in (':1', ':2')
 	and l_commitdate < l_receiptdate
 	and l_shipdate < l_commitdate
-	and l_receiptdate >= date ':3'
+	and l_receiptdate >= to_date(':3')
 	and l_receiptdate < dateadd(year, 1, to_date(':3'))
 group by
 	l_shipmode

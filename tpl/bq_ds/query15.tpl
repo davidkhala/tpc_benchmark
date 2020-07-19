@@ -37,7 +37,7 @@
  define _LIMIT=100;
  
  [_LIMITA] select [_LIMITB] ca_zip
-       ,sum(cs_sales_price)
+       ,sum(cs_sales_price) as r1
  from catalog_sales
      ,customer
      ,customer_address
@@ -51,6 +51,6 @@
  	and cs_sold_date_sk = d_date_sk
  	and d_qoy = [QOY] and d_year = [YEAR]
  group by ca_zip
- order by ca_zip
+ order by ca_zip nulls last
  [_LIMITC];
 

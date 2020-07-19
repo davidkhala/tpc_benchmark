@@ -56,7 +56,12 @@ define _LIMIT=100;
            AND cs_sold_date_sk=d_date_sk
            AND cs_item_sk=i_item_sk) foo
 GROUP BY channel, col_name, d_year, d_qoy, i_category
-ORDER BY channel, col_name, d_year, d_qoy, i_category
+ORDER BY
+  channel nulls last,
+  col_name nulls last,
+  d_year nulls last,
+  d_qoy nulls last,
+  i_category nulls last
 [_LIMITC];
 
  

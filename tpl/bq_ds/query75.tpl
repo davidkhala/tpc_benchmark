@@ -58,7 +58,7 @@ WITH all_sales AS (
                           LEFT JOIN catalog_returns ON (cs_order_number=cr_order_number 
                                                     AND cs_item_sk=cr_item_sk)
        WHERE i_category='[CATEGORY]'
-       UNION ALL
+       UNION DISTINCT
        SELECT d_year
              ,i_brand_id
              ,i_class_id
@@ -71,7 +71,7 @@ WITH all_sales AS (
                         LEFT JOIN store_returns ON (ss_ticket_number=sr_ticket_number 
                                                 AND ss_item_sk=sr_item_sk)
        WHERE i_category='[CATEGORY]'
-       UNION ALL
+       UNION DISTINCT
        SELECT d_year
              ,i_brand_id
              ,i_class_id
@@ -103,5 +103,7 @@ WITH all_sales AS (
    AND curr_yr.d_year=[YEAR]
    AND prev_yr.d_year=[YEAR]-1
    AND CAST(curr_yr.sales_cnt AS FLOAT64)/CAST(prev_yr.sales_cnt AS FLOAT64)<0.9
- ORDER BY sales_cnt_diff,sales_amt_diff
+ ORDER BY
+  sales_cnt_diff nulls last,
+  sales_amt_diff nulls last
  [_LIMITC];

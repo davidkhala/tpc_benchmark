@@ -37,7 +37,8 @@ define HOUR= text({"20",1},{"15",1},{"16",1},{"8",1});
 define DEPCNT=random(0,9,uniform);
 define _LIMIT=100;
 
-[_LIMITA] select [_LIMITB] count(*) 
+[_LIMITA] select [_LIMITB]
+	count(*) as r1
 from store_sales
     ,household_demographics 
     ,time_dim, store
@@ -48,5 +49,6 @@ where ss_sold_time_sk = time_dim.t_time_sk
     and time_dim.t_minute >= 30
     and household_demographics.hd_dep_count = [DEPCNT]
     and store.s_store_name = 'ese'
-order by count(*)
+order by
+	r1 nulls last
 [_LIMITC];

@@ -39,7 +39,7 @@ define WSDATE = date([YEAR]+"-01-01",[YEAR]+"-04-01",sales);
 define _LIMIT=100;
 
 [_LIMITA] select [_LIMITB] 
-   sum(ws_ext_discount_amt)  as "Excess Discount Amount" 
+   sum(ws_ext_discount_amt)  as excess_discount_amount 
 from 
     web_sales 
    ,item 

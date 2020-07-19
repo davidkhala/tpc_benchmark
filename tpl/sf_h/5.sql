@@ -22,7 +22,7 @@ where
 	and s_nationkey = n_nationkey
 	and n_regionkey = r_regionkey
 	and r_name = ':1'
-	and o_orderdate >= date ':2'
+	and o_orderdate >= to_date(':2')
 	and o_orderdate < dateadd(year, 1, to_date(':2'))
 group by
 	n_name

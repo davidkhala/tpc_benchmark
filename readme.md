@@ -738,7 +738,56 @@ https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environme
 `$ln -s /data /home/jupyter/code/bq_snowflake_benchmark/data`  
 (a new directory `data` should appear in the project folderin in Jupyter Lab)
 
+### Query Results Quality Control  
+For both TPC tests, query templates were copied and edited to create templates that when run with the query generation binaries produced executable SQL for BigQuery and Snowflake.  Since all operations in this benchmarking effort used Python and each database's official Python client, the outputs of each query were accessed using the respective client's Pandas Dataframe conversion method.  Comparison was then done using Pandas methods.  
 
+Results were collected as follows:
+1. Query SQL was generated for the appropriate database and scale factor and executed via the client
+2. Pandas Dataframes are output by each database client module
+3. Dataframes are saved to CSV files in the query sequence results directory
+4. Anytime after the query sequence is done, the CSV files are loaded into Pandas Dataframes
+5. The `tools.consistent` method is used on the loaded Dataframes which does the following:
+    a. Converts table column names to lowercase
+    b. Converts any columns with numeric like data using pandas.to_numeric method
+    c. Fills None/NaN values to numeric `-9999.99` to avoid evaluations failing due to None == None evaluating to False
+6. Evaluate Dataframe differences using pandas.testing.assert_fame_equal using:
+
+a. `check_names=False` : Whether to check that the names attribute for both the index and column attributes of the DataFrame is identical.  Snowflake and BigQuery return upper and lowercase different column labels which are not important for query comparisons.
+b. `check_exact=False` : Whether to compare number exactly.  Explicitly set to False to ensure use of `check_less_precise` is readable.
+c. `check_less_precise=2` : Specify comparison precision. Only used when check_exact is False. 5 digits (False) or 3 digits (True) after decimal points are compared. If int, then specify the digits to compare.
+
+When comparing two numbers, if the first number has magnitude less than 1e-5, we compare the two numbers directly and check whether they are equivalent within the specified precision. Otherwise, we compare the ratio of the second number to the first number and check whether it is equivalent to 1 within the specified precision.
+
+For this project, BigQuery defaults to returning 2 or 3 decimal places in Dataframes after conversion to numeric types.  Snowflake's client returns object columns with Decimal class contents which when converted to float dtype columns results in different numbers of decimal values.  In cases where the dissimilar additional decimal place is a 5, an evaluation based on decimal format or rounding produces values off by the last decimal place.  By setting `check_less_precise` to 2, all values are only compared to 2 decimal places regardless of additional decimal places available in the value.  
+
+
+### QUERY Alterations
+TPC-DS 4.1.3.1 - Query syntax is phrased in SQL1999 with OLAP amendments
+ANSI/ISO/IEC 9075-2:1999 Part 2, pg 269, 7.12.5 - 
+```If UNION, EXCEPT, or INTERSECT is specified and neither ALL nor DISTINCT is specified, then DISTINCT is implicit.```
+
+Snowflake
+UNION     >> distinct records
+UNION ALL >> all records, even duplicates
+
+BigQuery
+UNION DISTINCT >> distinct records
+UNION ALL      >> all records, even duplicates
+
+Therefore, the query conversion is as follows:
+
+TPC-DS >> Snowflake
+UNION  >> UNION
+
+TPC-DS >> BigQuery
+UNION  >> UNION DISTINCT
+
+
+Note: distinct takes more compute as it has to find all duplicateds
+
+https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax#union
+https://dwgeek.com/snowflake-set-operators-union-except-minus-and-intersect.html/
+https://docs.snowflake.com/en/sql-reference/operators-query.html#union-all
 
 ### refresh queries:
 TPC-H: 

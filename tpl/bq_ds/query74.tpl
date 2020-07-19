@@ -94,6 +94,9 @@
          and t_w_firstyear.year_total > 0
          and case when t_w_firstyear.year_total > 0 then t_w_secyear.year_total / t_w_firstyear.year_total else null end
            > case when t_s_firstyear.year_total > 0 then t_s_secyear.year_total / t_s_firstyear.year_total else null end
- order by [ORDERC.1],[ORDERC.2],[ORDERC.3]
+ order by
+  [ORDERC.1] nulls last,
+  [ORDERC.2] nulls last,
+  [ORDERC.3] nulls last
 [_LIMITC];
 

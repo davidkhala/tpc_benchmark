@@ -52,16 +52,16 @@
    and i_category in ('[CATEGORY.1]', '[CATEGORY.2]', '[CATEGORY.3]')
    and cs_sold_date_sk = d_date_sk
    and d_date between to_date('[SDATE]')
- 				and (dateadd('day', 30, to_date('[SDATE]')))
+   and (dateadd('day', 30, to_date('[SDATE]')))
  group by i_item_id
          ,i_item_desc 
          ,i_category
          ,i_class
          ,i_current_price
- order by i_category
-         ,i_class
-         ,i_item_id
-         ,i_item_desc
-         ,revenueratio
+ order by i_category nulls last
+         ,i_class nulls last
+         ,i_item_id nulls last
+         ,i_item_desc nulls last
+         ,revenueratio nulls last
 [_LIMITC];
 

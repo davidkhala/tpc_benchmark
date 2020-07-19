@@ -50,5 +50,10 @@ define DMS = random(1176,1224,uniform);
                        ,i_brand
                        ,i_class
                        ,i_category)
-order by qoh, i_product_name, i_brand, i_class, i_category
+order 
+  by qoh nulls last, 
+  i_product_name nulls last, 
+  i_brand nulls last, 
+  i_class nulls last, 
+  i_category nulls last
 [_LIMITC];
