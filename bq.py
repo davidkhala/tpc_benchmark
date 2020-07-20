@@ -246,6 +246,27 @@ def parse_log(fp):
     return pd.read_csv(fp, names=log_column_names)
 
 
+def result_namer(x):
+    """TODO: delete this along with module after sf>sfa bq>bqa merge"""
+    pass
+
+
+def write_to_csv(db, test, dataset, desc, columns, data, kind):
+    """ write data to csv file
+    TODO: delete, this method is in bqa.BQTPC
+    """
+
+    # load data frame
+    df = pd.DataFrame(data, columns=columns)
+
+    # generate filename
+    f = (f'{config.fp_results}{config.sep}{db}_{test}_{kind}_times-' +
+         f'{dataset}-{desc}-{str(pd.Timestamp.now())}.csv')
+
+    # write to file
+    df.to_csv(f, index=False)
+
+
 class BQUpload:
     """Upload data from a file location"""
     def __init__(self, test, scale, dataset):
@@ -757,9 +778,9 @@ def query_seq(desc, test, seq, templates_dir, scale,
                "t0", "t1", "bytes_processed", "bytes_billed", "query_plan", "cost"]
 
     # write results to csv file
-    utils.write_to_csv("bq", test, dataset, desc, columns, query_measured_results, kind="query")
+    write_to_csv("bq", test, dataset, desc, columns, query_measured_results, kind="query")
     if save:
-        df_fp = utils.result_namer("bq", test, dataset, desc, kind="query")
+        df_fp = result_namer("bq", test, dataset, desc, kind="query")
         df_out.to_csv(df_fp, index=False)
 
     return True
@@ -909,7 +930,7 @@ def stream_seq(desc, test, seq, templates_dir, scale,
                "t0", "t1", "bytes_processed", "bytes_billed", "query_plan", "cost"]
 
     # write data to file
-    utils.write_to_csv("sf", test, dataset, desc, columns, stream_data, kind="stream")
+    write_to_csv("sf", test, dataset, desc, columns, stream_data, kind="stream")
 
     return True
 
