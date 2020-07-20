@@ -12,7 +12,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pandas.testing import assert_frame_equal
 
-import sfa, bqa, tools, config
+import sf_tpc, bq_tpc, tools, config
 
 
 def splitter(fp):
@@ -275,13 +275,13 @@ class QueryCompare:
         sf_qid : str, Snowflake query ide for query job
         """
 
-        sf = sfa.SFTPC(test=self.test,
-                       scale=self.scale,
-                       cid=self.cid,
-                       warehouse=self.sf_warehouse_name,
-                       desc=self.desc,
-                       verbose=self.verbose,
-                       verbose_query=self.verbose_query)
+        sf = sf_tpc.SFTPC(test=self.test,
+                          scale=self.scale,
+                          cid=self.cid,
+                          warehouse=self.sf_warehouse_name,
+                          desc=self.desc,
+                          verbose=self.verbose,
+                          verbose_query=self.verbose_query)
         sf.verbose_query_n = self.verbose_query_n
 
         if self.verbose:
@@ -296,12 +296,12 @@ class QueryCompare:
 
         sf.close()
 
-        bq = bqa.BQTPC(test=self.test,
-                       scale=self.scale,
-                       cid=self.cid,
-                       desc=self.desc,
-                       verbose_query=self.verbose_query,
-                       verbose=self.verbose)
+        bq = bq_tpc.BQTPC(test=self.test,
+                          scale=self.scale,
+                          cid=self.cid,
+                          desc=self.desc,
+                          verbose_query=self.verbose_query,
+                          verbose=self.verbose)
         bq.verbose_query_n = self.verbose_query_n
 
         bq.timestamp = self.shared_timestamp
@@ -336,13 +336,13 @@ class QueryCompare:
         with open(metadata_fp, "w") as f:
             f.write(self.to_json(indent="  "))
 
-        sf = sfa.SFTPC(test=self.test,
-                       scale=self.scale,
-                       cid=self.cid,
-                       warehouse=self.sf_warehouse_name,
-                       desc=self.desc,
-                       verbose=self.verbose,
-                       verbose_query=self.verbose_query)
+        sf = sf_tpc.SFTPC(test=self.test,
+                          scale=self.scale,
+                          cid=self.cid,
+                          warehouse=self.sf_warehouse_name,
+                          desc=self.desc,
+                          verbose=self.verbose,
+                          verbose_query=self.verbose_query)
         sf.verbose_query_n = self.verbose_query_n
         
         if self.verbose:
@@ -379,12 +379,12 @@ class QueryCompare:
 
         self.results_sf_csv_fp = sf.results_csv_fp
         
-        bq = bqa.BQTPC(test=self.test,
-                       scale=self.scale,
-                       cid=self.cid,
-                       desc=self.desc,
-                       verbose_query=self.verbose_query,
-                       verbose=self.verbose)
+        bq = bq_tpc.BQTPC(test=self.test,
+                          scale=self.scale,
+                          cid=self.cid,
+                          desc=self.desc,
+                          verbose_query=self.verbose_query,
+                          verbose=self.verbose)
         bq.verbose_query_n = self.verbose_query_n
 
         bq.timestamp = self.shared_timestamp
@@ -449,13 +449,13 @@ class QueryCompare:
 
         col_names = {"ds": ds_col, "h": h_col}[self.test]
 
-        sf = sfa.SFTPC(test=self.test,
-                       scale=self.scale,
-                       cid=self.cid,
-                       warehouse="TEST9000",
-                       desc=self.desc,
-                       verbose=self.verbose,
-                       verbose_query=self.verbose_query)
+        sf = sf_tpc.SFTPC(test=self.test,
+                          scale=self.scale,
+                          cid=self.cid,
+                          warehouse="TEST9000",
+                          desc=self.desc,
+                          verbose=self.verbose,
+                          verbose_query=self.verbose_query)
 
         if self.verbose:
             print('Using database:', sf.database)
@@ -464,12 +464,12 @@ class QueryCompare:
         sf.results_dir = self.results_dir
         sf.connect()
 
-        bq = bqa.BQTPC(test=self.test,
-                       scale=self.scale,
-                       cid=self.cid,
-                       desc=self.desc,
-                       verbose_query=self.verbose_query,
-                       verbose=self.verbose)
+        bq = bq_tpc.BQTPC(test=self.test,
+                          scale=self.scale,
+                          cid=self.cid,
+                          desc=self.desc,
+                          verbose_query=self.verbose_query,
+                          verbose=self.verbose)
 
         bq.timestamp = self.shared_timestamp
         bq.results_dir = self.results_dir
@@ -534,7 +534,7 @@ class QueryCompare:
     def table_metadata(self):
         """Compare table contents on both platforms
         TODO: the BQ and SF specific methods could probably be migrated to
-        sfa.py and bqa.py
+        sf_tpc.py and bq_tpc.py
 
         For more details see:
         https://docs.snowflake.com/en/sql-reference/account-usage/tables.html
@@ -584,13 +584,13 @@ class QueryCompare:
             size_bytes             int64, total stored size in bytes
             type                   int64,
         """
-        sf = sfa.SFTPC(test=self.test,
-                       scale=self.scale,
-                       cid=self.cid,
-                       warehouse="TEST9000",
-                       desc=self.desc,
-                       verbose=self.verbose,
-                       verbose_query=self.verbose_query)
+        sf = sf_tpc.SFTPC(test=self.test,
+                          scale=self.scale,
+                          cid=self.cid,
+                          warehouse="TEST9000",
+                          desc=self.desc,
+                          verbose=self.verbose,
+                          verbose_query=self.verbose_query)
         
         if self.verbose:
             print('Using database:', sf.database)
@@ -604,12 +604,12 @@ class QueryCompare:
         df_sf_result = sf_query_result.fetch_pandas_all()
         sf.close()
 
-        bq = bqa.BQTPC(test=self.test,
-                       scale=self.scale,
-                       cid=self.cid,
-                       desc=self.desc,
-                       verbose_query=self.verbose_query,
-                       verbose=self.verbose)
+        bq = bq_tpc.BQTPC(test=self.test,
+                          scale=self.scale,
+                          cid=self.cid,
+                          desc=self.desc,
+                          verbose_query=self.verbose_query,
+                          verbose=self.verbose)
 
         bq.timestamp = self.shared_timestamp
         bq.results_dir = self.results_dir
