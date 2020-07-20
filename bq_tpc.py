@@ -58,7 +58,7 @@ import pandas as pd
 from google.cloud import bigquery
 from google.api_core import exceptions as google_api_exceptions
 
-import config, tools, ds_setup, h_setup, utils
+import config, tools, ds_setup, h_setup
 from gcp_storage import inventory_bucket_df
 
 
@@ -287,6 +287,98 @@ def create_table_remix(schema_name, source, destination, dot=False):
 def parse_log(fp):
     
     return pd.read_csv(fp, names=log_column_names)
+
+
+def add_view(query_text, project, dataset):
+    """Handle the unhelpful behavior of the Python DDL API and views:
+    The API allows setting a default dataset but does not honor that
+    attribute when creating views"""
+
+    pdt = project + "." + dataset + "."
+    return query_text.replace(config.p_d_id, pdt)
+
+
+def query(query_text, project, dataset, dry_run=False, use_cache=False):
+    """Run a DDL SQL query on BigQuery
+
+    Parameters
+    ----------
+    query_text : str, query text to execute
+    project : str, GCP project running this query
+    dataset : str, GCP BigQuery dataset running this query
+    dry_run : bool, execute query as a dry run
+        Default: False
+    use_cache : bool, attempt to use cached results from previous queries
+        Default: False
+
+    Returns
+    -------
+    query_job : bigquery.query_job object
+    """
+
+    client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
+    job_config = bigquery.QueryJobConfig()
+
+    default_dataset = project + "." + dataset
+
+    job_config.default_dataset = default_dataset
+
+    job_config.dry_run = dry_run  # only approximate the time and cost
+    job_config.use_query_cache = use_cache  # API default is True, here False
+
+    query_text = add_view(query_text, project, dataset)
+
+    query_job = client.query(query_text, job_config=job_config)
+
+    return query_job
+
+
+def parse_query_job(query_job, verbose=False):
+    """
+
+    Parameters
+    ----------
+    query_job : bigquery.query_job object
+    verbose : bool, print results
+
+    Returns
+    -------
+    t0 : datetime object, time query started
+    t1 : datetime object, time query ended
+    bytes_processed : int, bytes processed with query
+    bytes_billed : int, bytes billed for query
+    df : Pandas DataFrame containing results of query
+    """
+
+    result = query_job.result()
+    df_n = result.to_dataframe()
+
+    t0 = query_job.started
+    t1 = query_job.ended
+    dt = t1 - t0
+    bytes_processed = query_job.total_bytes_processed
+    bytes_billed = query_job.total_bytes_billed
+    job_id = query_job.job_id
+    query_plan = {k: v.__dict__ for k, v in enumerate(query_job.query_plan)}
+
+    if verbose:
+        print("Query Statistics")
+        print("================")
+        print("Total Time Elapsed: {}".format(dt))
+        print("Bytes Processed: {}".format(bytes_processed))
+        print("Bytes Billed: {}".format(bytes_billed))
+        print()
+        if len(df_n) < 25:
+            print("Result:")
+            print("=======")
+            print(df_n)
+        else:
+            print("Head of Result:")
+            print("===============")
+            print(df_n.head())
+
+    return t0, t1, bytes_processed, bytes_billed, query_plan, df_n, job_id
+
 
 
 class BQUpload:

@@ -120,20 +120,17 @@ workload   = "TPCH"
 fp_ds_stream_order = cwd + sep + "ds_stream_seq.csv"
 fp_h_stream_order  = cwd + sep + "h_stream_seq.csv"
 
-# 4.1 ANSI/DDL SQL Schema Files
-
+# 3.7 TPC schema files default locations
 ds_schema_ansi_sql_filepath = fp_ds_src + sep + "tools" + sep + "tpcds.sql"
 h_schema_ddl_filepath = fp_h_src + sep + "dbgen" + sep + "dss.ddl"
 
+# 4.1 Snowflake Schema Files
 fp_sf_ds_schema = cwd + sep + "sc" + sep + "sf_ds_01.sql"
 fp_sf_h_schema = cwd + sep + "sc" + sep + "sf_h_01.sql"
 
-
-# 4.2 Basic BigQuery Schema Files
-
-fp_schema = cwd + sep + "schema"
-fp_ds_schema = fp_schema + sep + "ds"
-fp_h_schema  = fp_schema + sep + "h"
+# 4.2 BigQuery Schema Files
+fp_bq_ds_schema = cwd + sep + "sc" + sep + "bq_ds_01.sql"
+fp_bq_h_schema  = cwd + sep + "sc" + sep + "bq_h_01.sql"
 
 # 4.3 Files output by data generators from either test to ignore
 # >> Do NOT edit

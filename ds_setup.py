@@ -5,14 +5,11 @@ Copyright (c) 2020 SADA Systems, Inc.
 """
 
 import os
-import re
 import threading
 import subprocess
 import concurrent.futures
 import zipfile
-import glob
 
-from datetime import datetime
 from google.cloud import storage
 
 import pandas as pd
@@ -604,7 +601,7 @@ class DGenPool:
         if self.seed is not None:
             cmd = cmd + ["-RNGSEED", str(self.seed)]
 
-        if self.validate is not None:
+        if self.validate:
             cmd = cmd + ["-VALIDATE"]
             
         binary_folder = config.fp_ds_src + config.sep + "tools"
