@@ -141,3 +141,18 @@ Results were collected as follows:
     When comparing two numbers, if the first number has magnitude less than 1e-5, we compare the two numbers directly and check whether they are equivalent within the specified precision. Otherwise, we compare the ratio of the second number to the first number and check whether it is equivalent to 1 within the specified precision.
 
 For this project, BigQuery defaults to returning 2 or 3 decimal places in Dataframes after conversion to numeric types.  Snowflake's client returns object columns with Decimal class contents which when converted to float dtype columns results in different numbers of decimal values.  In cases where the dissimilar additional decimal place is a 5, an evaluation based on decimal format or rounding produces values off by the last decimal place.  By setting `config.float_precision` to 2, all values are only compared to 2 decimal places regardless of additional decimal places available in the value.  
+
+## Data Format  
+Each benchmark run initiated by `NB_06_benchmark.ipynb` creates a folder in the project `/results` directory. If the optional exclusion of queries from calcuations is done, additional plots will be generated with the exclusions reflected.
+
+Data files generated:  
+1. `query_result*.csv` - result data from a specific query
+1. `query_text*.txt` - query text that was executed
+1. `plot_qc*` - plot showing agreement in query results by query number
+1. `metadata_initial.json` and `metadata_final.json` - test specific data for further processing and context
+1. `benchmark_times*.csv` - timing and query ids recorded locally
+1. `query_history*.csv` - information schema or account history data that includes the time period the benchmark was conducted with query ids for joining
+1. `benchmark_results*.csv` - compiled times and bytes processed from `query_history` and API data
+1. `plot_query_comparison*` - visual of `benchmark_results`
+1. `benchmark_total*.csv` - data summed by system
+1. `plot_totals*` - visual of `benchmark_total`
