@@ -29,7 +29,7 @@ The TPC Benchmark H (TPC-H) is a decision support benchmark. It consists of a su
 
 ### Specification  
 
-In addition to the source code required to run the benchmarks, each .zip contains a PDF of specification benchmark called `specification.pdf`. Refer to this document for detailed descriptions of all parts of the TPC supplied tools and the methods required to execute a TPC benchmark.  
+In addition to the source code required to run the benchmarks, each .zip contains a PDF of the benchmark's specifications called `specification.pdf`. Refer to this document for detailed descriptions of all parts of the TPC supplied tools and the methods required to execute a TPC benchmark.  
 
 ### Goals Adherant to TPC Specifications  
 The goal of this work is to follow as closely as possible the spirit and specification set out by the TPC. They describe this goal:  
@@ -42,8 +42,28 @@ The purpose of TPC benchmarks is to provide relevant, objective performance data
 The use of new systems, products, technologies (hardware or software) and pricing is encouraged so long as they meet the requirements above. Specifically prohibited are benchmark systems, products, technologies or pricing (hereafter referred to as "implementations") whose primary purpose is performance optimization of TPC benchmark results without any corresponding applicability to real-world applications and environments. In other words, all "benchmark special" implementations that improve benchmark results but not real-world performance or pricing, are prohibited.
 ```  
 
+## Project Structure  
+The project has and generates the following structure:  
+
+```
+/data      - local directory or symbolic link, location generated data is saved
+/download  - location TPC .zip files are downloaded to
+/ds        - TPC-DS uncompressed source folder
+/h         - TPC-H uncompressed source folder
+/results   - results directories are written during benchmarking
+/sc        - schema files used in creating or cloning databases
+/tpl       - query template files for target systems and test
+```
+
+The Python and Jupyter source is commented with descriptions, other source files include:  
+```
+environment_tpc.yml  - Conda environment file to use for project
+ds_stream_seq.csv    - TPC-DS query sequence for each stream test
+h_stream_seq.csv     - TPC-H query sequence for each stream test
+```
+
 ### Use of Query Templates  
-A key feature of the TPC benchmarks is the use of query templates. These template files, with extension `.tpl` are supplied in the TPC source and used by the TPC query generator to create SQL to be executed on the target system under test. In this project, these templates are copied to /tpl and then modified copies are run by the TPC query generator programs. The output of from the query generator will then be SQL syntax which will run on BigQuery and Snowflake. The four template folders are:
+A key feature of the TPC benchmarks is the use of query templates. These template files, with extension `.tpl` are supplied in the TPC source and used by the TPC query generator to create SQL to be executed on the target system under test. In this project, these templates were copied to /tpl and then manually modified to be run by the TPC query generator programs. The output of from the query generator will then be SQL syntax which will run on BigQuery and Snowflake. The four template folders are:
 * `/tpl/bq_ds`
 * `/tpl/bq_h`
 * `/tpl/sf_ds`
@@ -51,13 +71,25 @@ A key feature of the TPC benchmarks is the use of query templates. These templat
 
 A query edit log was maintained of all modifications done to the query templates; as well the project repository contains the templates in unedited format for quality control in folders within `/tpl` each with a `_gen` suffix in the folder name.  
 
+## Required Resources  
+The following accounts are required:  
+* A Google Cloud Platform service account with BigQuery Admin and Storage Admin Roles
+* A Google Cloud Platform account with ability to create and launch AI Notebooks  
+* A Snowflake account with SYSADMIN level permissions
+
+Additionally, these are needed locally in the project:  
+GCP Service account key JSON file
+Snowflake user name and password 
+
 ## Installing and Running Benchmarks   
 At all times, refer to the benchmark's `specification.pdf` for details on the benchmark. The Jupyter Notebooks contain instructions inline with executable code.  
+### Configuration File  
+This project uses a single configuration file, `config.py` to set project specific variables. In the following instructions, the relevent Python variable will include the module in the notation, i.e. `config.value`
 
 ### Download TPC-H and TPC-DS  
 The TPC data has to be downloaded to be used and a license agreement must be filled out manually.  
 http://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp  
-After submitting, emails are sent with download links. Download the zip files and upload to a GCS bucket.
+After submitting, emails are sent with download links. Upload the zip files to a GCS bucket and add the 
 
 For this project, both source programs were downloaded to GCS 2020-02-24.  
 
@@ -142,10 +174,25 @@ Results were collected as follows:
 
 For this project, BigQuery defaults to returning 2 or 3 decimal places in Dataframes after conversion to numeric types.  Snowflake's client returns object columns with Decimal class contents which when converted to float dtype columns results in different numbers of decimal values.  In cases where the dissimilar additional decimal place is a 5, an evaluation based on decimal format or rounding produces values off by the last decimal place.  By setting `config.float_precision` to 2, all values are only compared to 2 decimal places regardless of additional decimal places available in the value.  
 
-## Data Format  
-Each benchmark run initiated by `NB_06_benchmark.ipynb` creates a folder in the project `/results` directory. If the optional exclusion of queries from calcuations is done, additional plots will be generated with the exclusions reflected.
+## Data Output  
+Each benchmark run initiated by `NB_06_benchmark.ipynb` creates a folder in the project `/results` directory. If the optional exclusion of queries from calcuations is done, additional plots will be generated with the exclusions reflected.  Files and folders are generated using the `tools.make_name` function.
 
-Data files generated:  
+### Folder Name  
+Each folder in `/results` is generated with the following `_` delimited fields:  
+```
+results : str, constant indicating benchmark results
+db : str, data base name, either 'bq' or 'sf'; or 'bqsf' for both
+kind : str, kind of record, either 'results' or 'times'
+datasource : str, dataset if bq or database if snowflake, will be a combination of 
+    test : str, test being done, either 'h' or 'ds'
+    scale : str, scale factor with 'GB' suffix, i.e. '100GB'
+    cid : str, config id, i.e. '02A' for the experiment config number
+desc : str, description of experiment
+timestamp : timestamp of when test was run
+```
+
+### Data files  
+Inside the results folder, the following files are generated automatically:  
 1. `query_result*.csv` - result data from a specific query
 1. `query_text*.txt` - query text that was executed
 1. `plot_qc*` - plot showing agreement in query results by query number
@@ -156,3 +203,53 @@ Data files generated:
 1. `plot_query_comparison*` - visual of `benchmark_results`
 1. `benchmark_total*.csv` - data summed by system
 1. `plot_totals*` - visual of `benchmark_total`
+
+### Data Formatting  
+Besides the plots, all files are UTF-8 encoded text files.  Their data formats are:  
+#### query_result*.csv
+These results are specific to the query number run and should match between systems under test.
+#### query_text*.txt
+The query text that generated from a `.tpl` file and by the test query generator and executed by the system under test.
+
+#### plot_* 
+Plot are all .png format, visual layout varies
+
+#### metadata.json  
+Class atribute dumps of `compare.QueryCompare` before any queries were evaluated (initial) and after (final)  
+
+#### benchmark_times  
+Initial data collect on the computer running Python.  
+```
+db         - str, data base name, either 'bq' or 'sf'
+test       - str, test being done, either 'h' or 'ds'
+scale      - str, scale factor with 'GB' suffix, i.e. '100GB'
+source     - str, dataset if bq or database if snowflake
+cid        - str, config id, i.e. '02A' for the experiment config number
+desc       - str, description of experiment
+query_n    - int, test query number 
+seq_n      - int, test query stream sequence number
+driver_t0  - str timestamp, host system time query api was executed
+driver_t1  - str timestamp, host system time query api completed
+qid        - str, database system under test unique query identification value
+```
+
+### query_history_bq.csv  
+BigQuery job metadata from INFORMATION_SCHEMA.JOBS_BY_* view spanning the time of the benchmark.  See:  
+https://cloud.google.com/bigquery/docs/information-schema-jobs  
+
+### query_history_sf.csv  
+Snowflake job metadata from `QUERY_HISTORY` view spanning the time of the benchmark.  See:  
+https://docs.snowflake.com/en/sql-reference/account-usage/query_history.html  
+
+### benchmark_results  
+Same data format as `benchmark_times` for `db, test, scale, source, cid, desc, query_n, seq_n` with the following additions:  
+
+```
+dt    - str, time delta
+dt_s  - float, time in seconds
+TB    - float, amount of data processed in Terabytes
+```
+where all values are merged from the `query_history` data and represent the per-query system reported time and bytes processed (not the time observed by the computer running the Python and Jupyter Notebooks).  This file should be used as the 'final' data for a benchmark run.  
+
+### benchmark_total  
+Same data format as `benchmark_results`, with values summed by `db` and `test`. These values represent the 'total time' and 'total bytes' processed for the query stream sequence run (and for the 1st test sequence in the specification, the Power Test).

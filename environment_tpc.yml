@@ -8,7 +8,7 @@ channels:
 dependencies:
   - python
   - jupyterlab
-  - snowflake-connector-python
+  - snowflake-connector-python=2.2.6
   - pandas
   - pyarrow>=0.17
   - matplotlib

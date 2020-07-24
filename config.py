@@ -51,8 +51,6 @@ fp_h_output_mnt  = fp_output_mnt + sep + "h"
 
 # 2.4 Snowflake Connector Auth Basics
 # Note: credentials in 'poor_security.py' formatted as:
-sf_username = "dauren"
-sf_password = "239nj8834uffe"
 sf_account = "wja13212"
 sf_warehouse = ["TEST9000", "TEST9001", "TEST9002"]
 sf_warehouse_cost = 0.00056  # price per second for this warehouse size
@@ -103,6 +101,8 @@ fp_h_src               = fp_h  + sep + fp_h_src_version
 # 3.4 Random Seed for data generation
 # >> Edit this if desired, specified for repeatable results
 # Note: this could be set to random with `int(random.random()*100)`
+# setting to None will not pass a seed value to the command line and
+# both TPC data generation programs will randomly select a seed.
 
 random_seed = 14
 #random_seed = None
@@ -124,11 +124,11 @@ fp_h_stream_order  = cwd + sep + "h_stream_seq.csv"
 ds_schema_ansi_sql_filepath = fp_ds_src + sep + "tools" + sep + "tpcds.sql"
 h_schema_ddl_filepath = fp_h_src + sep + "dbgen" + sep + "dss.ddl"
 
-# 4.1 Snowflake Schema Files
+# 4.1 Snowflake Schema Files edited and commited to repo
 fp_sf_ds_schema = cwd + sep + "sc" + sep + "sf_ds_01.sql"
 fp_sf_h_schema = cwd + sep + "sc" + sep + "sf_h_01.sql"
 
-# 4.2 BigQuery Schema Files
+# 4.2 BigQuery Schema Files edited and commited to repo
 fp_bq_ds_schema = cwd + sep + "sc" + sep + "bq_ds_01.sql"
 fp_bq_h_schema  = cwd + sep + "sc" + sep + "bq_h_01.sql"
 
@@ -174,11 +174,13 @@ fp_h_sf_template_dir    = fp_query_templates + sep + "sf_h"
 # >> Do NOT edit
 fp_schema = cwd + sep + "sc"
 
+# TODO: possibly delete these two?
 bq_schema = ["ds_1GB_basic"]
 sf_schema = ["sf_1GB_basic"]
 
 # 5.3 Generated Queries  
 # >> Do NOT edit
+# TODO: delete this?
 fp_query = cwd + sep + "q"
 
 # 5.4 Qualification Query Answers
@@ -211,21 +213,9 @@ sf_dollars_per_tebibyte = 5.00
 bq_dollars_per_terabyte = 5.00
 
 # 5.8 Benchmark Data Output Format
-# db : str, database system under test, i.e. Snowflake "sf or BigQuery "bq"
-# test : str, TPC test, either "ds" or "h"
-# scale : int, TPC scale factor in GB
-# source : str, source dataset/database name test was conducted on
-# cid : str, configuration identifier, i.e. "01" or "03A" etc
-# desc : str, description of current data collection effort, i.e. "clustering"
-# query_n : int, query number in test stream
-# seq_n : int, test stream sequence number
-# dt : float, elapsed seconds query took to complete
-# dt_s :
-# TODO
-# TB : float, total number of Terabytes processed by query execution
-
+# >> DO NOT edit
 summary_short_columns = ["db", "test", "scale", "source", "cid", "desc", "query_n", "seq_n", "dt", "dt_s", "TB"]
 
-
 # 5.6 Data Quality Control Precision
+# >> edit if query results aren't matching and debug required
 float_precision = 2  # number of decimal places in str conversion
