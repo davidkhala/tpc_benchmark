@@ -1,4 +1,4 @@
-name: tpc
+name: tpc2
 
 channels:
   - defaults
@@ -22,3 +22,4 @@ dependencies:
 
   - pip:
     - google-resumable-media
+    - google-cloud-bigquery-reservation
