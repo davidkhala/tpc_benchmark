@@ -1,6 +1,8 @@
--- DS test version 02
--- cluster on time
+-- TPC-DS 
+-- Partition Strategy - SADA I
 -- 
+-- Partition by Date
+--
 create table `_destination_table.dbgen_version`
 as
 select * from `_source_table.dbgen_version`;
