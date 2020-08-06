@@ -1,102 +1,102 @@
 -- DS test version 02
 -- cluster on time
 -- 
-create table `_destination_table.dbgen_version`
+create table `_destination_dataset.dbgen_version`
 as
-select * from `_source_table.dbgen_version`;
+select * from `_source_dataset.dbgen_version`;
 
-create table `_destination_table.customer_address`
+create table `_destination_dataset.customer_address`
 as
-select * from `_source_table.customer_address`;
+select * from `_source_dataset.customer_address`;
 
-create table `_destination_table.customer_demographics`
+create table `_destination_dataset.customer_demographics`
 as
-select * from `_source_table.customer_demographics`;
+select * from `_source_dataset.customer_demographics`;
 
-create table `_destination_table.date_dim`
+create table `_destination_dataset.date_dim`
 as
-select * from `_source_table.date_dim`;
+select * from `_source_dataset.date_dim`;
 
-create table `_destination_table.warehouse`
+create table `_destination_dataset.warehouse`
 as
-select * from `_source_table.warehouse`;
+select * from `_source_dataset.warehouse`;
 
-create table `_destination_table.ship_mode`
+create table `_destination_dataset.ship_mode`
 as
-select * from `_source_table.ship_mode`;
+select * from `_source_dataset.ship_mode`;
 
-create table `_destination_table.time_dim`
+create table `_destination_dataset.time_dim`
 as
-select * from `_source_table.time_dim`;
+select * from `_source_dataset.time_dim`;
 
-create table `_destination_table.reason`
+create table `_destination_dataset.reason`
 as
-select * from `_source_table.reason`;
+select * from `_source_dataset.reason`;
 
-create table `_destination_table.income_band`
+create table `_destination_dataset.income_band`
 as
-select * from `_source_table.income_band`;
+select * from `_source_dataset.income_band`;
 
-create table `_destination_table.item`
+create table `_destination_dataset.item`
 as
-select * from `_source_table.item`;
+select * from `_source_dataset.item`;
 
-create table `_destination_table.store`
+create table `_destination_dataset.store`
 as
-select * from `_source_table.store`;
+select * from `_source_dataset.store`;
 
-create table `_destination_table.call_center`
+create table `_destination_dataset.call_center`
 as
-select * from `_source_table.call_center`;
+select * from `_source_dataset.call_center`;
 
-create table `_destination_table.customer`
+create table `_destination_dataset.customer`
 as
-select * from `_source_table.customer`;
+select * from `_source_dataset.customer`;
 
-create table `_destination_table.web_site`
+create table `_destination_dataset.web_site`
 as
-select * from `_source_table.web_site`;
+select * from `_source_dataset.web_site`;
 
-create table `_destination_table.store_returns`
+create table `_destination_dataset.store_returns`
 as
-select * from `_source_table.store_returns`;
+select * from `_source_dataset.store_returns`;
 
-create table `_destination_table.household_demographics`
+create table `_destination_dataset.household_demographics`
 as
-select * from `_source_table.household_demographics`;
+select * from `_source_dataset.household_demographics`;
 
-create table `_destination_table.web_page`
+create table `_destination_dataset.web_page`
 as
-select * from `_source_table.web_page`;
+select * from `_source_dataset.web_page`;
 
-create table `_destination_table.promotion`
+create table `_destination_dataset.promotion`
 as
-select * from `_source_table.promotion`;
+select * from `_source_dataset.promotion`;
 
-create table `_destination_table.catalog_page`
+create table `_destination_dataset.catalog_page`
 as
-select * from `_source_table.catalog_page`;
+select * from `_source_dataset.catalog_page`;
 
-create table `_destination_table.inventory`
+create table `_destination_dataset.inventory`
 as
-select * from `_source_table.inventory`;
+select * from `_source_dataset.inventory`;
 
-create table `_destination_table.catalog_returns`
+create table `_destination_dataset.catalog_returns`
 as
-select * from `_source_table.catalog_returns`;
+select * from `_source_dataset.catalog_returns`;
 
-create table `_destination_table.web_returns`
+create table `_destination_dataset.web_returns`
 as
-select * from `_source_table.web_returns`;
+select * from `_source_dataset.web_returns`;
 
-create table `_destination_table.web_sales`
+create table `_destination_dataset.web_sales`
 as
-select * from `_source_table.web_sales`;
+select * from `_source_dataset.web_sales`;
 
-create table `_destination_table.catalog_sales`
+create table `_destination_dataset.catalog_sales`
 as
-select * from `_source_table.catalog_sales`;
+select * from `_source_dataset.catalog_sales`;
 
-create table `_destination_table.store_sales`
+create table `_destination_dataset.store_sales`
 as
-select * from `_source_table.store_sales`;
+select * from `_source_dataset.store_sales`;

@@ -1,39 +1,39 @@
-CREATE TABLE `_destination_table.lineitem`
+CREATE TABLE `_destination_dataset.lineitem`
 PARTITION BY l_shipdate
 CLUSTER BY l_receiptdate, l_commitdate, l_suppkey, l_partkey
 AS 
-SELECT * FROM `_source_table.lineitem`;
+SELECT * FROM `_source_dataset.lineitem`;
 
-CREATE TABLE `_destination_table.orders`
+CREATE TABLE `_destination_dataset.orders`
 PARTITION BY o_orderdate
 CLUSTER BY o_custkey
 AS 
-SELECT * FROM `_source_table.orders`;
+SELECT * FROM `_source_dataset.orders`;
 
-CREATE TABLE `_destination_table.partsupp`
+CREATE TABLE `_destination_dataset.partsupp`
 PARTITION BY RANGE_BUCKET(ps_availqty, GENERATE_ARRAY(0, 10000, 100))
 CLUSTER BY ps_suppkey, ps_availqty
 AS 
-SELECT * FROM `_source_table.partsupp`;
+SELECT * FROM `_source_dataset.partsupp`;
 
-CREATE TABLE `_destination_table.part`
+CREATE TABLE `_destination_dataset.part`
 PARTITION BY RANGE_BUCKET(p_size, GENERATE_ARRAY(1, 50, 1))
 AS 
-SELECT * FROM `_source_table.part`;
+SELECT * FROM `_source_dataset.part`;
 
-CREATE TABLE `_destination_table.customer`
+CREATE TABLE `_destination_dataset.customer`
 PARTITION BY RANGE_BUCKET(c_nationkey, GENERATE_ARRAY(0, 25, 5))
 AS 
-SELECT * FROM `_source_table.customer`;
+SELECT * FROM `_source_dataset.customer`;
 
-CREATE TABLE `_destination_table.supplier`
+CREATE TABLE `_destination_dataset.supplier`
 AS 
-SELECT * FROM `_source_table.supplier`;
+SELECT * FROM `_source_dataset.supplier`;
 
-CREATE TABLE `_destination_table.nation`
+CREATE TABLE `_destination_dataset.nation`
 AS 
-SELECT * FROM `_source_table.nation`;
+SELECT * FROM `_source_dataset.nation`;
 
-CREATE TABLE `_destination_table.region`
+CREATE TABLE `_destination_dataset.region`
 AS 
-SELECT * FROM `_source_table.region`;
+SELECT * FROM `_source_dataset.region`;

@@ -1,9 +1,11 @@
 -- TPC-H
--- Partition Strategy
+-- Partition Strategy I
 -- 
 -- Optimize the largest tables, specifically:
--- LINEITEM, partition on L_SHIPDATE
--- ORDERS, partition on O_ORDERDATE
+-- | table    | column      | TPC type | BQ type |
+-- | -------- | ----------- | -------- | ------- |
+-- | lineitem | l_shipdate  | Date     | Date    |
+-- | orders   | o_orderdate | Date     | Date    |
 -- 
 -- Google's Documentation on partitioning:
 -- https://cloud.google.com/bigquery/docs/creating-column-partitions
@@ -34,37 +36,46 @@
 -- Multiple-level partitioning of base tables or auxiliary structures is allowed only if each level of partitioning satisfies
 -- the conditions stated above and each level references only one partitioning field as defined above. If implemented,
 -- the details of such partitioning must be disclosed.
+-- 
+-- Usage
+-- Before issuing a DDL command with this file, find and replace the following values to create a valid statement:
+-- "_destination_dataset" : dataset being populated
+-- "_source_dataset" : dataset that data is being copied from
+-- 
+-- Google Documentation:
+-- https://cloud.google.com/bigquery/docs/reference/standard-sql/data-definition-language
+-- 
 
-CREATE TABLE `_destination_table.lineitem`
-PARTITION BY TIMESTAMP_TRUNC(l_shipdate, DAY)
+CREATE TABLE `_destination_dataset.lineitem`
+PARTITION BY l_shipdate
 AS 
-SELECT * FROM `_source_table.lineitem`;
+SELECT * FROM `_source_dataset.lineitem`;
 
-CREATE TABLE `_destination_table.orders`
-PARTITION BY TIMESTAMP_TRUNC(o_orderdate, DAY)
+CREATE TABLE `_destination_dataset.orders`
+PARTITION BY o_orderdate
 AS 
-SELECT * FROM `_source_table.orders`;
+SELECT * FROM `_source_dataset.orders`;
 
-CREATE TABLE `_destination_table.partsupp`
+CREATE TABLE `_destination_dataset.partsupp`
 AS 
-SELECT * FROM `_source_table.partsupp`;
+SELECT * FROM `_source_dataset.partsupp`;
 
-CREATE TABLE `_destination_table.part`
+CREATE TABLE `_destination_dataset.part`
 AS 
-SELECT * FROM `_source_table.part`;
+SELECT * FROM `_source_dataset.part`;
 
-CREATE TABLE `_destination_table.customer`
+CREATE TABLE `_destination_dataset.customer`
 AS 
-SELECT * FROM `_source_table.customer`;
+SELECT * FROM `_source_dataset.customer`;
 
-CREATE TABLE `_destination_table.supplier`
+CREATE TABLE `_destination_dataset.supplier`
 AS 
-SELECT * FROM `_source_table.supplier`;
+SELECT * FROM `_source_dataset.supplier`;
 
-CREATE TABLE `_destination_table.nation`
+CREATE TABLE `_destination_dataset.nation`
 AS 
-SELECT * FROM `_source_table.nation`;
+SELECT * FROM `_source_dataset.nation`;
 
-CREATE TABLE `_destination_table.region`
+CREATE TABLE `_destination_dataset.region`
 AS 
-SELECT * FROM `_source_table.region`;
+SELECT * FROM `_source_dataset.region`;

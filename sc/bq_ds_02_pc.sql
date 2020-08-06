@@ -1,20 +1,21 @@
 -- TPC-DS
--- Partition Strategy
+-- Partition & Cluster Strategy I
 -- 
 -- Optimize the largest tables, specifically:
--- CATALOG_RETURNS, partition and cluster by cr_returned_date_sk
--- CATALOG_SALES, partition and cluster by cs_sold_date_sk
--- INVENTORY, partition and cluster by inv_date_sk
--- STORE_RETURNS, partition and cluster by sr_returned_date_sk
--- STORE_SALES, partition and cluster by ss_solid_date_sk 
--- WEB_RETURNS, partition and cluster by wr_returned_date_sk
--- WEB_SALES, partition and cluster by ws_sold_date_sk
+-- | table           | column              | TPC type   | BQ type |
+-- | --------------- | ------------------- | ---------- | ------- |
+-- | catalog_returns | cr_returned_date_sk | identifier | integer |
+-- | catalog_sales   | cs_sold_date_sk     | identifier | integer |
+-- | inventory       | inv_date_sk         | identifier | integer |
+-- | store_returns   | sr_returned_date_sk | identifier | integer |
+-- | store_sales     | ss_solid_date_sk    | identifier | integer |
+-- | web_returns     | wr_returned_date_sk | identifier | integer |
+-- | web_sales       | ws_sold_date_sk     | identifier | integer |
 -- 
--- Google's Documentation on partitioning:
+-- 1. Partitioning
+--
+-- Google's documentation on partitioning:
 -- https://cloud.google.com/bigquery/docs/creating-column-partitions
--- 
--- Google's documentation on clustering:
--- https://cloud.google.com/bigquery/docs/clustered-tables
 -- 
 -- TPC-DS Specification section discussing partitioning: 
 -- 2.5.3.8.3 Horizontal partitioning of base tables or EADS is allowed. If the partitioning is a function of data in the table
@@ -38,117 +39,144 @@
 -- to replicate the partitioning behavior shall be disclosed.
 -- Multi-level partitioning of base tables or auxiliary data structures is allowed only if each level of partitioning
 -- satisfies the conditions stated above.
+--
+-- 2. Clustering
+--
+-- Google's documentation on clustering:
+-- https://cloud.google.com/bigquery/docs/creating-clustered-tables
+-- https://cloud.google.com/bigquery/docs/reference/standard-sql/data-definition-language#creating_a_clustered_table_from_the_result_of_a_query
+-- 
+-- TPC-DS Specification section discussing clustering:
+-- 2.5.2.5 The physical clustering of records of different tables within the database is allowed as long as this clustering
+-- does not alter the logical relationships of each table.
+-- Comment: The intent of this clause is to permit flexibility in the physical layout of a database and based upon
+-- the defined TPC-DS schema.
+-- 10.3.2.2 The physical organization of tables and indices within the test and qualification databases must be disclosed. If
+-- the column ordering of any table is different from that specified in Clause2.3 or 2.4,, it must be noted.
+-- Comment: The concept of physical organization includes, but is not limited to: record clustering (i.e., rows
+-- from different logical tables are co-located on the same physical data page), index clustering (i.e., rows and leaf
+-- nodes of an index to these rows are co-located on the same physical data page), and partial fill-factors (i.e.,
+-- physical data pages are left partially empty even though additional rows are available to fill them).
+-- 
+-- Usage
+-- Before issuing a DDL command with this file, find and replace the following values to create a valid statement:
+-- "_destination_dataset" : dataset being populated
+-- "_source_dataset" : dataset that data is being copied from
+-- 
+-- Google Documentation:
+-- https://cloud.google.com/bigquery/docs/reference/standard-sql/data-definition-language
+-- 
 
-create table `_destination_table.catalog_returns`
-PARTITION BY TIMESTAMP_TRUNC(cr_returned_date_sk, DAY)
-CLUSTER BY TIMESTAMP_TRUNC(cr_returned_date_sk, DAY)
+create table `_destination_dataset.catalog_returns`
+PARTITION BY RANGE_BUCKET(cr_returned_date_sk, GENERATE_ARRAY(2450821, 2452922, 1))
+CLUSTER BY cr_returned_date_sk
 as
-select * from `_source_table.catalog_returns`;
+select * from `_source_dataset.catalog_returns`;
 
-create table `_destination_table.catalog_sales`
-PARTITION BY TIMESTAMP_TRUNC(cs_sold_date_sk, DAY)
-CLUSTER BY TIMESTAMP_TRUNC(cs_sold_date_sk, DAY)
+create table `_destination_dataset.catalog_sales`
+PARTITION BY RANGE_BUCKET(cs_sold_date_sk, GENERATE_ARRAY(2450815, 2452654, 1))
+CLUSTER BY cs_sold_date_sk
 as
-select * from `_source_table.catalog_sales`;
+select * from `_source_dataset.catalog_sales`;
 
-create table `_destination_table.inventory`
-PARTITION BY TIMESTAMP_TRUNC(inv_date_sk, DAY)
-CLUSTER BY TIMESTAMP_TRUNC(inv_date_sk, DAY)
+create table `_destination_dataset.inventory`
+PARTITION BY RANGE_BUCKET(inv_date_sk, GENERATE_ARRAY(2450815, 2452635, 1))
+CLUSTER BY inv_date_sk
 as
-select * from `_source_table.inventory`;
+select * from `_source_dataset.inventory`;
 
-create table `_destination_table.store_returns`
-PARTITION BY TIMESTAMP_TRUNC(sr_returned_date_sk, DAY)
-CLUSTER BY TIMESTAMP_TRUNC(sr_returned_date_sk, DAY)
+create table `_destination_dataset.store_returns`
+PARTITION BY RANGE_BUCKET(sr_returned_date_sk, GENERATE_ARRAY(2450820, 2452822, 1))
+CLUSTER BY sr_returned_date_sk
 as
-select * from `_source_table.store_returns`;
+select * from `_source_dataset.store_returns`;
 
-create table `_destination_table.store_sales`
-PARTITION BY TIMESTAMP_TRUNC(ss_solid_date_sk, DAY)
-CLUSTER BY TIMESTAMP_TRUNC(ss_solid_date_sk, DAY)
+create table `_destination_dataset.store_sales`
+PARTITION BY RANGE_BUCKET(ss_sold_date_sk, GENERATE_ARRAY(2450816, 2452642, 1))
+CLUSTER BY ss_sold_date_sk
 as
-select * from `_source_table.store_sales`;
+select * from `_source_dataset.store_sales`;
 
-create table `_destination_table.web_returns`
-PARTITION BY TIMESTAMP_TRUNC(wr_returned_date_sk, DAY)
-CLUSTER BY TIMESTAMP_TRUNC(wr_returned_date_sk, DAY)
+create table `_destination_dataset.web_returns`
+PARTITION BY RANGE_BUCKET(wr_returned_date_sk, GENERATE_ARRAY(2450820, 2453001, 1))
+CLUSTER BY wr_returned_date_sk
 as
-select * from `_source_table.web_returns`;
+select * from `_source_dataset.web_returns`;
 
-create table `_destination_table.web_sales`
-PARTITION BY TIMESTAMP_TRUNC(ws_sold_date_sk, DAY)
-CLUSTER BY TIMESTAMP_TRUNC(ws_sold_date_sk, DAY)
+create table `_destination_dataset.web_sales`
+PARTITION BY RANGE_BUCKET(ws_sold_date_sk, GENERATE_ARRAY(2450816, 2452642, 1))
+CLUSTER BY ws_sold_date_sk
 as
-select * from `_source_table.web_sales`;
+select * from `_source_dataset.web_sales`;
 
-create table `_destination_table.dbgen_version`
+create table `_destination_dataset.dbgen_version`
 as
-select * from `_source_table.dbgen_version`;
+select * from `_source_dataset.dbgen_version`;
 
-create table `_destination_table.customer_address`
+create table `_destination_dataset.customer_address`
 as
-select * from `_source_table.customer_address`;
+select * from `_source_dataset.customer_address`;
 
-create table `_destination_table.customer_demographics`
+create table `_destination_dataset.customer_demographics`
 as
-select * from `_source_table.customer_demographics`;
+select * from `_source_dataset.customer_demographics`;
 
-create table `_destination_table.date_dim`
+create table `_destination_dataset.date_dim`
 as
-select * from `_source_table.date_dim`;
+select * from `_source_dataset.date_dim`;
 
-create table `_destination_table.warehouse`
+create table `_destination_dataset.warehouse`
 as
-select * from `_source_table.warehouse`;
+select * from `_source_dataset.warehouse`;
 
-create table `_destination_table.ship_mode`
+create table `_destination_dataset.ship_mode`
 as
-select * from `_source_table.ship_mode`;
+select * from `_source_dataset.ship_mode`;
 
-create table `_destination_table.time_dim`
+create table `_destination_dataset.time_dim`
 as
-select * from `_source_table.time_dim`;
+select * from `_source_dataset.time_dim`;
 
-create table `_destination_table.reason`
+create table `_destination_dataset.reason`
 as
-select * from `_source_table.reason`;
+select * from `_source_dataset.reason`;
 
-create table `_destination_table.income_band`
+create table `_destination_dataset.income_band`
 as
-select * from `_source_table.income_band`;
+select * from `_source_dataset.income_band`;
 
-create table `_destination_table.item`
+create table `_destination_dataset.item`
 as
-select * from `_source_table.item`;
+select * from `_source_dataset.item`;
 
-create table `_destination_table.store`
+create table `_destination_dataset.store`
 as
-select * from `_source_table.store`;
+select * from `_source_dataset.store`;
 
-create table `_destination_table.call_center`
+create table `_destination_dataset.call_center`
 as
-select * from `_source_table.call_center`;
+select * from `_source_dataset.call_center`;
 
-create table `_destination_table.customer`
+create table `_destination_dataset.customer`
 as
-select * from `_source_table.customer`;
+select * from `_source_dataset.customer`;
 
-create table `_destination_table.web_site`
+create table `_destination_dataset.web_site`
 as
-select * from `_source_table.web_site`;
+select * from `_source_dataset.web_site`;
 
-create table `_destination_table.household_demographics`
+create table `_destination_dataset.household_demographics`
 as
-select * from `_source_table.household_demographics`;
+select * from `_source_dataset.household_demographics`;
 
-create table `_destination_table.web_page`
+create table `_destination_dataset.web_page`
 as
-select * from `_source_table.web_page`;
+select * from `_source_dataset.web_page`;
 
-create table `_destination_table.promotion`
+create table `_destination_dataset.promotion`
 as
-select * from `_source_table.promotion`;
+select * from `_source_dataset.promotion`;
 
-create table `_destination_table.catalog_page`
+create table `_destination_dataset.catalog_page`
 as
-select * from `_source_table.catalog_page`;
+select * from `_source_dataset.catalog_page`;

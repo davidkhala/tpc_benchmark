@@ -1,15 +1,16 @@
 -- TPC-H
--- Partition Strategy
+-- Partition & Cluster Strategy I
 -- 
 -- Optimize the largest tables, specifically:
--- LINEITEM, partition and cluster on L_SHIPDATE
--- ORDERS, partition and cluster on O_ORDERDATE
+-- | table    | column      | TPC type | BQ type |
+-- | -------- | ----------- | -------- | ------- |
+-- | lineitem | l_shipdate  | Date     | Date    |
+-- | orders   | o_orderdate | Date     | Date    |
+-- 
+-- 1. Partitioning
 -- 
 -- Google's Documentation on partitioning:
 -- https://cloud.google.com/bigquery/docs/creating-column-partitions
--- 
--- Google's documentation on clustering:
--- https://cloud.google.com/bigquery/docs/clustered-tables
 -- 
 -- TPC-H Specification section discussing partitioning:
 -- 1.5.4 Horizontal partitioning of base tables or auxiliary structures created by database directives (see Clause 1.5.7) is
@@ -37,39 +38,67 @@
 -- Multiple-level partitioning of base tables or auxiliary structures is allowed only if each level of partitioning satisfies
 -- the conditions stated above and each level references only one partitioning field as defined above. If implemented,
 -- the details of such partitioning must be disclosed.
+-- 
+-- 2. Clustering
+--
+-- Google's documentation on clustering:
+-- https://cloud.google.com/bigquery/docs/creating-clustered-tables
+-- https://cloud.google.com/bigquery/docs/reference/standard-sql/data-definition-language#creating_a_clustered_table_from_the_result_of_a_query
+-- 
+-- TPC-H Specification section discussing clustering:
+-- 1.5.2 The physical clustering of records within the database is allowed as long as this clustering does not alter the logical
+-- independence of each table.
+-- Comment: The intent of this clause is to permit flexibility in the physical design of a database while preserving a
+-- strict logical view of all the tables.
+-- 8.3.4.2 The physical organization of tables and indices within the test and qualification databases must be disclosed. If the
+-- column ordering of any table is different from that specified in Clause 1.4, it must be noted. The physical
+-- organization of tables must be reported in the supporting files archive.
+-- Comment: The concept of physical organization includes, but is not limited to: record clustering (i.e., rows from
+-- different logical tables are co-located on the same physical data page), index clustering (i.e., rows and leaf nodes of
+-- an index to these rows are co-located on the same physical data page), and partial fill-factors (i.e., physical data
+-- pages are left partially empty even though additional rows are available to fill them).
+-- 
+-- Usage
+-- Before issuing a DDL command with this file, find and replace the following values to create a valid statement:
+-- "_destination_dataset" : dataset being populated
+-- "_source_dataset" : dataset that data is being copied from
+-- 
+-- Google Documentation:
+-- https://cloud.google.com/bigquery/docs/reference/standard-sql/data-definition-language
+-- 
 
-CREATE TABLE `_destination_table.lineitem`
-PARTITION BY TIMESTAMP_TRUNC(l_shipdate, DAY)
-CLUSTER BY TIMESTAMP_TRUNC(l_shipdate, DAY)
+CREATE TABLE `_destination_dataset.lineitem`
+PARTITION BY l_shipdate
+CLUSTER BY l_shipdate
 AS 
-SELECT * FROM `_source_table.lineitem`;
+SELECT * FROM `_source_dataset.lineitem`;
 
-CREATE TABLE `_destination_table.orders`
-PARTITION BY TIMESTAMP_TRUNC(o_orderdate, DAY)
-CLUSTER BY TIMESTAMP_TRUNC(o_orderdate, DAY)
+CREATE TABLE `_destination_dataset.orders`
+PARTITION BY o_orderdate
+CLUSTER BY o_orderdate
 AS 
-SELECT * FROM `_source_table.orders`;
+SELECT * FROM `_source_dataset.orders`;
 
-CREATE TABLE `_destination_table.partsupp`
+CREATE TABLE `_destination_dataset.partsupp`
 AS 
-SELECT * FROM `_source_table.partsupp`;
+SELECT * FROM `_source_dataset.partsupp`;
 
-CREATE TABLE `_destination_table.part`
+CREATE TABLE `_destination_dataset.part`
 AS 
-SELECT * FROM `_source_table.part`;
+SELECT * FROM `_source_dataset.part`;
 
-CREATE TABLE `_destination_table.customer`
+CREATE TABLE `_destination_dataset.customer`
 AS 
-SELECT * FROM `_source_table.customer`;
+SELECT * FROM `_source_dataset.customer`;
 
-CREATE TABLE `_destination_table.supplier`
+CREATE TABLE `_destination_dataset.supplier`
 AS 
-SELECT * FROM `_source_table.supplier`;
+SELECT * FROM `_source_dataset.supplier`;
 
-CREATE TABLE `_destination_table.nation`
+CREATE TABLE `_destination_dataset.nation`
 AS 
-SELECT * FROM `_source_table.nation`;
+SELECT * FROM `_source_dataset.nation`;
 
-CREATE TABLE `_destination_table.region`
+CREATE TABLE `_destination_dataset.region`
 AS 
-SELECT * FROM `_source_table.region`;
+SELECT * FROM `_source_dataset.region`;

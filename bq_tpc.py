@@ -279,8 +279,8 @@ def create_table_remix(schema_name, source, destination, dot=False):
 
     with open(fp_schema, "r") as f:
         query_text = f.read()
-    query_text = query_text.replace("_source_table.", source)
-    query_text = query_text.replace("_destination_table.", destination)
+    query_text = query_text.replace("_source_dataset.", source)
+    query_text = query_text.replace("_destination_dataset.", destination)
     return query_text
 
 
