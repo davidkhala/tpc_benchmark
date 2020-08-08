@@ -1305,6 +1305,7 @@ class SFTPC:
 
         self.df_gcs_full = None  # all files in bucket, as fyi
         self.df_gcs = None       # just files for this dataset
+        self.upload_data = None
 
         self.verbose = verbose
         self.verbose_query = verbose_query
@@ -1487,13 +1488,15 @@ class SFTPC:
                       f"storage_integration={self.storage_integration_name} " +
                       "file_format=(format_name=csv_file_format);")
 
-        self.sfc.query(query_text)
-
-    def import_data(self):
-        for table in self.df_gcs.table.unique():
-            if table in config.ignore_tables:
-                continue
-            self.import_table(table=table)
+        t0 = pd.Timestamp.now()
+        if self.verbose:
+            print("Load SQL:")
+            print(query_text)
+        self.sfc.query(query_text, verbose=self.verbose)
+        t1 = pd.Timestamp.now()
+        if self.verbose:
+            print("Time Elapsed:", t1-t0)
+        self.upload_data.append([t0, t1, table, gcs_file_path])
 
     def import_table(self, table):
 
@@ -1508,6 +1511,12 @@ class SFTPC:
         if self.verbose:
             print("Done!")
             print()
+
+    def import_data(self):
+        for table in self.df_gcs.table.unique():
+            if table in config.ignore_tables:
+                continue
+            self.import_table(table=table)
 
     @staticmethod
     def parse_query_result(query_result):
