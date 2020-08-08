@@ -923,6 +923,7 @@ https://docs.snowflake.com/en/sql-reference/intro-summary-data-types.html
 for Snowflake datatype specifications in standard SQL
 
 """
+
 import snowflake.connector
 import atexit
 
@@ -930,6 +931,16 @@ import pandas as pd
 
 import config, poor_security, gcp_storage, tools
 import h_setup, ds_setup
+
+
+log_column_names = ["test", "scale", "database",
+                    "table", "status",
+                    "t0", "t1",
+                    "size_bytes", "job_id"]
+
+
+def parse_log(fp):
+    return pd.read_csv(fp, names=log_column_names)
 
 
 def calc_cost(running_time):
@@ -1305,7 +1316,7 @@ class SFTPC:
 
         self.df_gcs_full = None  # all files in bucket, as fyi
         self.df_gcs = None       # just files for this dataset
-        self.upload_data = None
+        self.upload_data = []
 
         self.verbose = verbose
         self.verbose_query = verbose_query
@@ -1325,6 +1336,7 @@ class SFTPC:
                                               kind="result", datasource=self.database,
                                               desc=self.desc, ext="", timestamp=self.timestamp)
         self.results_csv_fp = None
+        self.fp_log = ""
 
     def _connect(self):
         self.sfc.connect(username=poor_security.sf_username,
@@ -1488,21 +1500,54 @@ class SFTPC:
                       f"storage_integration={self.storage_integration_name} " +
                       "file_format=(format_name=csv_file_format);")
 
-        t0 = pd.Timestamp.now()
-        if self.verbose:
-            print("Load SQL:")
-            print(query_text)
-        self.sfc.query(query_text, verbose=self.verbose)
-        t1 = pd.Timestamp.now()
+        t0x = pd.Timestamp.now("UTC")
+        total_bytes = 0
+        d_prefix = [self.test, str(self.scale), self.database]
+
+        fp_log = ("sf_upload-" + self.test + "_" +
+                  str(self.scale) + "GB-" +
+                  self.database + "-" +
+                  str(pd.Timestamp.now("UTC")) + ".csv"
+                  )
+
+        log_dir = {"h": config.fp_h_output,
+                   "ds": config.fp_ds_output}
+        self.fp_log = log_dir[self.test] + config.sep + fp_log
+        with open(self.fp_log, "a") as f:
+            _d0 = ",".join(log_column_names) + "\n"
+            f.write(_d0)
+
+        t0 = pd.Timestamp.now("UTC")
+
+        d0 = d_prefix + [table, "start",
+                         str(t0), "",
+                         "", ""]
+        with open(self.fp_log, "a") as f:
+            _d0 = ",".join(d0) + "\n"
+            f.write(_d0)
+
+        query_result = self.sfc.query(query_text, verbose=self.verbose)
+        qid = query_result.sfqid
+
+        t1 = pd.Timestamp.now("UTC")
+
+        d1 = d_prefix + [table, "end",
+                         str(t0), str(t1),
+                         "", qid]
+        with open(self.fp_log, "a") as f:
+            _d1 = ",".join(d1) + "\n"
+            f.write(_d1)
+
         if self.verbose:
             print("Time Elapsed:", t1-t0)
-        self.upload_data.append([t0, t1, table, gcs_file_path])
 
     def import_table(self, table):
 
         _df = self.df_gcs.loc[self.df_gcs.table == table]
         if self.verbose:
             print("Loading table:", table)
+            print("============================")
+            print()
         # this could be turned into a pooled apply but perhaps 1 warehouse
         # can't handle it?
         _df.apply(lambda r: self.import_data_apply(table=r.table,

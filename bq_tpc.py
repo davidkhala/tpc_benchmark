@@ -575,8 +575,8 @@ https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.cl
                   str(pd.Timestamp.now("UTC")) + ".csv"
                   )
         
-        log_dir = {"h":config.fp_h_output,
-                   "ds":config.fp_ds_output}
+        log_dir = {"h":  config.fp_h_output,
+                   "ds": config.fp_ds_output}
         fp_log = log_dir[self.test] + config.sep + fp_log
         with open(fp_log, "a") as f:
             _d0 = ",".join(log_column_names) + "\n"
