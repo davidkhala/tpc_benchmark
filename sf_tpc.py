@@ -1055,7 +1055,7 @@ class Connector:
         if self.dry_run:
             return
         else:
-            if self.verbose_query:
+            if verbose:
                 if self.verbose_query_n:
                     qt = "\n".join([str(n) + "  " + line for n, line in enumerate(query_text.split("\n"))])
                 else:
@@ -1395,7 +1395,7 @@ class SFTPC:
     def database_drop(self):
         self.sfc.database_drop(self.database, verbose=self.verbose)
 
-    def create_schema(self, schema_file):
+    def create_schema(self, schema_file, verbose=False):
         """Apply the schema .sql file as reformatted from
         config.tpcds_schema_ansi_sql_filepath
         to
@@ -1404,12 +1404,13 @@ class SFTPC:
         Parameters
         ----------
         schema_file : str, path to file containing DDL or sql schema query definitions
+        verbose : bool, print schema file SQL query text
         """
         with open(schema_file, 'r') as f:
             schema_text = f.read()
         query_list = [qt.strip() + ";" for qt in schema_text.split(";") if len(qt.strip()) > 0]
         for query_text in query_list:
-            self.sfc.query(query_text, verbose=self.verbose)
+            self.sfc.query(query_text, verbose=verbose)
 
     def create_named_file_format(self):
         """Create named file format"""
@@ -1492,16 +1493,21 @@ class SFTPC:
         for table in self.df_gcs.table.unique():
             if table in config.ignore_tables:
                 continue
-            _df = self.df_gcs.loc[self.df_gcs.table == table]
-            if self.verbose:
-                print("Loading table:", table)
-            # this could be turned into a pooled apply
-            _df.apply(lambda r: self.import_data_apply(table=r.table,
-                                                       gcs_file_path=r.uri),
-                      axis=1)
-            if self.verbose:
-                print("Done!")
-                print()
+            self.import_table(table=table)
+
+    def import_table(self, table):
+
+        _df = self.df_gcs.loc[self.df_gcs.table == table]
+        if self.verbose:
+            print("Loading table:", table)
+        # this could be turned into a pooled apply but perhaps 1 warehouse
+        # can't handle it?
+        _df.apply(lambda r: self.import_data_apply(table=r.table,
+                                                   gcs_file_path=r.uri),
+                  axis=1)
+        if self.verbose:
+            print("Done!")
+            print()
 
     @staticmethod
     def parse_query_result(query_result):
