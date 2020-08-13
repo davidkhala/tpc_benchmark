@@ -1,4 +1,4 @@
-"""Quality Control methods on query results 
+"""Comparison methods on for two systems
 
 MIT License, see LICENSE file for complete text.
 Copyright (c) 2020 SADA Systems, Inc.
@@ -10,76 +10,14 @@ import json
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from pandas.testing import assert_frame_equal
 
-import sf_tpc, bq_tpc, tools, config
+import config, tools, qc, sf_tpc, bq_tpc
 
 
 def splitter(fp):
     x = fp.split(".")
     y = x[-2].split("_")[-1]
     return y
-
-
-def assert_equal(df1, df2, check_less_precise=True):
-
-    if (len(df1) == 0) & len(df2 == 0):
-        return False
-
-    try:
-        assert_frame_equal(df1, df2,
-                           check_names=False,
-                           check_exact=False,
-                           check_less_precise=check_less_precise)
-        return True
-    except AssertionError:
-        return False
-
-
-def equal_percent(df1, df2):
-    diff = df1.eq(df2)
-    return diff.sum().sum() / (diff.shape[0] * diff.shape[1])
-
-
-def csv_consistent(fp_df1, fp_df2):
-    """Print head middle and tail values of Pandas Dataframe"""
-    df1 = pd.read_csv(fp_df1)
-    df2 = pd.read_csv(fp_df2)
-    df1 = tools.to_consistent(df=df1, n=config.float_precision)
-    df2 = tools.to_consistent(df=df2, n=config.float_precision)
-    return df1, df2
-
-
-def assert_equal_csv(fp1, fp2):
-
-    df1, df2 = csv_consistent(fp_df1=fp1, fp_df2=fp2)
-    return assert_equal(df1, df2)
-
-
-def percent_equal_csv(fp1, fp2):
-    df1, df2 = csv_consistent(fp_df1=fp1, fp_df2=fp2)
-    return equal_percent(df1, df2)
-
-
-def apply_assert_equal(df):
-    """Compare the CSV results from a dual SF/BQ query sequence
-    
-    Parameters
-    ----------
-    df : Pandas Dataframe, filepaths to each results file 
-    
-    Returns
-    -------
-    result : Pandas Series, bool if results were identical according 
-        to assert_equal_csv function
-    """
-
-    return df.apply(lambda r: assert_equal_csv(r.fp_bq, r.fp_sf), axis=1)
-
-
-def apply_percent_equal(df):
-
-    return df.apply(lambda r: percent_equal_csv(r.fp_bq, r.fp_sf), axis=1)
 
 
 def collate_results(results_dir):
@@ -706,16 +644,16 @@ class QueryCompare:
         # TODO: should probably unify file naming in one place
         name = "_".join([x for x in self.results_dir.split(config.sep) if x != ""][-1].split("_")[1:6])
         df = collate_results(self.results_dir)
-        df["equal"] = apply_assert_equal(df)
-        df["equal_percent"] = apply_percent_equal(df)
+        df["equal"] = qc.apply_assert_equal(df)
+        df["equal_percent"] = qc.apply_percent_equal(df)
 
         if len(df) == 1:
 
             fp_df_bq = df.loc[1, "fp_bq"]
             fp_df_sf = df.loc[1, "fp_sf"]
 
-            df_bq, df_sf = csv_consistent(fp_df1=fp_df_bq,
-                                          fp_df2=fp_df_sf)
+            df_bq, df_sf = qc.csv_consistent(fp_df1=fp_df_bq,
+                                             fp_df2=fp_df_sf)
             self.result_bq_csv = df_bq
             self.result_sf_csv = df_sf
 
