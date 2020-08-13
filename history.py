@@ -56,8 +56,7 @@ def sf_results(results_dir, buffer_time="20 minutes"):
     sf = sf_tpc.AU(warehouse="TEST9000")
     sf.connect()
 
-    df_sf_history_av, qid_sf_av = sf.query_history_view(t0=pd.to_datetime(t0) - t_buffer,
-                                                        t1=pd.Timestamp.utcnow())
+    df_sf_history_av, qid_sf_av = sf.query_history_view(t0=pd.to_datetime(t0) - t_buffer)
 
     sf.close()
 

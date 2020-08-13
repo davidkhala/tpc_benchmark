@@ -196,6 +196,8 @@ class QueryCompare:
         self.results_sf_csv_fp = None
         self.results_bq_csv_fp = None
 
+        self.systems = ["bq", "sf"]
+
         self.result_bq = None
         self.result_sf = None
 
@@ -307,10 +309,12 @@ class QueryCompare:
         bq.timestamp = self.shared_timestamp
         bq.results_dir = self.results_dir
 
-        if self.cache:
-            bq.cache_set("on")
+        if self.cache is True:
+            # sf.cache_set("on")
+            sf.cache = True
         else:
-            bq.cache_set("off")
+            sf.cache = False
+            # sf.cache_set("off")
 
         _bq_t0, _bq_t1, df_bq_result, _bq_query_text, bq_qid = bq.query_n(n=query_n)
 
@@ -322,6 +326,7 @@ class QueryCompare:
         Parameters
         ----------
         seq : list of int, query numbers to execute
+        #systems : list of str, systems under test to collect data. Allowed values: 'sf' and 'bq'
 
         Returns
         -------
@@ -330,85 +335,91 @@ class QueryCompare:
 
         self.query_sequence = seq
 
-        # stage 1 - start run
-        self.test_stage = "start run"
-        metadata_fp = self.results_dir + config.sep + "metadata_initial.json"
-        with open(metadata_fp, "w") as f:
-            f.write(self.to_json(indent="  "))
+        if 'sf' in self.systems:
 
-        sf = sf_tpc.SFTPC(test=self.test,
-                          scale=self.scale,
-                          cid=self.cid,
-                          warehouse=self.sf_warehouse_name,
-                          desc=self.desc,
-                          verbose=self.verbose,
-                          verbose_query=self.verbose_query)
-        sf.verbose_query_n = self.verbose_query_n
-        
-        if self.verbose:
-            print('Using database:', sf.database)
+            self.test_stage = "Snowflake start"
+            metadata_fp = self.results_dir + config.sep + "metadata_sf_compare_initial.json"
+            with open(metadata_fp, "w") as f:
+                f.write(self.to_json(indent="  "))
 
-        sf.timestamp = self.shared_timestamp
-        sf.results_dir = self.results_dir
+            sf = sf_tpc.SFTPC(test=self.test,
+                              scale=self.scale,
+                              cid=self.cid,
+                              warehouse=self.sf_warehouse_name,
+                              desc=self.desc,
+                              verbose=self.verbose,
+                              verbose_query=self.verbose_query)
+            sf.verbose_query_n = self.verbose_query_n
 
-        sf.connect()
+            if self.verbose:
+                print('Using database:', sf.database)
 
-        # record what the SF warehouse size is
-        query_result = sf.show_warehouses()
-        warehouse_size_mapper = {r[0]: r[3] for r in query_result.fetchall()}
-        self.sf_warehouse_size = warehouse_size_mapper[self.sf_warehouse_name]
+            sf.timestamp = self.shared_timestamp
+            sf.results_dir = self.results_dir
 
-        # update initial metadata so warehouse size is captured
-        # stage 2 - connected to Snowflake and got warehouse size metadata
-        self.test_stage = "Snowflake connected"
-        metadata_fp = self.results_dir + config.sep + "metadata_initial.json"
-        with open(metadata_fp, "w") as f:
-            f.write(self.to_json(indent="  "))
+            sf.connect()
 
-        if self.cache:
-            sf.cache_set("on")
-        else:
-            sf.cache_set("off")
+            # record what the SF warehouse size is
+            query_result = sf.show_warehouses()
+            warehouse_size_mapper = {r[0]: r[3] for r in query_result.fetchall()}
+            self.sf_warehouse_size = warehouse_size_mapper[self.sf_warehouse_name]
 
-        self.result_sf = sf.query_seq(seq=seq,
-                                      seq_n=self.stream_n,
-                                      qual=self.qual,
-                                      save=self.save,
-                                      verbose_iter=self.verbose_iter)
-        sf.close()
+            # update initial metadata so warehouse size is captured
 
-        self.results_sf_csv_fp = sf.results_csv_fp
-        
-        bq = bq_tpc.BQTPC(test=self.test,
-                          scale=self.scale,
-                          cid=self.cid,
-                          desc=self.desc,
-                          verbose_query=self.verbose_query,
-                          verbose=self.verbose)
-        bq.verbose_query_n = self.verbose_query_n
+            if self.cache is True:
+                sf.cache = True
+            else:
+                sf.cache = False
 
-        bq.timestamp = self.shared_timestamp
-        bq.results_dir = self.results_dir
+            self.result_sf = sf.query_seq(seq=seq,
+                                          seq_n=self.stream_n,
+                                          qual=self.qual,
+                                          save=self.save,
+                                          verbose_iter=self.verbose_iter)
+            sf.close()
 
-        if self.cache:
-            bq.cache_set("on")
-        else:
-            bq.cache_set("off")
+            self.results_sf_csv_fp = sf.results_csv_fp
 
-        self.result_bq = bq.query_seq(seq,
-                                      seq_n=self.stream_n,
-                                      qual=self.qual,
-                                      save=self.save,
-                                      verbose_iter=self.verbose_iter)
+            self.test_stage = "Snowflake end"
+            metadata_fp = self.results_dir + config.sep + "metadata_sf_compare_final.json"
+            with open(metadata_fp, "w") as f:
+                f.write(self.to_json(indent="  "))
 
-        self.results_bq_csv_fp = bq.results_csv_fp
+        if 'bq' in self.systems:
 
-        # stage 3 - done with both systems
-        self.test_stage = "SF and BQ done"
-        metadata_fp = self.results_dir + config.sep + "metadata_final.json"
-        metadata_final = self.to_json(indent="  ")
-        with open(metadata_fp, "w") as f:
-            f.write(metadata_final)
+            bq = bq_tpc.BQTPC(test=self.test,
+                              scale=self.scale,
+                              cid=self.cid,
+                              desc=self.desc,
+                              verbose_query=self.verbose_query,
+                              verbose=self.verbose)
+            bq.verbose_query_n = self.verbose_query_n
+
+            bq.timestamp = self.shared_timestamp
+            bq.results_dir = self.results_dir
+
+            if self.cache is True:
+                bq.cache = True
+            else:
+                bq.cache = False
+
+            self.test_stage = "BigQuery start"
+            metadata_fp = self.results_dir + config.sep + "metadata_bq_compare_initial.json"
+            with open(metadata_fp, "w") as f:
+                f.write(self.to_json(indent="  "))
+
+            self.result_bq = bq.query_seq(seq,
+                                          seq_n=self.stream_n,
+                                          qual=self.qual,
+                                          save=self.save,
+                                          verbose_iter=self.verbose_iter)
+
+            self.results_bq_csv_fp = bq.results_csv_fp
+
+            self.test_stage = "BigQuery end"
+            metadata_fp = self.results_dir + config.sep + "metadata_bq_compare_final.json"
+            with open(metadata_fp, "w") as f:
+                f.write(self.to_json(indent="  "))
 
     def compare_sum(self):
 
