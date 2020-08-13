@@ -926,6 +926,7 @@ for Snowflake datatype specifications in standard SQL
 
 import snowflake.connector
 import atexit
+import json
 
 import pandas as pd
 
@@ -1330,13 +1331,45 @@ class SFTPC:
         self.q_label_base = self.q_label_base.lower()
 
         self.cache = False
-
+        self.test_stage = "init"
         self.timestamp = timestamp
         self.results_dir, _ = tools.make_name(db="sf", test=self.test, cid=self.cid,
                                               kind="result", datasource=self.database,
                                               desc=self.desc, ext="", timestamp=self.timestamp)
         self.results_csv_fp = None
-        self.fp_log = ""
+        self.fp_log = None
+
+    def values(self):
+        """Get all class attributes from __dict__ attribute
+        except those prefixed with underscore ('_')
+
+        Returns
+        -------
+        dict, of (attribute: value) pairs
+        """
+
+        skip_attributes = ["sfc"]
+        d = {}
+        for k, v in self.__dict__.items():
+            if (k[0] != "_") and (k not in skip_attributes):
+                d[k] = v
+        return d
+
+    def to_json(self, indent=None):
+        """Return all class objects from __dict__ except
+        those prefixed with underscore ('_')
+
+        Paramters
+        ---------
+        indent : None or non-negative integer or string, then JSON array
+        elements and object members will be pretty-printed with that indent level.
+
+        Returns
+        -------
+        str, JSON formatted (attribute: value) pairs
+        """
+        return json.dumps(self, default=lambda o: o.values(),
+                          sort_keys=True, indent=indent)
 
     def _connect(self):
         self.sfc.connect(username=poor_security.sf_username,
@@ -1510,10 +1543,11 @@ class SFTPC:
                   str(pd.Timestamp.now("UTC")) + ".csv"
                   )
 
-        log_dir = {"h": config.fp_h_output,
-                   "ds": config.fp_ds_output}
-        self.fp_log = log_dir[self.test] + config.sep + fp_log
-        with open(self.fp_log, "a") as f:
+        #log_dir = {"h": config.fp_h_output,
+        #           "ds": config.fp_ds_output}
+
+        fp_log = config.fp_results + config.sep + fp_log
+        with open(fp_log, "a") as f:
             _d0 = ",".join(log_column_names) + "\n"
             f.write(_d0)
 
@@ -1522,7 +1556,7 @@ class SFTPC:
         d0 = d_prefix + [table, "start",
                          str(t0), "",
                          "", ""]
-        with open(self.fp_log, "a") as f:
+        with open(fp_log, "a") as f:
             _d0 = ",".join(d0) + "\n"
             f.write(_d0)
 
@@ -1534,7 +1568,7 @@ class SFTPC:
         d1 = d_prefix + [table, "end",
                          str(t0), str(t1),
                          "", qid]
-        with open(self.fp_log, "a") as f:
+        with open(fp_log, "a") as f:
             _d1 = ",".join(d1) + "\n"
             f.write(_d1)
 
@@ -1730,6 +1764,12 @@ class SFTPC:
             qid : str, database system under test query id for the query run
         """
 
+        self.test_stage = "start"
+        metadata_fp = self.results_dir + config.sep + "metadata_sf_initial.json"
+        tools.mkdir_safe(self.results_dir)
+        with open(metadata_fp, "w") as f:
+            f.write(self.to_json(indent="  "))
+
         if seq_n is None:
             seq_n = "sNA"
         else:
@@ -1809,6 +1849,11 @@ class SFTPC:
 
         # write local timing results to file
         self.write_times_csv(results_list=n_time_data, columns=columns)
+
+        self.test_stage = "end"
+        metadata_fp = self.results_dir + config.sep + "metadata_sf_final.json"
+        with open(metadata_fp, "w") as f:
+            f.write(self.to_json(indent="  "))
 
         return pd.DataFrame(n_time_data, columns=columns)
 

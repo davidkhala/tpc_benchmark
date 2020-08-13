@@ -54,6 +54,7 @@ for BigQuery datatype specifications in standard SQL
 
 import importlib
 import inspect
+import json
 import pandas as pd
 from google.cloud import bigquery
 from google.api_core import exceptions as google_api_exceptions
@@ -568,16 +569,17 @@ https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.cl
         t0x = pd.Timestamp.now("UTC")
         total_bytes = 0
         d_prefix = [self.test, str(self.scale), self.dataset]
-        
-        fp_log = ("bq_upload-" + self.test + "_" + 
-                  str(self.scale) + "GB-" + 
-                  self.dataset + "-" + 
+
+        fp_log = ("bq_upload-" + self.test + "_" +
+                  str(self.scale) + "GB-" +
+                  self.dataset + "-" +
                   str(pd.Timestamp.now("UTC")) + ".csv"
                   )
-        
-        log_dir = {"h":  config.fp_h_output,
-                   "ds": config.fp_ds_output}
-        fp_log = log_dir[self.test] + config.sep + fp_log
+
+        #log_dir = {"h":  config.fp_h_output,
+        #           "ds": config.fp_ds_output}
+
+        fp_log = config.fp_results + config.sep + fp_log
         with open(fp_log, "a") as f:
             _d0 = ",".join(log_column_names) + "\n"
             f.write(_d0)
@@ -693,13 +695,15 @@ class BQTPC:
         self.set_query_label(self.q_label_base)
 
         self.dry_run = False
-        self.cache_set("off")
 
+        self.cache = False
+        self.test_stage = "init"
         self.timestamp = timestamp
         self.results_dir, _ = tools.make_name(db="bq", test=self.test, cid=self.cid,
                                               kind="result", datasource=self.dataset,
                                               desc=self.desc, ext="", timestamp=self.timestamp)
         self.results_csv_fp = None
+        self.fp_log = None
 
         if verbose:
             service_account = self.client.get_service_account_email()
@@ -708,6 +712,39 @@ class BQTPC:
             print(f'Service Account:  {service_account}')
             print()
 
+    def values(self):
+        """Get all class attributes from __dict__ attribute
+        except those prefixed with underscore ('_')
+
+        Returns
+        -------
+        dict, of (attribute: value) pairs
+        """
+
+        skip_attributes = ["client", "job_config"]
+        d = {}
+        for k, v in self.__dict__.items():
+            if (k[0] != "_") and (k not in skip_attributes):
+                d[k] = v
+        return d
+
+    def to_json(self, indent=None):
+        """Return all class objects from __dict__ except
+        those prefixed with underscore ('_')
+
+        Paramters
+        ---------
+        indent : None or non-negative integer or string, then JSON array
+        elements and object members will be pretty-printed with that indent level.
+
+        Returns
+        -------
+        str, JSON formatted (attribute: value) pairs
+        """
+        return json.dumps(self, default=lambda o: o.values(),
+                          sort_keys=True, indent=indent)
+
+    '''
     def cache_set(self, state="off"):
         """Set BigQuery user cache, API defaults to True, here we default to False
 
@@ -719,6 +756,7 @@ class BQTPC:
             self.job_config.use_query_cache = True
         else:
             self.job_config.use_query_cache = False
+    '''
 
     def dry_run(self, use=False):
         self.job_config.dry_run = use  # only approximate the time and cost
@@ -790,6 +828,11 @@ class BQTPC:
         query_result : bigquery.query_job object
         """
 
+        if self.cache is True:
+            self.job_config.use_query_cache = True
+        else:
+            self.job_config.use_query_cache = False
+
         if self.dry_run is True:
             self.job_config.dry_run = True  # only approximate the time and cost
 
@@ -804,6 +847,18 @@ class BQTPC:
             print("===================")
             print(qt)
             print()
+
+        if self.fp_log is None:
+            fp_log = ("sf_upload-" + self.test + "_" +
+                      str(self.scale) + "GB-" +
+                      self.dataset + "-" +
+                      str(pd.Timestamp.now("UTC")) + ".csv"
+                      )
+
+            self.fp_log = config.fp_results + config.sep + fp_log
+        with open(self.fp_log, "a") as f:
+            _d0 = ",".join(log_column_names) + "\n"
+            f.write(_d0)
 
         query_result = self.client.query(query_text, job_config=self.job_config)
         return query_result
@@ -974,6 +1029,12 @@ class BQTPC:
             driver_t1 : datatime, time on the driver when query returned
             qid : str, database system under test query id for the query run
         """
+        self.test_stage = "start"
+        metadata_fp = self.results_dir + config.sep + "metadata_bq_initial.json"
+        tools.mkdir_safe(self.results_dir)
+        with open(metadata_fp, "w") as f:
+            f.write(self.to_json(indent="  "))
+
         if seq_n is None:
             seq_n = "sNA"
         else:
@@ -1053,6 +1114,11 @@ class BQTPC:
 
         # write local timing results to file
         self.write_times_csv(results_list=n_time_data, columns=columns)
+
+        self.test_stage = "end"
+        metadata_fp = self.results_dir + config.sep + "metadata_initial.json"
+        with open(metadata_fp, "w") as f:
+            f.write(self.to_json(indent="  "))
 
         return pd.DataFrame(n_time_data, columns=columns)
 
