@@ -140,7 +140,7 @@ def create_schema(schema_file, dataset, verbose=False):
             print(r.name)
 
 
-def table_size(client, project, dataset, table, verbose=False):
+def table_size(project, dataset, table):
     """Apply the schema .sql file as reformatted from 
     config.tpcds_schema_ansi_sql_filepath
     to 
@@ -192,69 +192,6 @@ def extract_table_name(f_name):
         except ValueError:
             f_list_new.append(x)
     return "_".join(f_list_new)
-
-
-def upload_all_local(directory, dataset, verbose=False):
-    
-    files = tools.file_inventory(directory)
-    
-    client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
-    
-    b = BQUpload(client=client,
-                 project=config.gcp_project,
-                 dataset=dataset)
-    
-    for f in files:
-        table = f[2]
-        filepath = f[5]
-        load_job = b.upload_local_csv(table=table, filepath=filepath, verbose=verbose)
-
-
-def validate(directory, dataset, byte_multiplier=1):
-    """Validate data integrity between .csv data and data in BigQuery
-
-    Parameters
-    ----------
-    directory : str, path to directory with .csv data files
-    dataset : str, dataset to compare
-    byte_multiplier : int, multiplier for size, default is 1, equal to bytes output
-
-    Returns
-    -------
-    Pandas DataFrame with:
-        columns=["table", "local_size", "local_rows", "bq_size", "bq_rows"]
-    """
-
-    import pandas as pd
-
-    dir_files = tools.file_inventory(directory)
-    table_names = set([f[2] for f in dir_files])
-    table_sizes = {f[2]: f[1] for f in dir_files}
-    
-    client = bigquery.Client.from_service_account_json(config.gcp_cred_file)
-
-    b = BQUpload(client=client,
-                 project=config.gcp_project,
-                 dataset=config.gcp_dataset)
-    table_attrs = b.get_all_table_attributes()
-    
-    data = []
-    for t in table_names:
-        # count rows across all files for this table
-        local_rows = 0
-        for f in dir_files:
-            if f[2] == t:
-                local_rows += int(f[3])
-        local_size = table_sizes[t]
-        bq_size, bq_rows = table_attrs[t]
-        bq_size = bq_size / 10**6
-        data.append([t, local_size, local_rows, bq_size, bq_rows])
-        
-    df = pd.DataFrame(data, columns=["table",
-                                     "local_size", "local_rows",
-                                     "bq_size", "bq_rows"])
-    df["bq_percent"] = (df.bq_rows / df.local_rows) * 100
-    return df
 
 
 def create_table_remix(schema_name, source, destination, dot=False):
@@ -381,7 +318,6 @@ def parse_query_job(query_job, verbose=False):
     return t0, t1, bytes_processed, bytes_billed, query_plan, df_n, job_id
 
 
-
 class BQUpload:
     """Upload data from a file location"""
     def __init__(self, test, scale, dataset):
@@ -473,8 +409,7 @@ class BQUpload:
         
         _sizes = {}
         for t in self.tables:
-            _s = table_size(client=self.client, 
-                            project=config.gcp_project, 
+            _s = table_size(project=config.gcp_project,
                             dataset=self.dataset,
                             table=t)
             _t = self.get_table(table_id=t)
@@ -526,7 +461,7 @@ https://googleapis.dev/python/bigquery/latest/generated/google.cloud.bigquery.cl
         Parameters
         ----------
         table : str, table name to upload data to
-        uris : str or sequence of str, single path to a GCS file 
+        source_uris : str or sequence of str, single path to a GCS file
             to upload, or a sequence of strings of the same
         verbose : bool, print debug statements
             
@@ -863,7 +798,8 @@ class BQTPC:
         query_result = self.client.query(query_text, job_config=self.job_config)
         return query_result
 
-    def parse_query_result(self, query_result):
+    @staticmethod
+    def parse_query_result(query_result):
         """
         Parameters
         ----------
@@ -1190,7 +1126,7 @@ class Stats(BQTPC):
         query_job = self.query(query_text=query_text)
         return list(query_job)
 
-    def count_approx_distinct(self, project, dataset, table, column):
+    def count_approx_distinct(self, table, column):
         query_text = """
         SELECT APPROX_COUNT_DISTINCT({}) as _result
         FROM `{}`.{}.{}
@@ -1199,7 +1135,7 @@ class Stats(BQTPC):
         query_job = self.query(query_text=query_text)
         return list(query_job)
 
-    def hll(self, project, dataset, table, column):
+    def hll(self, table, column):
         query_text = """
         SELECT HLL_COUNT.MERGE(sketch) approx
         FROM (
