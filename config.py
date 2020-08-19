@@ -5,7 +5,6 @@ Copyright (c) 2020 SADA Systems, Inc.
 """
 
 import os
-import random
 
 # set logger
 #import logging
@@ -52,7 +51,7 @@ fp_h_output_mnt  = fp_output_mnt + sep + "h"
 # 2.4 Snowflake Connector Auth Basics
 # Note: credentials in 'poor_security.py' formatted as:
 sf_account = "wja13212"
-sf_warehouse = ["TEST9000_XSMALL", "TEST9001_2XLARGE"]
+sf_warehouse = ["TEST9000_XSMALL", "TEST9001_2XLARGE"]  # ascending size
 sf_warehouse_cost = 0.00056  # price per second for this warehouse size
 
 # 2.5 Snowflake connector configuration

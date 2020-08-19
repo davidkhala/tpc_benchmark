@@ -23,13 +23,15 @@ def exp_log_t0(results_dir):
     return t0
 
 
-def sf_results(results_dir, buffer_time="20 minutes"):
+def sf_results(results_dir: str, t0: str, buffer_time: str = "20 minutes", verbose: bool = False):
     """Get query history for an already collected query result directory
 
     Parameters
     ----------
     results_dir : str, directory to data collected
-    buffer_time : str, time interval for Pandas.Timedelta
+    t0 : str, optional, start time to bound query results
+    buffer_time : str, time interval for Pandas.Timedelta, amount of time before t0
+    verbose : bool, print debug statements
 
     Returns
     -------
@@ -37,26 +39,32 @@ def sf_results(results_dir, buffer_time="20 minutes"):
     df_sf_history_av : Pandas DataFrame, containing query history
     """
 
-    t0 = exp_log_t0(results_dir)
+    if t0 is None:
+        t0 = exp_log_t0(results_dir)
+
     t_buffer = pd.Timedelta(buffer_time)
+    t0 = pd.to_datetime(t0) - t_buffer
+
+    print("Warehouse to use: ", config.sf_warehouse[0])
 
     sf = sf_tpc.SFTPC(test="ds",
                       scale=1,
                       cid="01",
-                      warehouse="TEST9000",
+                      warehouse=config.sf_warehouse[0],
                       desc="query_history",
-                      verbose=False,
-                      verbose_query=False)
+                      verbose=verbose,
+                      verbose_query=verbose)
+    sf.database = "SNOWFLAKE"  # use a builtin so it's always available
     sf.connect()
-    df_sf_history_sq, qid_sf_sq = sf.query_history(t0=pd.to_datetime(t0) - t_buffer,
+    df_sf_history_sq, qid_sf_sq = sf.query_history(t0=t0,
                                                    t1=pd.Timestamp.now())
 
     sf.close()
 
-    sf = sf_tpc.AU(warehouse="TEST9000")
+    sf = sf_tpc.AU(warehouse=config.sf_warehouse[0])
     sf.connect()
 
-    df_sf_history_av, qid_sf_av = sf.query_history_view(t0=pd.to_datetime(t0) - t_buffer)
+    df_sf_history_av, qid_sf_av = sf.query_history_view(t0=t0)
 
     sf.close()
 
@@ -65,32 +73,47 @@ def sf_results(results_dir, buffer_time="20 minutes"):
     return df_sf_history_sq, df_sf_history_av
 
 
-def bq_results(results_dir, buffer_time="20 minutes"):
+def bq_results(results_dir, t0=None, buffer_time="20 minutes", verbose: bool = False):
     """Get query history for an already collected query result directory
 
     Parameters
     ----------
     results_dir : str, directory to data collected
-    buffer_time : str, time interval for Pandas.Timedelta
+    t0 : str, optional, start time to bound query results
+    buffer_time : str, time interval for Pandas.Timedelta, amount of time before t0
+    verbose : bool, print debug statements
 
     Returns
     -------
     df_bq_history : Pandas DataFrame, containing query history
     """
 
-    t0 = exp_log_t0(results_dir)
+    if t0 is None:
+        t0 = exp_log_t0(results_dir)
+
     t_buffer = pd.Timedelta(buffer_time)
+    t0 = pd.to_datetime(t0) - t_buffer
 
     bq = bq_tpc.BQTPC(test="ds",
                       scale=1,
                       cid="01",
                       desc="query_history",
-                      verbose=False,
-                      verbose_query=True)
+                      verbose=verbose,
+                      verbose_query=verbose)
 
-    df_bq_history, qid_bq = bq.query_history(t0=pd.to_datetime(t0) - t_buffer,
-                                             t1=pd.Timestamp.utcnow())
+    df_bq_history, qid_bq = bq.query_history(t0=t0, t1=pd.Timestamp.utcnow())
 
     df_bq_history.to_csv(results_dir + config.sep + "query_history_bq.csv")
 
     return df_bq_history
+
+
+def test_t0(results_dir):
+    """Get query history for experiment"""
+    x = glob.glob(results_dir + config.sep + "benchmark_times*")
+    df = pd.read_csv(x[0])
+    t0 = df.driver_t0.min()
+    t0 = pd.to_datetime(t0)
+    return t0
+
+

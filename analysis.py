@@ -10,7 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-import config
+import config, history
 
 
 def bytes_to_TebiByte(b):
@@ -383,3 +383,120 @@ class Results:
         plt.savefig(self.results_dir + config.sep + plot_fp, bbox_to_anchor='tight')
 
         return fig
+
+
+class NResult:
+    def __init__(self):
+        self.results_dir = None
+        self.data_folders = None
+        self.df = None
+        self.df_query = None
+
+        self.df_bq_history = None
+        self.df_sf_history = None
+
+    def local_inventory(self):
+        self.data_folders = glob.glob(self.results_dir + config.sep + "result*")
+        d = []
+        for f in self.data_folders:
+            f2 = f.split(config.sep)[-1]
+            f3 = f2.split("_")
+            d.append(f3)
+        self.df = pd.DataFrame(d, columns=["data_type", "system", "test", "scale", "cid", "desc", "date", "time"])
+        self.df["fp"] = self.data_folders
+
+        query_files = glob.glob(self.results_dir + config.sep + "result*" + config.sep + "benchmark_times*")
+        query_data = []
+        for qf in query_files:
+            _df = pd.read_csv(qf)
+            query_data.append(_df)
+        self.df_query = pd.concat(query_data)
+        self.df_query.drop_duplicates(subset="qid", inplace=True)
+
+    def apply_history(self, row):
+        """Apply History Download per file"""
+        x = glob.glob(row.fp + config.sep + "benchmark_times*")
+        df = pd.read_csv(x[0])
+        t0 = df.driver_t0.min()
+        t0 = pd.to_datetime(t0)
+        if row.system == "sf":
+            _df_sq, _df_av = history.sf_results(results_dir=row.fp, t0=t0, verbose=True)
+        elif row.system == "bq":
+            _df = history.bq_results(results_dir=row.fp, t0=t0, verbose=True)
+        return t0
+
+    def system_inventory(self):
+        """Applies a function across self.df to download query histories to:
+        query_history_bq.csv
+        query_history_sf.csv
+        """
+        self.df["t0"] = self.df.apply(self.apply_history, axis=1)
+
+    def row_extract_sf(self, row, value):
+        """Extract Arbitrary row value from
+        Snowflake Account Usage table
+
+        Parameters
+        ----------
+        row : Pandas Series, from Snowflake history account view
+        value : str, name of column in row
+
+        Returns
+        -------
+        single value or None if nothing found
+        """
+        mask = self.df_sf_history.QUERY_ID == row["qid"]
+        out = self.df_sf_history.loc[mask, value]
+        if out.values.shape == (1,):
+            return out.values[0]
+        else:
+            return None
+
+    def row_extract_bq(self, row, value):
+        """Extract Arbitrary row value from
+        BigQuery Account Usage table
+
+        Parameters
+        ----------
+        row : Pandas Series, from BigQuery history account view
+        value : str, name of column in row
+
+        Returns
+        -------
+        single value or None if nothing found
+        """
+        mask = self.df_bq_history.job_id == row["qid"]
+        out = self.df_bq_history.loc[mask, value]
+        if out.values.shape == (1,):
+            return out.values[0]
+        else:
+            return None
+
+    def compile_history(self):
+        data = []
+        for folder in self.df.loc[self.df.system == "sf", "fp"].values:
+            fp = folder + config.sep + "query_history_sf.csv"
+            _df = pd.read_csv(fp)
+            data.append(_df)
+        self.df_sf_history = pd.concat(data)
+        self.df_sf_history.drop_duplicates(subset="QUERY_ID", inplace=True)
+
+        data = []
+        for folder in self.df.loc[self.df.system == "bq", "fp"].values:
+            fp = folder + config.sep + "query_history_bq.csv"
+            _df = pd.read_csv(fp)
+            data.append(_df)
+        self.df_bq_history = pd.concat(data)
+        self.df_bq_history.drop_duplicates(subset="job_id", inplace=True)
+
+    def append_history(self):
+
+        # intialize the columns before .loc into them
+        for col in config.sf_extended_keep + config.bq_keep:
+            self.df_query[col.lower()] = None
+
+        for col in config.sf_extended_keep:
+            self.df_query[col.lower()] = self.df_query.apply(lambda x: self.row_extract_sf(row=x, value=col), axis=1)
+
+        for col in config.bq_keep:
+            self.df_query[col.lower()] = self.df_query.apply(lambda x: self.row_extract_bq(row=x, value=col), axis=1)
