@@ -126,10 +126,10 @@ class Results:
 
     def append_history(self):
         """Append query history data to the basic data collected during benchmarking"""
-        for col in config.sf_extended_keep:
+        for col in config.sf_keep:
             self.dfsf[col.lower()] = None
 
-        for col in config.sf_extended_keep:
+        for col in config.sf_keep:
             self.dfsf[col.lower()] = self.dfsf.apply(lambda x: self.row_extract_sf(row=x, value=col), axis=1)
 
         for col in config.bq_keep:
@@ -385,7 +385,7 @@ class Results:
         return fig
 
 
-class NResult:
+class MultiResult:
     def __init__(self):
         self.results_dir = None
         self.data_folders = None
@@ -420,7 +420,8 @@ class NResult:
         t0 = df.driver_t0.min()
         t0 = pd.to_datetime(t0)
         if row.system == "sf":
-            _df_sq, _df_av = history.sf_results(results_dir=row.fp, t0=t0, verbose=True)
+            #_df_sq, _df_av = history.sf_results(results_dir=row.fp, t0=t0, verbose=True)
+            _df = history.sf_results(results_dir=row.fp, t0=t0, verbose=True)
         elif row.system == "bq":
             _df = history.bq_results(results_dir=row.fp, t0=t0, verbose=True)
         return t0
@@ -446,7 +447,7 @@ class NResult:
         single value or None if nothing found
         """
         mask = self.df_sf_history.QUERY_ID == row["qid"]
-        out = self.df_sf_history.loc[mask, value]
+        out = self.df_sf_history.loc[mask, value.upper()]
         if out.values.shape == (1,):
             return out.values[0]
         else:
@@ -472,6 +473,27 @@ class NResult:
         else:
             return None
 
+    def row_extract_bq2(self, row, value):
+        """Extract Arbitrary row value from
+        BigQuery Account Usage table
+
+        Parameters
+        ----------
+        row : Pandas Series, from BigQuery history account view
+        value : str, name of column in row
+
+        Returns
+        -------
+        single value or None if nothing found
+        """
+        mask = self.df_bq_history.job_id == row["qid"]
+        out = self.df_bq_history.loc[mask, value]
+        return out.values[0]
+        #if out.values.shape == (1,):
+        #    return out.values[0]
+        #else:
+        #    return None
+
     def compile_history(self):
         data = []
         for folder in self.df.loc[self.df.system == "sf", "fp"].values:
@@ -492,11 +514,23 @@ class NResult:
     def append_history(self):
 
         # intialize the columns before .loc into them
-        for col in config.sf_extended_keep + config.bq_keep:
-            self.df_query[col.lower()] = None
+        for col in set(config.sf_keep + config.bq_keep):
+            col = col.lower()
+            self.df_query[col] = None
 
-        for col in config.sf_extended_keep:
-            self.df_query[col.lower()] = self.df_query.apply(lambda x: self.row_extract_sf(row=x, value=col), axis=1)
+        for col in config.sf_keep:
+            col = col.lower()
+            print("SF:", col)
+            self.df_query[col] = self.df_query.apply(lambda x: self.row_extract_sf(row=x, value=col), axis=1)
+            #self.df_query.loc[self.df_query.db == "sf", col.lower()] = \
+            #    self.df_query.loc[self.df_query.db == "sf", col.lower()].apply(lambda x: self.row_extract_sf(row=x, value=col))
 
         for col in config.bq_keep:
-            self.df_query[col.lower()] = self.df_query.apply(lambda x: self.row_extract_bq(row=x, value=col), axis=1)
+            #col = col.lower()
+            print("BQ:", col)
+            #self.df_query[col] = self.df_query.apply(lambda x: self.row_extract_bq(row=x, value=col), axis=1)
+            _df_target = self.df_query.loc[self.df_query.db == "bq", col.lower()]
+            _df_source = self.df_query.loc[self.df_query.db == "bq", col]
+            _df_target = _df_source.apply(lambda x: self.row_extract_bq2(row=x, value=col))
+            #self.df_query.loc[self.df_query.db == "bq", col.lower()] = \
+            #    self.df_query.loc[self.df_query.db == "bq", col.lower()].apply(lambda x: self.row_extract_bq(row=x, value=col))
