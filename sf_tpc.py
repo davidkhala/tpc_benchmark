@@ -275,7 +275,7 @@ class Connector:
         return result
 
 
-class AU:
+class AccountUsage:
     def __init__(self, warehouse):
         """Connect to the snowflake.account_usage context
 
@@ -345,9 +345,11 @@ class AU:
         qid = query_result.sfqid
         return df_result, qid
 
-    def query_history_view(self, t0):
+    def query_history(self, t0):
         """Get the time bound query history for all queries run on this account using the
-        `snowflake.account_usage` database
+        `snowflake`      database
+        `account_usage`  schema
+        `query_history`  view
 
         Note: Activity in the last 1 year is available, latency is 45 minutes.
         https://docs.snowflake.com/en/sql-reference/account-usage.html
@@ -364,12 +366,114 @@ class AU:
 
         query_text = ("select * " +
                       "from query_history " +
-                      f"where start_time>=to_timestamp_ltz('{t0}')"
+                      f"where start_time>=to_timestamp_ltz('{t0}')" +
+                      f"end_time_range_end=>to_timestamp_ltz('{t1}');"
                       )
 
         query_result = self.sfc.query(query_text)
         df_result, qid = self.parse_query_result(query_result)
         return df_result, qid
+
+
+def usage(warehouse, schema, query_text, t0, t1=None, verbose=False):
+    """Get the time bound query history for all queries run on this account using the
+    `snowflake`      database
+    `account_usage`  schema
+    `query_history`  view
+
+    Note: Activity in the last 1 year is available, latency is 45 minutes.
+    https://docs.snowflake.com/en/sql-reference/account-usage.html
+    https://docs.snowflake.com/en/sql-reference/account-usage/query_history.html
+
+    Parameters
+    ----------
+    warehouse : str, name of warehouse to use for query
+    schema : str, name of schema to use for query
+    query_text : str, SQL text to execute
+    t0 : can be either datetime, pd.Timestamp, or str objects
+        that can be parsed by pd.to_datetime, start time of records to return
+    t1 : can be either datetime, pd.Timestamp, or str objects
+        that can be parsed by pd.to_datetime, start time of records to return
+
+    """
+
+    sfc = Connector(verbose_query=False,
+                    verbose=verbose)
+
+    sfc.connect(username=poor_security.sf_username,
+                password=poor_security.sf_password,
+                account=config.sf_account,
+                verbose=verbose)
+
+    sfc.set_timezone("UTC")
+    sfc.set_query_tag("read_query_history")
+    sfc.cache_off()
+    sfc.warehouse_use(warehouse, verbose=verbose)
+    sfc.database_use("snowflake", verbose=verbose)
+    sfc.schema_use(schema)
+
+    query_result = sfc.query(query_text)
+    df_result = query_result.fetch_pandas_all()
+    qid = query_result.sfqid
+
+    sfc.close()
+
+    return df_result, qid
+
+
+def usage_account(t0, t1=None, warehouse=config.sf_warehouse[0], verbose=False):
+    """Get the ACCOUNT USAGE history from:
+    SNOWFLAKE.ACCOUNT_USAGE.QUERY_HISTORY
+
+    Availability: <=1 year
+    Latency: ~2 hrs
+
+    """
+
+    t0 = pd.to_datetime(t0)
+    if t1 is None:
+        t1 = pd.Timestamp.now('UTC')
+    else:
+        t1 = pd.to_datetime(t1)
+
+    t0 = t0.strftime("%Y-%m-%d %H:%M:%S")
+    t1 = t1.strftime("%Y-%m-%d %H:%M:%S")
+
+    query_text = f"select * from query_history where start_time between '{t0}' and '{t1}'"
+
+    return usage(warehouse=warehouse, schema="account_usage",
+                 query_text=query_text,
+                 t0=t0, t1=t1, verbose=verbose)
+
+
+def usage_info_schema(t0, t1=None, warehouse=config.sf_warehouse[0], verbose=False):
+    """Get the INFORMATION SCHEMA history from:
+    SNOWFLAKE.INFORMATION_SCHEMA.QUERY_HISTORY
+
+    Availability: <= 7 days
+    Latency: None
+    """
+
+    t0 = pd.to_datetime(t0)
+    if t1 is None:
+        t1 = pd.Timestamp.now('UTC')
+    else:
+        t1 = pd.to_datetime(t1)
+
+    t0 = t0.strftime("%Y-%m-%d %H:%M:%S")
+    t1 = t1.strftime("%Y-%m-%d %H:%M:%S")
+
+    query_text = ("select * " +
+                  "from table(information_schema.query_history(" +
+                  f"end_time_range_start=>to_timestamp_ltz('{t0}')," +
+                  f"end_time_range_end=>to_timestamp_ltz('{t1}')));")
+
+    return usage(warehouse=warehouse, schema="information_schema",
+                 query_text=query_text,
+                 t0=t0, t1=t1, verbose=verbose)
+
+
+
 
 
 class SFTPC:
