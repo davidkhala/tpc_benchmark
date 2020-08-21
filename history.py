@@ -45,51 +45,10 @@ def sf_results(results_dir: str, t0: str, buffer_time: str = "20 minutes", verbo
     t_buffer = pd.Timedelta(buffer_time)
     t0 = pd.to_datetime(t0) - t_buffer
 
-    #print("Warehouse to use: ", config.sf_warehouse[0])
-
-    # this first result, df_sf_history_sq, might not be needed
-
-    # uses database = "snowflake"
-    # uses schema = "information_schema"
-    # uses view = "query_history"
-
-    """
-    sf = sf_tpc.SFTPC(test="ds",  # not used
-                      scale=1,    # not used
-                      cid="01",   # not used
-                      warehouse=config.sf_warehouse[0],
-                      desc="query_history",
-                      verbose=verbose,
-                      verbose_query=verbose)
-    sf.database = "SNOWFLAKE"  # use a builtin so it's always available
-    sf.connect()
-    df_sf_history_sq, qid_sf_sq = sf.query_history(t0=t0,
-                                                   t1=pd.Timestamp.now())
-
-    sf.close()
-    """
-
-    # perhaps only use this second data source?
-    # uses database = "snowflake"
-    # uses schema = "account_usage"
-    # uses the view = "query_history"
-    #sfau = sf_tpc.AccountUsage(warehouse=config.sf_warehouse[0])
-    #sfau.connect()
-
-    #df_sf_history_av, qid_sf_av = sf.query_history_view(t0=t0)
-    #df_sf_history, qid_sf = sfau.query_history(t0=t0)
-
     df_sf_history, qid_sf = sf_tpc.usage_account(warehouse=config.sf_warehouse[0],
                                                  t0=t0, t1=None, verbose=verbose)
-    #except:
-    #    df_sf_history, qid_sf = sf_tpc.usage_info_schema(warehouse=config.sf_warehouse[0],
-    #                                                     t0=t0, t1=None, verbose=verbose)
-    #sfau.close()
-
-    #df_sf_history_av.to_csv(results_dir + config.sep + "query_history_sf.csv")
     df_sf_history.to_csv(results_dir + config.sep + "query_history_sf.csv")
 
-    #return df_sf_history_sq, df_sf_history_av
     return df_sf_history
 
 
@@ -135,5 +94,3 @@ def test_t0(results_dir):
     t0 = df.driver_t0.min()
     t0 = pd.to_datetime(t0)
     return t0
-
-

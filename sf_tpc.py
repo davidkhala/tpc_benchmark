@@ -366,8 +366,7 @@ class AccountUsage:
 
         query_text = ("select * " +
                       "from query_history " +
-                      f"where start_time>=to_timestamp_ltz('{t0}')" +
-                      f"end_time_range_end=>to_timestamp_ltz('{t1}');"
+                      f"where start_time>=to_timestamp_ltz('{t0}');"
                       )
 
         query_result = self.sfc.query(query_text)
@@ -375,7 +374,7 @@ class AccountUsage:
         return df_result, qid
 
 
-def usage(warehouse, schema, query_text, t0, t1=None, verbose=False):
+def usage(warehouse, schema, query_text, verbose=False):
     """Get the time bound query history for all queries run on this account using the
     `snowflake`      database
     `account_usage`  schema
@@ -390,11 +389,7 @@ def usage(warehouse, schema, query_text, t0, t1=None, verbose=False):
     warehouse : str, name of warehouse to use for query
     schema : str, name of schema to use for query
     query_text : str, SQL text to execute
-    t0 : can be either datetime, pd.Timestamp, or str objects
-        that can be parsed by pd.to_datetime, start time of records to return
-    t1 : can be either datetime, pd.Timestamp, or str objects
-        that can be parsed by pd.to_datetime, start time of records to return
-
+    verbose : bool, print debug statements
     """
 
     sfc = Connector(verbose_query=False,
@@ -428,6 +423,14 @@ def usage_account(t0, t1=None, warehouse=config.sf_warehouse[0], verbose=False):
     Availability: <=1 year
     Latency: ~2 hrs
 
+    Parameters
+    ----------
+    t0 : can be either datetime, pd.Timestamp, or str objects
+        that can be parsed by pd.to_datetime, start time of records to return
+    t1 : can be either datetime, pd.Timestamp, or str objects
+        that can be parsed by pd.to_datetime, start time of records to return
+    warehouse : str, name of warehouse to use for query
+    verbose : bool, print debug statements
     """
 
     t0 = pd.to_datetime(t0)
@@ -443,7 +446,7 @@ def usage_account(t0, t1=None, warehouse=config.sf_warehouse[0], verbose=False):
 
     return usage(warehouse=warehouse, schema="account_usage",
                  query_text=query_text,
-                 t0=t0, t1=t1, verbose=verbose)
+                 verbose=verbose)
 
 
 def usage_info_schema(t0, t1=None, warehouse=config.sf_warehouse[0], verbose=False):
@@ -452,6 +455,15 @@ def usage_info_schema(t0, t1=None, warehouse=config.sf_warehouse[0], verbose=Fal
 
     Availability: <= 7 days
     Latency: None
+
+    Parameters
+    ----------
+    t0 : can be either datetime, pd.Timestamp, or str objects
+        that can be parsed by pd.to_datetime, start time of records to return
+    t1 : can be either datetime, pd.Timestamp, or str objects
+        that can be parsed by pd.to_datetime, start time of records to return
+    warehouse : str, name of warehouse to use for query
+    verbose : bool, print debug statements
     """
 
     t0 = pd.to_datetime(t0)
@@ -470,10 +482,7 @@ def usage_info_schema(t0, t1=None, warehouse=config.sf_warehouse[0], verbose=Fal
 
     return usage(warehouse=warehouse, schema="information_schema",
                  query_text=query_text,
-                 t0=t0, t1=t1, verbose=verbose)
-
-
-
+                 verbose=verbose)
 
 
 class SFTPC:

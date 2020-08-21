@@ -6,10 +6,6 @@ Copyright (c) 2020 SADA Systems, Inc.
 
 import os
 
-# set logger
-#import logging
-#logging.basicConfig(filename='./nb.log', level=logging.DEBUG)
-
 # 1.0 Project's current path locations
 # >> Do NOT edit this section
 cwd = os.path.dirname(os.path.realpath(__file__))
@@ -191,9 +187,7 @@ fp_ds_answers = fp_ds_src + sep + "answer_sets"
 fp_results = cwd + sep + "results"
 fp_plots   = cwd + sep + "plots"
 
-# 5.6 SnowFlake Information Schema columns to keep
-
-# basic values, from snowflake.account_usage.query_history
+# 5.6 SnowFlake from snowflake.account_usage.query_history
 sf_keep = ["QUERY_ID", "QUERY_TEXT", "DATABASE_NAME", "WAREHOUSE_SIZE", "WAREHOUSE_TYPE",
            "QUERY_TAG", "START_TIME", "END_TIME", "TOTAL_ELAPSED_TIME", "BYTES_SCANNED",
            "CREDITS_USED_CLOUD_SERVICES",
@@ -201,12 +195,6 @@ sf_keep = ["QUERY_ID", "QUERY_TEXT", "DATABASE_NAME", "WAREHOUSE_SIZE", "WAREHOU
            "PARTITIONS_SCANNED", "PARTITIONS_TOTAL",
            "BYTES_SPILLED_TO_LOCAL_STORAGE", "BYTES_SPILLED_TO_REMOTE_STORAGE"
            ]
-
-# extended values, from account_usage.query_history
-# has values common to information_schema.query_history plus:
-#sf_extended_keep = sf_keep + ["PERCENTAGE_SCANNED_FROM_CACHE",
-#                              "PARTITIONS_SCANNED", "PARTITIONS_TOTAL",
-#                              "BYTES_SPILLED_TO_LOCAL_STORAGE", "BYTES_SPILLED_TO_REMOTE_STORAGE"]
 
 # 5.7 BigQuery Information Schema columns to keep
 bq_keep = ["statement_type", "start_time", "end_time", "total_bytes_processed",
