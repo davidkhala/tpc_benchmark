@@ -736,23 +736,10 @@ class SFTPC:
 
         d_prefix = [self.test, str(self.scale), self.database]
 
-        fp_log = ("sf_upload-" + self.test + "_" +
-                  str(self.scale) + "GB-" +
-                  self.database + "-" +
-                  str(pd.Timestamp.now("UTC")) + ".csv"
-                  )
-
-        fp_log = config.fp_results + config.sep + fp_log
-        with open(fp_log, "a") as f:
-            _d0 = ",".join(log_column_names) + "\n"
-            f.write(_d0)
-
         t0 = pd.Timestamp.now("UTC")
 
-        d0 = d_prefix + [table, "start",
-                         str(t0), "",
-                         "", ""]
-        with open(fp_log, "a") as f:
+        d0 = d_prefix + [table, "start", str(t0), "", "", ""]
+        with open(self.fp_log, "a") as f:
             _d0 = ",".join(d0) + "\n"
             f.write(_d0)
 
@@ -764,7 +751,7 @@ class SFTPC:
         d1 = d_prefix + [table, "end",
                          str(t0), str(t1),
                          "", qid]
-        with open(fp_log, "a") as f:
+        with open(self.fp_log, "a") as f:
             _d1 = ",".join(d1) + "\n"
             f.write(_d1)
 
@@ -788,6 +775,19 @@ class SFTPC:
             print()
 
     def import_data(self):
+
+        self.fp_log = ("sf_upload-" + self.test + "_" +
+                       str(self.scale) + "GB-" +
+                       self.database + "-" +
+                       str(pd.Timestamp.now("UTC")) + ".csv"
+                       )
+
+        self.fp_log = config.fp_results + config.sep + self.fp_log
+
+        with open(self.fp_log, "a") as f:
+            _d0 = ",".join(log_column_names) + "\n"
+            f.write(_d0)
+
         for table in self.df_gcs.table.unique():
             if table in config.ignore_tables:
                 continue
