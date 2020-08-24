@@ -352,3 +352,58 @@ class MultiResult:
         self.dfp_dt = dfp_dt
         self.dfp_cost = dfp_cost
         self.df_agg = df_agg
+
+        ## Save results
+        self.dfp_TB.to_csv(self.results_dir + config.sep + "dfp_TB.csv")
+        self.dfp_dt.to_csv(self.results_dir + config.sep + "dfp_dt.csv")
+        self.dfp_cost.to_csv(self.results_dir + config.sep + "dfp_cost.csv")
+        self.df_agg.to_csv(self.results_dir + config.sep + "df_agg.csv")
+
+    def query_heatmap(self, dfx, dtype):
+        """
+
+        Parameters
+        ----------
+        dtype : str, either "dt", "TB" or "cost
+        """
+
+        scaled_df = (dfx - dfx.min(axis=0)) / (dfx.max(axis=0) - dfx.min(axis=0))
+        if len(dfx) > 25:
+            h = 40
+        else:
+            h = 18
+
+        w_mapper  = {"dt": 6, "TB": 12, "cost": 12}
+        fmt_mapper = {"dt": ".2f", "TB": ".6f", "cost": ".6f"}
+
+        plt.figure(figsize=(w_mapper[dtype], h))
+
+        ax = sns.heatmap(scaled_df, annot=dfx, fmt=fmt_mapper[dtype],
+                         # vmin=0, vmax=0.5,
+                         cmap="viridis", cbar=False)
+        ax.xaxis.set_ticks_position('top')
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
+
+        plot_fp = f"plot_heatmap_query_{dtype}.png"
+        plt.tight_layout()
+        plt.savefig(self.results_dir + config.sep + plot_fp, bbox_to_anchor='tight')
+
+    def save_heatmaps(self):
+
+        # aggregate heatmap
+        dfx = self.df_agg
+        scaled_df = (dfx - dfx.min(axis=0)) / (dfx.max(axis=0) - dfx.min(axis=0))
+        # transpose both so the x-axis labels match the per-type heatmaps
+        ax = sns.heatmap(scaled_df.T, annot=dfx.T, fmt=".3f",
+                         linewidths=.5,
+                         cmap="viridis", cbar=False)
+        ax.xaxis.set_ticks_position('top')
+        ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
+
+        plot_fp = "plot_query_heatmap.png"
+        plt.tight_layout()
+        plt.savefig(self.results_dir + config.sep + plot_fp)  #, bbox_to_anchor='tight')
+
+        # per-type heatmaps
+        for _dtype, _df in zip(["dt", "TB", "cost"], [self.dfp_dt, self.dfp_TB, self.dfp_cost]):
+            self.query_heatmap(dfx=_df, dtype=_dtype)

@@ -187,7 +187,7 @@ class QueryCompare:
         self.shared_timestamp = pd.Timestamp.now()  # "UTC"
         self.shared_timestamp = str(self.shared_timestamp).replace(" ", "_")
         self.data_source = self.test + "_" + str(self.scale) + "GB_" + self.cid
-        self.results_dir, _ = tools.make_name(db="bqsf",
+        self.results_dir, _ = tools.make_name(db="".join(self.systems),
                                               test=self.test,
                                               cid=self.cid,
                                               kind="results",
