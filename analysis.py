@@ -14,7 +14,7 @@ import seaborn as sns
 import config, history
 
 
-def bq_reserve_cost(ts, slots):
+def bq_reserve_cost(dt, slots):
     """Calculate the cost of a flex-slot reservation on BigQuery
 
     Note:
@@ -23,14 +23,14 @@ def bq_reserve_cost(ts, slots):
 
     Parameters
     ----------
-    ts : float, milliseconds of slot consumption
+    dt : float, milliseconds of slot consumption
     slots : int, number of slots to reserve
 
     Returns
     -------
     float : dollars of billed cost
     """
-    return 4.00 * math.ceil(slots / 100) * (math.ceil(ts) / (1000 * 60 * 60))
+    return 4.00 * math.ceil(slots / 100) * (math.ceil(dt) / (1000 * 60 * 60))
 
 
 def plot_dual(df1, df2, y1_label="", y2_label="", drop=None, save_dir=None, suffix=None):
@@ -322,21 +322,31 @@ class MultiResult:
         dollars_per_credit = 3.00
 
         # BigQuery
-        # total_bytes_processed    INTEGER    Total bytes processed by the job.
+        # dt : float, total seconds elapsed (see above).
         # Conversion:
         # Using the Flex-slot commit cost (60 second min commit = $4.00/60 = $0.07)
         # rate = $4.00 per (100 slots)/(1 hour)
         # number of slots reserved: `slots`
-        # seconds of billed time in seconds:`ts`
+        # seconds of billed time in seconds:`dt`
         # cost of billed time and slot reservation:
-        # 4.00 * math.ceil(slots / 100) * (math.ceil(ts) / (60 * 60))
+        # 4.00 * math.ceil(slots / 100) * (math.ceil(dt) / (60 * 60))
+
+        # Note: costing calculations for BQ could be much more complete, on-demand based on
+        # bytes_processed, etc.
+
         df["cost"] = 0
 
         df.loc[df.db == "sf", "cost"] = \
             df.loc[df.db == "sf", "sf_credits"] * dollars_per_credit
 
+        # bq_reserve_cost expects dt in milliseconds & dt in seconds, so dt x 1000 = ms
         df.loc[df.db == "bq", "cost"] = \
-            df.loc[df.db == "bq", "bq_total_slot_ms"].apply(lambda x: bq_reserve_cost(x, slots=2000) / 1000)
+            df.loc[df.db == "bq", "dt"].apply(lambda x: bq_reserve_cost(x * 1000, slots=config.bq_slots))
+
+        # flex-slot short term commitment is based on the TB of data processed
+        df["cost_od"] = 0
+        df.loc[df.db == "bq", "cost_od"] = \
+            df.loc[df.db == "bq", "TB"] * config.bq_on_demand_cost
 
         ## Pivot Final Results
 

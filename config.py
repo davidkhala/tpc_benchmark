@@ -55,6 +55,11 @@ sf_role = "SYSADMIN"
 sf_storage_integration = "gcs_storage_integration"
 sf_named_file_format = "csv_file_format"
 
+# 2.6 BigQuery Slot Reservations
+bq_slots = 2000
+bq_slot_flex_cost = 4.00  # per (100 slots)/(1 hr)
+bq_on_demand_cost = 5.00  # per TB data processed
+
 # 3.0 TPC installer zip file names stored in gcs_zip_bucket
 # >> Edit this if you download a different version from tpc.org
 
