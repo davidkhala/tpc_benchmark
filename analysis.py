@@ -197,16 +197,18 @@ class MultiResult:
             fp = folder + config.sep + "query_history_sf.csv"
             _df = pd.read_csv(fp)
             data.append(_df)
-        self.df_sf_history = pd.concat(data)
-        self.df_sf_history.drop_duplicates(subset="QUERY_ID", inplace=True)
+        if len(data) > 0:
+            self.df_sf_history = pd.concat(data)
+            self.df_sf_history.drop_duplicates(subset="QUERY_ID", inplace=True)
 
         data = []
         for folder in self.df.loc[self.df.system == "bq", "fp"].values:
             fp = folder + config.sep + "query_history_bq.csv"
             _df = pd.read_csv(fp)
             data.append(_df)
-        self.df_bq_history = pd.concat(data)
-        self.df_bq_history.drop_duplicates(subset="job_id", inplace=True)
+        if len(data) > 0:
+            self.df_bq_history = pd.concat(data)
+            self.df_bq_history.drop_duplicates(subset="job_id", inplace=True)
 
     def append_history(self):
 
@@ -240,35 +242,39 @@ class MultiResult:
                              "driver_t1"]].copy()
 
         # Snowflake
-        row_select = self.df_sf_history.QUERY_ID.apply(lambda x: x in dfq.qid.unique())
-        column_select = ["QUERY_ID", "START_TIME", "END_TIME", "TOTAL_ELAPSED_TIME", "BYTES_SCANNED",
-                         "CREDITS_USED_CLOUD_SERVICES"]
-        dfsfh = self.df_sf_history.loc[row_select, column_select].copy()
-        dfsfh.reset_index(inplace=True, drop=True)
-        dfsfh.columns = ["sf_" + col for col in dfsfh.columns]
-        dfsfh.rename({"sf_QUERY_ID": "qid",
-                      "sf_START_TIME": "start_time",
-                      "sf_END_TIME": "end_time",
-                      "sf_BYTES_SCANNED": "bytes",
-                      "sf_TOTAL_ELAPSED_TIME": "sf_elapsed",
-                      "sf_CREDITS_USED_CLOUD_SERVICES": "sf_credits"}, axis=1, inplace=True)
-        dfsfh.start_time = pd.to_datetime(dfsfh.start_time)
-        dfsfh.end_time = pd.to_datetime(dfsfh.end_time)
+        dfsfh = pd.DataFrame(None)
+        if self.df_sf_history is not None:
+            row_select = self.df_sf_history.QUERY_ID.apply(lambda x: x in dfq.qid.unique())
+            column_select = ["QUERY_ID", "START_TIME", "END_TIME", "TOTAL_ELAPSED_TIME", "BYTES_SCANNED",
+                             "CREDITS_USED_CLOUD_SERVICES"]
+            dfsfh = self.df_sf_history.loc[row_select, column_select].copy()
+            dfsfh.reset_index(inplace=True, drop=True)
+            dfsfh.columns = ["sf_" + col for col in dfsfh.columns]
+            dfsfh.rename({"sf_QUERY_ID": "qid",
+                          "sf_START_TIME": "start_time",
+                          "sf_END_TIME": "end_time",
+                          "sf_BYTES_SCANNED": "bytes",
+                          "sf_TOTAL_ELAPSED_TIME": "sf_elapsed",
+                          "sf_CREDITS_USED_CLOUD_SERVICES": "sf_credits"}, axis=1, inplace=True)
+            dfsfh.start_time = pd.to_datetime(dfsfh.start_time)
+            dfsfh.end_time = pd.to_datetime(dfsfh.end_time)
 
         # BigQuery
-        row_select = self.df_bq_history.job_id.apply(lambda x: x in dfq.qid.unique())
-        column_select = ["job_id", "start_time", "end_time", "total_bytes_processed", "total_slot_ms",
-                         "total_bytes_billed"]
-        dfbqh = self.df_bq_history.loc[row_select, column_select].copy()
-        dfbqh.reset_index(inplace=True, drop=True)
-        dfbqh.columns = ["bq_" + col for col in dfbqh.columns]
-        dfbqh.rename({"bq_job_id": "qid",
-                      "bq_start_time": "start_time",
-                      "bq_end_time": "end_time",
-                      "bq_total_bytes_processed": "bytes",
-                      "bq_total_bytes_billed": "bq_bytes_billed"}, axis=1, inplace=True)
-        dfbqh.start_time = pd.to_datetime(dfbqh.start_time)
-        dfbqh.end_time = pd.to_datetime(dfbqh.end_time)
+        dfbqh = pd.DataFrame(None)
+        if self.df_bq_history is not None:
+            row_select = self.df_bq_history.job_id.apply(lambda x: x in dfq.qid.unique())
+            column_select = ["job_id", "start_time", "end_time", "total_bytes_processed", "total_slot_ms",
+                             "total_bytes_billed"]
+            dfbqh = self.df_bq_history.loc[row_select, column_select].copy()
+            dfbqh.reset_index(inplace=True, drop=True)
+            dfbqh.columns = ["bq_" + col for col in dfbqh.columns]
+            dfbqh.rename({"bq_job_id": "qid",
+                          "bq_start_time": "start_time",
+                          "bq_end_time": "end_time",
+                          "bq_total_bytes_processed": "bytes",
+                          "bq_total_bytes_billed": "bq_bytes_billed"}, axis=1, inplace=True)
+            dfbqh.start_time = pd.to_datetime(dfbqh.start_time)
+            dfbqh.end_time = pd.to_datetime(dfbqh.end_time)
 
         # combined history relevant to the dfq records
         dfh = pd.concat([dfsfh, dfbqh], axis=0)
@@ -298,8 +304,10 @@ class MultiResult:
         # dt is a TimeDelta converted to total seconds (dt.total_seconds() method)
         # so to create something comparable, convert both from milliseconds to seconds
 
-        df.loc[df.db == "sf", "dt_sys"] = df.loc[df.db == "sf", "sf_elapsed"] / 1000.0
-        df.loc[df.db == "bq", "dt_sys"] = df.loc[df.db == "bq", "bq_total_slot_ms"] / 1000.0
+        if "sf" in df.db.unique():
+            df.loc[df.db == "sf", "dt_sys"] = df.loc[df.db == "sf", "sf_elapsed"] / 1000.0
+        if "bq" in df.db.unique():
+            df.loc[df.db == "bq", "dt_sys"] = df.loc[df.db == "bq", "bq_total_slot_ms"] / 1000.0
 
         ## TeraBytes Processed
 
@@ -336,17 +344,19 @@ class MultiResult:
 
         df["cost"] = 0
 
-        df.loc[df.db == "sf", "cost"] = \
-            df.loc[df.db == "sf", "sf_credits"] * dollars_per_credit
+        if "sf" in df.db.unique():
+            df.loc[df.db == "sf", "cost"] = \
+                df.loc[df.db == "sf", "sf_credits"] * dollars_per_credit
 
         # bq_reserve_cost expects dt in milliseconds & dt in seconds, so dt x 1000 = ms
-        df.loc[df.db == "bq", "cost"] = \
-            df.loc[df.db == "bq", "dt"].apply(lambda x: bq_reserve_cost(x * 1000, slots=config.bq_slots))
+        if "bq" in df.db.unique():
+            df.loc[df.db == "bq", "cost"] = \
+                df.loc[df.db == "bq", "dt"].apply(lambda x: bq_reserve_cost(x * 1000, slots=config.bq_slots))
 
-        # flex-slot short term commitment is based on the TB of data processed
-        df["cost_od"] = 0
-        df.loc[df.db == "bq", "cost_od"] = \
-            df.loc[df.db == "bq", "TB"] * config.bq_on_demand_cost
+            # flex-slot short term commitment is based on the TB of data processed
+            df["cost_od"] = 0
+            df.loc[df.db == "bq", "cost_od"] = \
+                df.loc[df.db == "bq", "TB"] * config.bq_on_demand_cost
 
         ## Pivot Final Results
 

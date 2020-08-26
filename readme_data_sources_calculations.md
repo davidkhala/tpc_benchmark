@@ -209,8 +209,6 @@ Output column is `TB` : float, total TeraBytes calculated as `bytes / 1e12`
 ##### *Snowflake*
 `CREDITS_USED_CLOUD_SERVICES` : NUMBER, number of credits used for cloud services in the hour.
 
-Conversion:
-
 ##### *BigQuery*  
 `dt` : float, calculated total seconds elapsed (see calculation above)
 
