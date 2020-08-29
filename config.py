@@ -48,6 +48,8 @@ fp_h_output_mnt  = fp_output_mnt + sep + "h"
 # Note: credentials in 'poor_security.py' formatted as:
 sf_account = "wja13212"
 sf_warehouse = ["TEST9000_XSMALL", "TEST9001_2XLARGE"]  # ascending size
+sf_warehouse_util = "TEST9000_XSMALL"
+sf_warehouse_benchmark = "TEST9001_2XLARGE"
 sf_warehouse_cost = 0.00056  # price per second for this warehouse size
 
 # 2.5 Snowflake connector configuration

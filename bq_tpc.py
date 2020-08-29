@@ -783,18 +783,6 @@ class BQTPC:
             print(qt)
             print()
 
-        if self.fp_log is None:
-            fp_log = ("sf_upload-" + self.test + "_" +
-                      str(self.scale) + "GB-" +
-                      self.dataset + "-" +
-                      str(pd.Timestamp.now("UTC")) + ".csv"
-                      )
-
-            self.fp_log = config.fp_results + config.sep + fp_log
-        with open(self.fp_log, "a") as f:
-            _d0 = ",".join(log_column_names) + "\n"
-            f.write(_d0)
-
         query_result = self.client.query(query_text, job_config=self.job_config)
         return query_result
 

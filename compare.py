@@ -144,7 +144,7 @@ class QueryCompare:
         self.result_sf_csv = None
 
         # useful to be able to set if running multiple benchmarks
-        self.sf_warehouse_name = config.sf_warehouse[0]
+        self.sf_warehouse_name = config.sf_warehouse_benchmark  # should be 2XL
 
         self.sf_warehouse_size = None  # strictly depends on warehouse name
 

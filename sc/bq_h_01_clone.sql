@@ -1,10 +1,11 @@
+-- TPC-H
+-- Create Table Clone - no clustering or partitioning
+--
 CREATE TABLE `_destination_dataset.lineitem`
-PARTITION BY l_shipdate
 AS 
 SELECT * FROM `_source_dataset.lineitem`;
 
 CREATE TABLE `_destination_dataset.orders`
-PARTITION BY o_orderdate
 AS 
 SELECT * FROM `_source_dataset.orders`;
 
