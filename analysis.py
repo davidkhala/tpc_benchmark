@@ -30,7 +30,9 @@ def bq_reserve_cost(dt, slots):
     -------
     float : dollars of billed cost
     """
-    return 4.00 * math.ceil(slots / 100) * (math.ceil(dt) / (1000 * 60 * 60))
+    t = (math.ceil(dt) / (1000 * 60 * 60))
+    slot_count = math.ceil(slots / 100)
+    return 4.00 * slot_count * t
 
 
 def plot_dual(df1, df2, y1_label="", y2_label="", drop=None, save_dir=None, suffix=None):
@@ -113,6 +115,8 @@ class MultiResult:
         self.dfp_TB = None
         self.dfp_dt = None
         self.dfp_cost = None
+        self.df_agg_prelim_all = None
+        self.df_agg_prelim = None
         self.df_agg = None
 
         self.verbose = True
@@ -280,19 +284,24 @@ class MultiResult:
         dfh = pd.concat([dfsfh, dfbqh], axis=0)
 
         # final target DataFrame for results
-        df = dfq.merge(right=dfh, how='left', on='qid')
+        self.df_agg_prelim_all = dfq.merge(right=dfh, how='left', on='qid')
 
-        df["dt"] = df.end_time - df.start_time
-        df.dt = df.dt.dt.total_seconds()
+        # if an kind of Exception occures in the query, there will be non start or end time
+        # note: the qid will also have a message, altho we're dropping that here
+        mask = (pd.notnull(self.df_agg_prelim_all.start_time) & pd.notnull(self.df_agg_prelim_all.end_time))
+        self.df_agg_prelim = self.df_agg_prelim_all.loc[mask].copy()
 
-        df.driver_t0 = pd.to_datetime(df.driver_t0)
-        df.driver_t1 = pd.to_datetime(df.driver_t1)
+        self.df_agg_prelim["dt"] = self.df_agg_prelim.end_time - self.df_agg_prelim.start_time
+        self.df_agg_prelim.dt = self.df_agg_prelim.dt.dt.total_seconds()
 
-        df["dt_local"] = df.driver_t1 - df.driver_t0
-        df.dt_local = df.dt_local.dt.total_seconds()
+        self.df_agg_prelim.driver_t0 = pd.to_datetime(self.df_agg_prelim.driver_t0)
+        self.df_agg_prelim.driver_t1 = pd.to_datetime(self.df_agg_prelim.driver_t1)
+
+        self.df_agg_prelim["dt_local"] = self.df_agg_prelim.driver_t1 - self.df_agg_prelim.driver_t0
+        self.df_agg_prelim.dt_local = self.df_agg_prelim.dt_local.dt.total_seconds()
 
         ## Time Elapsed
-        df["dt_sys"] = pd.NaT
+        self.df_agg_prelim["dt_sys"] = pd.NaT
 
         # Snowflake
         # TOTAL_ELAPSED_TIME    NUMBER    Elapsed time (in milliseconds).
@@ -304,10 +313,12 @@ class MultiResult:
         # dt is a TimeDelta converted to total seconds (dt.total_seconds() method)
         # so to create something comparable, convert both from milliseconds to seconds
 
-        if "sf" in df.db.unique():
-            df.loc[df.db == "sf", "dt_sys"] = df.loc[df.db == "sf", "sf_elapsed"] / 1000.0
-        if "bq" in df.db.unique():
-            df.loc[df.db == "bq", "dt_sys"] = df.loc[df.db == "bq", "bq_total_slot_ms"] / 1000.0
+        if "sf" in self.df_agg_prelim.db.unique():
+            self.df_agg_prelim.loc[self.df_agg_prelim.db == "sf", "dt_sys"] = \
+                self.df_agg_prelim.loc[self.df_agg_prelim.db == "sf", "sf_elapsed"] / 1000.0
+        if "bq" in self.df_agg_prelim.db.unique():
+            self.df_agg_prelim.loc[self.df_agg_prelim.db == "bq", "dt_sys"] = \
+                self.df_agg_prelim.loc[self.df_agg_prelim.db == "bq", "bq_total_slot_ms"] / 1000.0
 
         ## TeraBytes Processed
 
@@ -319,7 +330,7 @@ class MultiResult:
 
         # Conversion is the same for both:
         # 1 TeraByte (TB) = 1e12 bytes
-        df["TB"] = df.bytes / 1e12
+        self.df_agg_prelim["TB"] = self.df_agg_prelim.bytes / 1e12
 
         ## Cost
 
@@ -342,27 +353,27 @@ class MultiResult:
         # Note: costing calculations for BQ could be much more complete, on-demand based on
         # bytes_processed, etc.
 
-        df["cost"] = 0
+        self.df_agg_prelim["cost"] = 0
 
-        if "sf" in df.db.unique():
-            df.loc[df.db == "sf", "cost"] = \
-                df.loc[df.db == "sf", "sf_credits"] * dollars_per_credit
+        if "sf" in self.df_agg_prelim.db.unique():
+            self.df_agg_prelim.loc[self.df_agg_prelim.db == "sf", "cost"] = \
+                self.df_agg_prelim.loc[self.df_agg_prelim.db == "sf", "sf_credits"] * dollars_per_credit
 
         # bq_reserve_cost expects dt in milliseconds & dt in seconds, so dt x 1000 = ms
-        if "bq" in df.db.unique():
-            df.loc[df.db == "bq", "cost"] = \
-                df.loc[df.db == "bq", "dt"].apply(lambda x: bq_reserve_cost(x * 1000, slots=config.bq_slots))
+        if "bq" in self.df_agg_prelim.db.unique():
+            self.df_agg_prelim.loc[self.df_agg_prelim.db == "bq", "cost"] = \
+                self.df_agg_prelim.loc[self.df_agg_prelim.db == "bq", "dt"].apply(lambda x: bq_reserve_cost(x * 1000, slots=config.bq_slots))
 
             # flex-slot short term commitment is based on the TB of data processed
-            df["cost_od"] = 0
-            df.loc[df.db == "bq", "cost_od"] = \
-                df.loc[df.db == "bq", "TB"] * config.bq_on_demand_cost
+            self.df_agg_prelim["cost_od"] = 0
+            self.df_agg_prelim.loc[self.df_agg_prelim.db == "bq", "cost_od"] = \
+                self.df_agg_prelim.loc[self.df_agg_prelim.db == "bq", "TB"] * config.bq_on_demand_cost
 
         ## Pivot Final Results
 
-        dfp_TB = df.pivot_table(index="query_n", columns=["db", "desc"], values="TB")
-        dfp_dt = df.pivot_table(index="query_n", columns=["db", "desc"], values="dt")
-        dfp_cost = df.pivot_table(index="query_n", columns=["db", "desc"], values="cost")
+        dfp_TB = self.df_agg_prelim.pivot_table(index="query_n", columns=["db", "desc"], values="TB")
+        dfp_dt = self.df_agg_prelim.pivot_table(index="query_n", columns=["db", "desc"], values="dt")
+        dfp_cost = self.df_agg_prelim.pivot_table(index="query_n", columns=["db", "desc"], values="cost")
 
         ## Aggregate Sum Results
         df_agg = pd.concat({"dt": dfp_dt.sum(), "TB": dfp_TB.sum(), "cost": dfp_cost.sum()}, axis=1)
