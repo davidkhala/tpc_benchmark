@@ -35,6 +35,59 @@ def bq_reserve_cost(dt, slots):
     return 4.00 * slot_count * t
 
 
+def plot_single(df1, y1_label="", drop=None, save_dir=None, suffix=None):
+    """Plot one aggregate pivot plot
+
+    Parameters
+    ----------
+    df1 : Pandas Dataframe, pivoted data with:
+        `query_n` row index
+        (`db`, `desc`) column multi-index
+    y1_label : str, label for df1 y axis
+    drop : list of int, index rows (as `query_n`) to drop from plot
+    save_dir : str, path to directory to save plot to. If not set, nothing is saved.
+    suffix : str, suffix for save_dir file name
+
+    Returns
+    -------
+    matplotlib.figure.Figure
+    """
+
+    if drop is not None:
+        df1 = df1[~(df1.index.isin(drop))]
+
+    color_palette = sns.hls_palette(n_colors=12)
+    fig, ax1 = plt.subplots(1, 1)
+    ax1 = df1.plot.bar(ax=ax1, legend=False, color=color_palette)
+
+    # set the figure size BEFORE adjusting ticks
+    fig.set_size_inches(30, 8, forward=True)
+
+    handles, labels = ax1.get_legend_handles_labels()
+
+    ax1.set_ylabel(y1_label)
+    ax1.set_xlabel(None)
+    ax1.xticklabels = ax1.get_xticklabels()
+    plt.xticks(rotation=0)
+
+    ax1.set_xlabel("Query Number")
+
+    plt.subplots_adjust(hspace=0.15)
+    plt.subplots_adjust(right=0.93)
+
+    fig.legend(handles, labels, loc="right")
+
+    if save_dir is not None:
+        if suffix is not None:
+            suffix = "_" + suffix
+        else:
+            suffix = ""
+        plot_fp = f"plot_query_single{suffix}.png"
+        plt.savefig(save_dir + config.sep + plot_fp, bbox_to_anchor='tight')
+
+    return fig
+
+
 def plot_dual(df1, df2, y1_label="", y2_label="", drop=None, save_dir=None, suffix=None):
     """Plot two aggregate pivot plots
 
@@ -70,7 +123,7 @@ def plot_dual(df1, df2, y1_label="", y2_label="", drop=None, save_dir=None, suff
     ax2 = _df2.plot.bar(ax=ax2, legend=False, color=color_palette)
 
     # set the figure size BEFORE adjusting ticks
-    fig.set_size_inches(30, 8, forward=True)
+    fig.set_size_inches(32, 8, forward=True)
 
     handles, labels = ax1.get_legend_handles_labels()
 
@@ -87,7 +140,7 @@ def plot_dual(df1, df2, y1_label="", y2_label="", drop=None, save_dir=None, suff
     ax2.xaxis.tick_top()
 
     plt.subplots_adjust(hspace=0.15)
-    plt.subplots_adjust(right=0.93)
+    plt.subplots_adjust(right=0.85)
 
     fig.legend(handles, labels, loc="right")
 
@@ -234,8 +287,13 @@ class MultiResult:
             _df_source = self.df_query.loc[self.df_query.db == "bq", col]
             _df_target = _df_source.apply(lambda x: self.row_extract_bq(row=x, value=col))
 
-    def aggregate(self):
+    def aggregate(self, by="desc"):
         """Aggregate
+
+        Parameters
+        ----------
+        by : str, column to create pivot tables from. Default = "desc".
+
         self.df_query - query result record on local machine
         self.df_sf_history - query_history from Snowflake account usage
         self.df_bq_history - query history from BigQuery Information Schema
@@ -390,6 +448,18 @@ class MultiResult:
         self.dfp_cost.to_csv(self.results_dir + config.sep + "dfp_cost.csv")
         self.df_agg.to_csv(self.results_dir + config.sep + "df_agg.csv")
 
+        self.dfp_TB.to_hdf(self.results_dir + config.sep + "dfp_TB.hdf5", key="df")
+        self.dfp_dt.to_hdf(self.results_dir + config.sep + "dfp_dt.hdf5", key="df")
+        self.dfp_cost.to_hdf(self.results_dir + config.sep + "dfp_cost.hdf5", key="df")
+        self.df_agg.to_hdf(self.results_dir + config.sep + "df_agg.hdf5", key="df")
+
+    def load_results(self):
+
+        self.dfp_TB = pd.read_hdf(self.results_dir + config.sep + "dfp_TB.hdf5", key="df")
+        self.dfp_dt = pd.read_hdf(self.results_dir + config.sep + "dfp_dt.hdf5", key="df")
+        self.dfp_cost = pd.read_hdf(self.results_dir + config.sep + "dfp_cost.hdf5", key="df")
+        self.df_agg = pd.read_hdf(self.results_dir + config.sep + "df_agg.hdf5", key="df")
+
     def query_heatmap(self, dfx, dtype):
         """
 
@@ -410,7 +480,6 @@ class MultiResult:
         plt.figure(figsize=(w_mapper[dtype], h))
 
         ax = sns.heatmap(scaled_df, annot=dfx, fmt=fmt_mapper[dtype],
-                         # vmin=0, vmax=0.5,
                          cmap="viridis", cbar=False)
         ax.xaxis.set_ticks_position('top')
         ax.set_xticklabels(ax.get_xticklabels(), rotation=45)
@@ -419,13 +488,17 @@ class MultiResult:
         plt.tight_layout()
         plt.savefig(self.results_dir + config.sep + plot_fp, bbox_to_anchor='tight')
 
-    def save_heatmaps(self):
-
+    def agg_heatmap(self, transpose=True):
         # aggregate heatmap
         dfx = self.df_agg
         scaled_df = (dfx - dfx.min(axis=0)) / (dfx.max(axis=0) - dfx.min(axis=0))
+
         # transpose both so the x-axis labels match the per-type heatmaps
-        ax = sns.heatmap(scaled_df.T, annot=dfx.T, fmt=".3f",
+        if transpose:
+            dfx = dfx.T
+            scaled_df = scaled_df.T
+
+        ax = sns.heatmap(scaled_df, annot=dfx, fmt="0.4g", #fmt=".3f",
                          linewidths=.5,
                          cmap="viridis", cbar=False)
         ax.xaxis.set_ticks_position('top')
@@ -433,7 +506,10 @@ class MultiResult:
 
         plot_fp = "plot_query_heatmap.png"
         plt.tight_layout()
-        plt.savefig(self.results_dir + config.sep + plot_fp)  #, bbox_to_anchor='tight')
+        plt.savefig(self.results_dir + config.sep + plot_fp)
+
+    def save_heatmaps(self, transpose=True):
+        self.agg_heatmap(transpose=transpose)
 
         # per-type heatmaps
         for _dtype, _df in zip(["dt", "TB", "cost"], [self.dfp_dt, self.dfp_TB, self.dfp_cost]):
