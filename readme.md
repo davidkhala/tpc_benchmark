@@ -127,6 +127,13 @@ For this project, both source programs were downloaded to GCS 2020-02-24.
 2. Using Jupyter upload a JSON key into the user directory (i.e. `/jupyter`)
 3. Using Jupyter, create a file called `poor_security.py` in the root repo directory. Add two variables to this file: `sf_username` = your Snowflake user name and `sf_password` = your Snowflake account password. Make sure this account has `SYSADMIN` level permissions.   
 
+### Running Notebooks in Sequence  
+To run from start to end an entire TPC power test (query stream sequence 0), the Jupyter Notebooks need to be executed in order.  This allows for an entire pipeline to be run, or a specific step to be repeated or explored further.  The naming conventions common to all notebooks need to be coordinated. A dataset generated with specific attributes will create specific blobs in GCS and commonly named dataset in BigQuery and Snowflake.  Specifically:  
+
+`test` : str, test being done, either 'h' or 'ds'  
+`scale` : int, test scale factor in GigaBytes, i.e. 100 for 100GB  
+`cid` : str, config id, i.e. '02A' for the experiment config number  
+
 ### Notebook Step 01 - Compile TPC  
 Run either `NB_01_DS_setup.ipynb` or `NB_01_H_setup.ipynb`. Both will download the 
 .zip files locally, alter path variables and install the TPC binaries in a known location for use in the rest of the project.

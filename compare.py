@@ -11,7 +11,13 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 
-import config, tools, qc, sf_tpc, bq_tpc
+import config, tools, qc, bq_tpc
+
+# TODO: handle BQ or SF only benchmarking separately
+try:
+    import sf_tpc
+except ModuleNotFoundError:
+    print("Failed to Load Snowflake driver.")
 
 
 def splitter(fp):

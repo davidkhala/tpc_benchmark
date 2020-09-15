@@ -35,7 +35,7 @@ def bq_reserve_cost(dt, slots):
     return 4.00 * slot_count * t
 
 
-def plot_single(df1, y1_label="", drop=None, save_dir=None, suffix=None):
+def plot_single(df1, y1_label="", drop=None, save_dir=None, suffix=None, radjust=0.93, figsize=(30, 8)):
     """Plot one aggregate pivot plot
 
     Parameters
@@ -47,6 +47,8 @@ def plot_single(df1, y1_label="", drop=None, save_dir=None, suffix=None):
     drop : list of int, index rows (as `query_n`) to drop from plot
     save_dir : str, path to directory to save plot to. If not set, nothing is saved.
     suffix : str, suffix for save_dir file name
+    radjust : float, percent adjustment of right margin to fit legend
+    figsize : tuple, (w, h) where w = width, h = height in inches
 
     Returns
     -------
@@ -61,7 +63,7 @@ def plot_single(df1, y1_label="", drop=None, save_dir=None, suffix=None):
     ax1 = df1.plot.bar(ax=ax1, legend=False, color=color_palette)
 
     # set the figure size BEFORE adjusting ticks
-    fig.set_size_inches(30, 8, forward=True)
+    fig.set_size_inches(figsize[0], figsize[1], forward=True)
 
     handles, labels = ax1.get_legend_handles_labels()
 
@@ -73,7 +75,7 @@ def plot_single(df1, y1_label="", drop=None, save_dir=None, suffix=None):
     ax1.set_xlabel("Query Number")
 
     plt.subplots_adjust(hspace=0.15)
-    plt.subplots_adjust(right=0.93)
+    plt.subplots_adjust(right=radjust)
 
     fig.legend(handles, labels, loc="right")
 
@@ -287,13 +289,16 @@ class MultiResult:
             _df_source = self.df_query.loc[self.df_query.db == "bq", col]
             _df_target = _df_source.apply(lambda x: self.row_extract_bq(row=x, value=col))
 
-    def aggregate(self, by="desc"):
+    def aggregate(self, drop=None, save=True):
         """Aggregate
 
         Parameters
         ----------
-        by : str, column to create pivot tables from. Default = "desc".
+        drop : list of int, index rows (as `query_n`) to drop from plot
+        save : bool, save data to files
 
+        Attributes Used
+        ---------------
         self.df_query - query result record on local machine
         self.df_sf_history - query_history from Snowflake account usage
         self.df_bq_history - query history from BigQuery Information Schema
@@ -302,6 +307,9 @@ class MultiResult:
         dfq = self.df_query[["db", "test", "scale", "source", "cid", "desc",
                              "query_n", "seq_n", "qid", "driver_t0",
                              "driver_t1"]].copy()
+
+        if drop is not None:
+            df1 = dfq[~(dfq.query_n.isin(drop))]
 
         # Snowflake
         dfsfh = pd.DataFrame(None)
@@ -427,6 +435,24 @@ class MultiResult:
             self.df_agg_prelim.loc[self.df_agg_prelim.db == "bq", "cost_od"] = \
                 self.df_agg_prelim.loc[self.df_agg_prelim.db == "bq", "TB"] * config.bq_on_demand_cost
 
+        # pivot final results
+        self.pivot()
+
+        ## Save results
+        if save:
+            self.dfp_TB.to_csv(self.results_dir + config.sep + "dfp_TB.csv")
+            self.dfp_dt.to_csv(self.results_dir + config.sep + "dfp_dt.csv")
+            self.dfp_cost.to_csv(self.results_dir + config.sep + "dfp_cost.csv")
+            self.df_agg.to_csv(self.results_dir + config.sep + "df_agg.csv")
+
+            self.dfp_TB.to_hdf(self.results_dir + config.sep + "dfp_TB.hdf5", key="df")
+            self.dfp_dt.to_hdf(self.results_dir + config.sep + "dfp_dt.hdf5", key="df")
+            self.dfp_cost.to_hdf(self.results_dir + config.sep + "dfp_cost.hdf5", key="df")
+            self.df_agg.to_hdf(self.results_dir + config.sep + "df_agg.hdf5", key="df")
+
+            self.df_agg_prelim.to_hdf(self.results_dir + config.sep + "df_agg_prelim.hdf5", key="df")
+
+    def pivot(self):
         ## Pivot Final Results
 
         dfp_TB = self.df_agg_prelim.pivot_table(index="query_n", columns=["db", "desc"], values="TB")
@@ -442,23 +468,13 @@ class MultiResult:
         self.dfp_cost = dfp_cost
         self.df_agg = df_agg
 
-        ## Save results
-        self.dfp_TB.to_csv(self.results_dir + config.sep + "dfp_TB.csv")
-        self.dfp_dt.to_csv(self.results_dir + config.sep + "dfp_dt.csv")
-        self.dfp_cost.to_csv(self.results_dir + config.sep + "dfp_cost.csv")
-        self.df_agg.to_csv(self.results_dir + config.sep + "df_agg.csv")
-
-        self.dfp_TB.to_hdf(self.results_dir + config.sep + "dfp_TB.hdf5", key="df")
-        self.dfp_dt.to_hdf(self.results_dir + config.sep + "dfp_dt.hdf5", key="df")
-        self.dfp_cost.to_hdf(self.results_dir + config.sep + "dfp_cost.hdf5", key="df")
-        self.df_agg.to_hdf(self.results_dir + config.sep + "df_agg.hdf5", key="df")
-
     def load_results(self):
 
         self.dfp_TB = pd.read_hdf(self.results_dir + config.sep + "dfp_TB.hdf5", key="df")
         self.dfp_dt = pd.read_hdf(self.results_dir + config.sep + "dfp_dt.hdf5", key="df")
         self.dfp_cost = pd.read_hdf(self.results_dir + config.sep + "dfp_cost.hdf5", key="df")
         self.df_agg = pd.read_hdf(self.results_dir + config.sep + "df_agg.hdf5", key="df")
+        self.df_agg_prelim = pd.read_hdf(self.results_dir + config.sep + "df_agg_prelim.hdf5", key="df")
 
     def query_heatmap(self, dfx, dtype):
         """
