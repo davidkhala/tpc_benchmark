@@ -99,25 +99,20 @@ For this project, both source programs were downloaded to GCS 2020-02-24.
 3. Start instance and open Jupyter Lab
 4. Open new terminal from the plus menu (+)
 5. Install gcc and gsutil if not already installed (usually is on AI Notebooks)
-6. Add ssh key to github repo if required
-    see: https://help.github.com/en/github/authenticating-to-github/generating-a-new-ssh-key-and-adding-it-to-the-ssh-agent  
-7. Once the ssh key is generated, you can view the hash in a Notebook with:
-    ```
-    with open("/home/jupyter/.ssh/id_rsa.pub", "r") as f:
-        for line in f:
-            print(line)
-    ``` 
-    and paste into github.com credential page
-8. git clone the repo `tpc_benchmark`
-9. cd to the repo and update the base conda environment with
+6. Activate the base Conda environment and install the Google BigQuery reservation API Python client:  
+   `conda activate base`
+   `pip install google-cloud-bigquery-reservation`
+6. git clone the repo https://github.com/sadasystems/tpc_benchmark  
+   Repository should be public, so no credentials are required.  
+7. cd to the repo and update the base conda environment with
     ```
     conda env update --file environment_tpc.yml --name base
     ```
-9. add the repo to the conda path so notebooks will find the package in the python path:  `conda develop /home/jupyter/code/tpc_benchmark`
-10. add the persistent disk to a mount point
+8. add the repo to the conda path so notebooks will find the package in the python path:  `conda develop /home/jupyter/code/tpc_benchmark`
+9. add the persistent disk to a mount point
     https://devopscube.com/mount-extra-disks-on-google-cloud/
     mount the persistent disk to the same value as `config.fp_output_mnt`, this will likely be "/mnt/disks/data"
-11. Since Jupyter loads in the `jupyter` user directory, create a symbolic link to the /data mount point with:  
+10. Since Jupyter loads in the `jupyter` user directory, create a symbolic link to the /data mount point with:  
 `ln -s /data /home/jupyter/code/tpc_benchmark/data`  
 (a new directory `data` should appear in the project folderin in Jupyter Lab)
 

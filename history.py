@@ -8,7 +8,14 @@ import os
 import glob
 import pandas as pd
 
-import config, sf_tpc, bq_tpc
+import config, bq_tpc
+
+# TODO: handle BQ or SF only benchmarking separately
+try:
+    import sf_tpc
+except ModuleNotFoundError:
+    print("Failed to Load Snowflake driver.")
+
 
 
 def exp_log_t0(results_dir):
