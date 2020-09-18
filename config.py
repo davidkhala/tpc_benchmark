@@ -37,13 +37,6 @@ gcp_location     = "US"
 gcs_zip_bucket   = "tpc-benchmark-zips-5947"
 gcs_data_bucket  = "tpc-benchmark-5947"
 
-# 2.3 Compute Engine Mounted Persistent Disk
-# >> Edit only if you created a separate persistent disk on the VM
-
-fp_output_mnt    = "/data"
-fp_ds_output_mnt = fp_output_mnt + sep + "ds"
-fp_h_output_mnt  = fp_output_mnt + sep + "h"
-
 # 2.4 Snowflake Connector Auth Basics
 # Note: credentials in 'poor_security.py' formatted as:
 sf_account = "wja13212"
@@ -71,6 +64,8 @@ gcs_h_zip        = "tpc-h_2.18.0_rc2.zip"
 # 3.1 TPC File and Data Locations
 # >> Do NOT edit this section
 
+fp_download = cwd + sep + "download"
+
 fp_base_output   = cwd
 
 fp_ds            = cwd + sep + "ds"
@@ -79,16 +74,18 @@ fp_ds_output     = fp_ds
 fp_h             = cwd + sep + "h"
 fp_h_output      = fp_h
 
-# 3.2 contingent generated data output locations
-# >> Do NOT edit this section
+# 3.2 Compute Engine Mounted Persistent Disk
+# This only matters if a separate persistent disk is installed on the VM
+# create an alias to cwd/data to write data to during generation
+# for any scale factor above 1TB, a presistent disk will be needed.
+# see readme for details
 
-if os.path.exists(fp_output_mnt):
-    fp_ds_output   = cwd + sep + "data" + sep + "ds"
-    fp_h_output    = cwd + sep + "data" + sep + "h"
-    fp_base_output = cwd + sep + "data"
+fp_base_mnt = cwd + sep + "data"
+
+if os.path.exists(fp_base_mnt):
+    fp_ds_output   = fp_base_mnt + sep + "ds"
+    fp_h_output    = fp_base_mnt + sep + "h"
     
-fp_download = cwd + sep + "download"
-
 # 3.3 Extracted TPC Binaries
 # >> Edit this based on what's in stored in gcs_zip_bucket
 

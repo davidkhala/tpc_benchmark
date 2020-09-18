@@ -5,12 +5,12 @@ Copyright (c) 2020 SADA Systems, Inc.
 """
 from setuptools import setup
 
-setup(name='bq_snowflake_benchmark',
+setup(name='tpc_benchmark',
       version='0.1',
-      description='TPC/DS testing',
-      url='https://github.com/sadasystems/bq_snowflake_benchmark',
-      author='',
+      description='TPC-DS & TPC-H testing',
+      url='https://github.com/sadasystems/tpc_benchmark',
+      author='Colin Dietrich',
       author_email='',
       license='MIT',
-      packages=['bq_snowflake_benchmark'],
+      packages=['tpc_benchmark'],
       zip_safe=False)
